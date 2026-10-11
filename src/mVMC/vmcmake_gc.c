@@ -128,7 +128,6 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
   double proposalRatio = 1.0;
   double complex logIpNew;
   double x;
-  double weight;
   int accepted;
   const int anti = GCAntiMode();
 
@@ -207,40 +206,44 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
 
   logIpNew = CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm);
   x = LogProjRatio(projCntNew, eleProjCnt);
-  if (anti) {
-    /* logIpNew is already reduced over comm, so every rank decides alike;
-     * a zero candidate is a rejection, NaN/Inf input stops all ranks. */
-    if (GCAntiAcceptLog(*logIpOld, logIpNew, x, proposalRatio, acceptDraw,
-                        &accepted) != 0) {
+  if (GCAntiAcceptLog(*logIpOld, logIpNew, x, proposalRatio, acceptDraw,
+                      &accepted) != 0) {
+    int rank = 0;
+    MPI_Comm_rank(comm, &rank);
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: GC sampler met a nonfinite or invalid acceptance "
+              "input (%s mode, move=%d oldLog=(%.17g,%.17g) "
+              "newLog=(%.17g,%.17g) logProjRatio=%.17g ratio=%.17g).\n",
+              anti ? "anti-parallel" : "general", (int)moveClass,
+              creal(*logIpOld), cimag(*logIpOld), creal(logIpNew),
+              cimag(logIpNew), x, proposalRatio);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (creal(logIpNew) == -INFINITY)
+    GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+  if (accepted) {
+    const int kind = moveClass == GC_MOVE_HOP
+                         ? GC_COMMIT_HOP
+                         : moveClass == GC_MOVE_ADD ? GC_COMMIT_ADD
+                                                    : GC_COMMIT_REMOVE;
+    const int status = GCCommitAccepted(kind, arg0, arg1, pfMNew, eleIdx,
+                                        ncurOld, ncurProposal, qpStart,
+                                        qpEnd);
+    if (status != GC_MALL_OK) {
       int rank = 0;
       MPI_Comm_rank(comm, &rank);
-      if (rank == 0) {
+      if (rank == 0)
         fprintf(stderr,
-                "Error: GC anti-parallel sampler met a nonfinite or invalid "
-                "acceptance input (move=%d oldLog=(%.17g,%.17g) "
-                "newLog=(%.17g,%.17g) logProjRatio=%.17g ratio=%.17g).\n",
-                (int)moveClass, creal(*logIpOld), cimag(*logIpOld),
-                creal(logIpNew), cimag(logIpNew), x, proposalRatio);
-      }
+                "Error: GC component commit failed (move=%d status=%d).\n",
+                (int)moveClass, status);
       MPI_Abort(comm, EXIT_FAILURE);
     }
-  } else {
-    weight = exp(2.0 * (x + creal(logIpNew - *logIpOld))) * proposalRatio;
-    accepted = isfinite(weight) && weight > acceptDraw;
-  }
-  if (accepted) {
-    if (moveClass == GC_MOVE_HOP) {
-      UpdateMAllHopGC(arg0, eleIdx, ncurOld, qpStart, qpEnd);
-    } else if (moveClass == GC_MOVE_ADD) {
-      UpdateMAllAddGC(arg0, arg1, eleIdx, ncurOld, qpStart, qpEnd);
-    } else {
-      UpdateMAllRemoveGC(arg0, arg1, eleIdx, ncurOld, qpStart, qpEnd);
-    }
-    if (NProj > 0) {
+    if (NProj > 0)
       memcpy(eleProjCnt, projCntNew, (size_t)NProj * sizeof(*eleProjCnt));
-    }
     Ncur = ncurProposal;
-    *logIpOld = logIpNew;
+    *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
     return 1;
   }
 
@@ -341,18 +344,34 @@ static void GCDebugCheckFastState(const int *eleIdx,
       GCCheckedSizeToInt(totalCount, "GC debug rebuild workspace");
   size_t index;
   RequestWorkSpaceComplex(workspaceCount);
+  RequestWorkSpaceInt(GCCheckedSizeToInt(qpCount,
+                                         "GC debug state workspace"));
   {
     double complex *fastInv = GetWorkSpaceComplex((int)invCount);
     double complex *fastPf = GetWorkSpaceComplex((int)qpCount);
+    int *fastState = GetWorkSpaceInt((int)qpCount);
     memcpy(fastInv, InvM, invCount * sizeof(*fastInv));
     memcpy(fastPf, PfM, qpCount * sizeof(*fastPf));
+    memcpy(fastState, GCQpState, qpCount * sizeof(*fastState));
     if (CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd) != GC_MALL_OK) {
       fprintf(stderr, "Error: GC debug full rebuild failed.\n");
       MPI_Abort(comm, EXIT_FAILURE);
     }
     for (index = 0; index < qpCount; index++) {
+      const int fast = fastState[index];
+      const int rebuilt = GCQpState[index];
       const double error = cabs(fastPf[index] - PfM[index]) /
                            fmax(1.0, cabs(PfM[index]));
+      if (fast == GC_QP_PFONLY && rebuilt == GC_QP_INVERSE) {
+        fprintf(stderr,
+                "Error: GC debug state mismatch qp=%zu fast=PFONLY "
+                "rebuild=INVERSE.\n",
+                index + (size_t)qpStart);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      if (fast == GC_QP_INVERSE && rebuilt == GC_QP_PFONLY)
+        GCComponentCountersOf(GCComponentThreadCache())
+            ->debugNearSingular++;
       if (!(isfinite(error) && error <= 1.0e-8)) {
         fprintf(stderr,
                 "Error: GC debug Pfaffian mismatch qp=%zu error=%.17e.\n",
@@ -362,6 +381,9 @@ static void GCDebugCheckFastState(const int *eleIdx,
     }
     for (index = 0; index < qpCount; index++) {
       int row;
+      if (fastState[index] != GC_QP_INVERSE ||
+          GCQpState[index] != GC_QP_INVERSE)
+        continue;
       for (row = 0; row < Ncur; row++) {
         int column;
         for (column = 0; column < Ncur; column++) {
@@ -381,6 +403,7 @@ static void GCDebugCheckFastState(const int *eleIdx,
       }
     }
   }
+  ReleaseWorkSpaceInt();
   ReleaseWorkSpaceComplex();
   *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
 }
@@ -652,13 +675,22 @@ void VMCMakeSampleGC(MPI_Comm comm) {
     rebuildStatus = CalculateMAllGC_fcmp(Ncur, TmpEleIdx, qpStart, qpEnd);
     rebuildStatus = GCCollectiveRebuildStatus(rebuildStatus, comm);
     if (rebuildStatus != GC_MALL_OK) {
-      (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
-                                TmpEleProjCnt, qpStart, qpEnd, comm);
-      BurnFlag = 0;
+      if (rank == 0)
+        fprintf(stderr,
+                "Error: GC burn-sample rebuild failed (status=%d).\n",
+                rebuildStatus);
+      MPI_Abort(comm, EXIT_FAILURE);
     }
   }
   logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
   if (!isfinite(creal(logIpOld)) || !isfinite(cimag(logIpOld))) {
+    if (!(creal(logIpOld) == -INFINITY && isfinite(cimag(logIpOld)))) {
+      if (rank == 0)
+        fprintf(stderr,
+                "Error: GC restored configuration has a nonfinite "
+                "amplitude.\n");
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
     (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
                               TmpEleProjCnt, qpStart, qpEnd, comm);
     logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);

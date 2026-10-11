@@ -47,6 +47,7 @@ double complex CalculateLogIP_fcmp(double complex *const pfM,
 #include "../src/mVMC/vmcmake_gc.c"
 
 #define ORBITALS 4
+#define MULTI_QP 2
 #define STATE_COUNT 8
 #define CHAIN_COUNT 32
 #define CHAIN_WARMUP 10000
@@ -72,8 +73,9 @@ typedef struct {
   int eleCfg[ORBITALS];
   int eleNum[ORBITALS];
   int eleProjCnt[1];
-  double complex inv[ORBITALS * ORBITALS];
-  double complex pf;
+  double complex inv[MULTI_QP * ORBITALS * ORBITALS];
+  double complex pf[MULTI_QP];
+  int state[MULTI_QP];
   double complex logIp;
 } SamplerState;
 
@@ -198,10 +200,11 @@ static double complex set_state(const unsigned int mask, int *eleIdx,
   }
   Ncur = count;
   MakeProjCnt(eleProjCnt, eleNum);
-  memset(InvM, 0x5a, ORBITALS * ORBITALS * sizeof(*InvM));
-  CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, 0, 1) == GC_MALL_OK,
+  memset(InvM, 0x5a,
+         (size_t)NQPFull * ORBITALS * ORBITALS * sizeof(*InvM));
+  CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, 0, NQPFull) == GC_MALL_OK,
         "state mask=%u rebuild", mask);
-  return CalculateLogIP_fcmp(PfM, 0, 1, MPI_COMM_SELF);
+  return CalculateLogIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
 }
 
 static void snapshot(SamplerState *state, const int *eleIdx,
@@ -212,8 +215,10 @@ static void snapshot(SamplerState *state, const int *eleIdx,
   memcpy(state->eleCfg, eleCfg, sizeof(state->eleCfg));
   memcpy(state->eleNum, eleNum, sizeof(state->eleNum));
   memcpy(state->eleProjCnt, eleProjCnt, sizeof(state->eleProjCnt));
-  memcpy(state->inv, InvM, sizeof(state->inv));
-  state->pf = PfM[0];
+  memcpy(state->inv, InvM,
+         (size_t)NQPFull * ORBITALS * ORBITALS * sizeof(*InvM));
+  memcpy(state->pf, PfM, (size_t)NQPFull * sizeof(*PfM));
+  memcpy(state->state, GCQpState, (size_t)NQPFull * sizeof(*GCQpState));
   state->logIp = logIp;
 }
 
@@ -232,9 +237,14 @@ static void check_snapshot(const SamplerState *state, const int *eleIdx,
   CHECK(memcmp(eleProjCnt, state->eleProjCnt,
                sizeof(state->eleProjCnt)) == 0,
         "%s eleProjCnt changed", label);
-  CHECK(memcmp(InvM, state->inv, sizeof(state->inv)) == 0,
+  CHECK(memcmp(InvM, state->inv,
+               (size_t)NQPFull * ORBITALS * ORBITALS * sizeof(*InvM)) == 0,
         "%s InvM changed", label);
-  CHECK(PfM[0] == state->pf, "%s PfM changed", label);
+  CHECK(memcmp(PfM, state->pf, (size_t)NQPFull * sizeof(*PfM)) == 0,
+        "%s PfM changed", label);
+  CHECK(memcmp(GCQpState, state->state,
+               (size_t)NQPFull * sizeof(*GCQpState)) == 0,
+        "%s component state changed", label);
   CHECK(logIp == state->logIp, "%s logIp changed", label);
 }
 
@@ -272,8 +282,8 @@ static void exercise_transaction(const enum GCMoveClass moveClass,
   double complex fastPf;
 
   logIp = set_state(mask, eleIdx, eleCfg, eleNum, eleProjCnt);
-  snapshot(&oldState, eleIdx, eleCfg, eleNum, eleProjCnt, INFINITY + 0.0 * I);
-  logIp = oldState.logIp;
+  logIp += 1000.0;
+  snapshot(&oldState, eleIdx, eleCfg, eleNum, eleProjCnt, logIp);
   CHECK(GCAttemptMove(moveClass, arg0, arg1, 0.5, eleIdx, eleCfg, eleNum,
                       eleProjCnt, &logIp, pfMNew, projCntNew, 0, 1,
                       MPI_COMM_SELF) == 0,
@@ -595,32 +605,34 @@ static void test_burn_and_save(void) {
         "saved log weight");
 }
 
-static void test_production_chains(void) {
+static void run_production_chains(void (*exact_probabilities_fn)(double *),
+                                  const int qpCount) {
   double exact[STATE_COUNT];
   double frequency[CHAIN_COUNT][STATE_COUNT];
   long long totalCounts[STATE_COUNT] = {0};
   int saw02 = 0;
   int saw24 = 0;
   int chain;
-  exact_probabilities(exact);
+  exact_probabilities_fn(exact);
   for (chain = 0; chain < CHAIN_COUNT; chain++) {
     int eleIdx[ORBITALS];
     int eleCfg[ORBITALS];
     int eleNum[ORBITALS];
     int eleProjCnt[1];
     int projCntNew[1];
-    double complex pfMNew[1];
+    double complex pfMNew[MULTI_QP];
     double complex logIp;
     long long counts[STATE_COUNT] = {0};
     int previousNcur;
     int step;
     init_gen_rand((uint32_t)(1013 + 7919 * chain));
-    logIp = set_state(evenStates[chain % STATE_COUNT], eleIdx, eleCfg,
-                      eleNum, eleProjCnt);
+    int initial = chain % STATE_COUNT;
+    while (exact[initial] == 0.0) initial = (initial + 1) % STATE_COUNT;
+    logIp = set_state(evenStates[initial], eleIdx, eleCfg, eleNum, eleProjCnt);
     previousNcur = Ncur;
     for (step = 0; step < CHAIN_WARMUP; step++) {
       (void)GCMakeOneStep(eleIdx, eleCfg, eleNum, eleProjCnt, &logIp,
-                          pfMNew, projCntNew, 0, 1, MPI_COMM_SELF);
+                          pfMNew, projCntNew, 0, qpCount, MPI_COMM_SELF);
       if ((previousNcur == 0 && Ncur == 2) ||
           (previousNcur == 2 && Ncur == 0)) saw02 = 1;
       if ((previousNcur == 2 && Ncur == 4) ||
@@ -631,7 +643,7 @@ static void test_production_chains(void) {
       int separation;
       for (separation = 0; separation < ORBITALS; separation++) {
         (void)GCMakeOneStep(eleIdx, eleCfg, eleNum, eleProjCnt, &logIp,
-                            pfMNew, projCntNew, 0, 1, MPI_COMM_SELF);
+                            pfMNew, projCntNew, 0, qpCount, MPI_COMM_SELF);
         if ((previousNcur == 0 && Ncur == 2) ||
             (previousNcur == 2 && Ncur == 0)) saw02 = 1;
         if ((previousNcur == 2 && Ncur == 4) ||
@@ -672,11 +684,400 @@ static void test_production_chains(void) {
     CHECK(fabs(mean - exact[chain]) <= tolerance,
           "chain state=%u mean=%.17g exact=%.17g SE=%.17g tol=%.17g",
           evenStates[chain], mean, exact[chain], standardError, tolerance);
-    CHECK((double)(CHAIN_COUNT * CHAIN_SAMPLES) * exact[chain] >= 100.0,
-          "chain state=%u expected count below 100", evenStates[chain]);
-    CHECK(totalCounts[chain] > 0, "chain state=%u never observed",
-          evenStates[chain]);
+    if (exact[chain] == 0.0) {
+      CHECK(totalCounts[chain] == 0,
+            "zero-weight chain state=%u was observed", evenStates[chain]);
+    } else {
+      CHECK((double)(CHAIN_COUNT * CHAIN_SAMPLES) * exact[chain] >= 100.0,
+            "chain state=%u expected count below 100", evenStates[chain]);
+      CHECK(totalCounts[chain] > 0, "chain state=%u never observed",
+            evenStates[chain]);
+    }
   }
+}
+
+static void test_production_chains(void) {
+  run_production_chains(exact_probabilities, 1);
+}
+
+static double complex pfaffian_recursive_complex(
+    const double complex *matrix, const int n) {
+  double complex result = 0.0;
+  int column;
+  if (n == 0) return 1.0;
+  if (n == 2) return matrix[1];
+  for (column = 1; column < n; column++) {
+    double complex minor[ORBITALS * ORBITALS];
+    int sourceRow;
+    int minorRow = 0;
+    for (sourceRow = 1; sourceRow < n; sourceRow++) {
+      int sourceColumn;
+      int minorColumn = 0;
+      if (sourceRow == column) continue;
+      for (sourceColumn = 1; sourceColumn < n; sourceColumn++) {
+        if (sourceColumn == column) continue;
+        minor[(size_t)minorRow * (n - 2) + minorColumn++] =
+            matrix[(size_t)sourceRow * n + sourceColumn];
+      }
+      minorRow++;
+    }
+    result += ((column % 2) != 0 ? 1.0 : -1.0) * matrix[column] *
+              pfaffian_recursive_complex(minor, n - 2);
+  }
+  return result;
+}
+
+static void fill_slater_block1(void) {
+  double complex *s = SlaterElm + ORBITALS * ORBITALS;
+  int row;
+  memset(s, 0, ORBITALS * ORBITALS * sizeof(*s));
+  for (row = 0; row < ORBITALS; row++) {
+    int column;
+    for (column = row + 1; column < ORBITALS; column++) {
+      const double complex value =
+          (0.29 - 0.11 * (row + 1) + 0.23 * (column + 1)) +
+          (0.17 + 0.07 * (row + 1) - 0.05 * (column + 1)) * I;
+      s[(size_t)row * ORBITALS + column] = value;
+      s[(size_t)column * ORBITALS + row] = -value;
+    }
+  }
+  for (row = 0; row < ORBITALS; row++) {
+    s[row] = 0.0;
+    s[(size_t)row * ORBITALS] = 0.0;
+  }
+}
+
+static void enter_multiqp_mode(void) {
+  NQPFull = MULTI_QP;
+  SlaterElm = realloc(
+      SlaterElm, MULTI_QP * ORBITALS * ORBITALS * sizeof(*SlaterElm));
+  InvM = realloc(InvM,
+                 MULTI_QP * ORBITALS * ORBITALS * sizeof(*InvM));
+  PfM = realloc(PfM, MULTI_QP * sizeof(*PfM));
+  QPFullWeight = realloc(QPFullWeight, MULTI_QP * sizeof(*QPFullWeight));
+  CHECK(SlaterElm != NULL && InvM != NULL && PfM != NULL &&
+            QPFullWeight != NULL,
+        "multiqp allocation");
+  if (failures != 0) exit(EXIT_FAILURE);
+  QPFullWeight[0] = 0.6 + 0.2 * I;
+  QPFullWeight[1] = 0.4 - 0.3 * I;
+  fill_slater();
+  fill_slater_block1();
+  CHECK(GCComponentInit() == GC_MALL_OK, "multiqp component init");
+}
+
+static double complex block_pfaffian(const unsigned int mask, const int qp) {
+  double complex matrix[ORBITALS * ORBITALS];
+  int occupied[ORBITALS];
+  int n = 0;
+  int rs;
+  int row;
+  for (rs = 0; rs < ORBITALS; rs++) {
+    if ((mask >> rs) & 1U) occupied[n++] = rs;
+  }
+  for (row = 0; row < n; row++) {
+    int column;
+    for (column = 0; column < n; column++) {
+      matrix[(size_t)row * n + column] =
+          SlaterElm[(size_t)qp * ORBITALS * ORBITALS +
+                    (size_t)occupied[row] * ORBITALS + occupied[column]];
+    }
+  }
+  return pfaffian_recursive_complex(matrix, n);
+}
+
+static double complex composite_amplitude(const unsigned int mask) {
+  return QPFullWeight[0] * block_pfaffian(mask, 0) +
+         QPFullWeight[1] * block_pfaffian(mask, 1);
+}
+
+static void multiqp_exact_probabilities(double *probability) {
+  double normalization = 0.0;
+  int i;
+  for (i = 0; i < STATE_COUNT; i++) {
+    const double complex amplitude = composite_amplitude(evenStates[i]);
+    probability[i] =
+        exp(2.0 * creal(Proj[0]) * double_occupancy(evenStates[i])) *
+        creal(amplitude * conj(amplitude));
+    normalization += probability[i];
+  }
+  for (i = 0; i < STATE_COUNT; i++) probability[i] /= normalization;
+  for (i = 0; i < STATE_COUNT; i++) {
+    CHECK(probability[i] > 1.0e-6, "multiqp state %u has zero weight",
+          evenStates[i]);
+  }
+}
+
+static double exact_weight(const unsigned int from, const unsigned int to) {
+  const double complex a = composite_amplitude(from);
+  const double complex b = composite_amplitude(to);
+  return creal(b * conj(b)) / creal(a * conj(a)) *
+         exp(2.0 * creal(Proj[0]) *
+             (double_occupancy(to) - double_occupancy(from)));
+}
+
+static void multiqp_accept(const enum GCMoveClass moveClass,
+                           const unsigned int mask, const int arg0,
+                           const int arg1, const int expectQp1State,
+                           const char *label) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[MULTI_QP];
+  double complex logIp;
+  double complex fastInv[MULTI_QP * ORBITALS * ORBITALS];
+  double complex fastPf[MULTI_QP];
+  int fastState[MULTI_QP];
+  int qp;
+  logIp = set_state(mask, eleIdx, eleCfg, eleNum, eleProjCnt);
+  CHECK(GCAttemptMove(moveClass, arg0, arg1, 0.0, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, MULTI_QP,
+                      MPI_COMM_SELF) == 1,
+        "%s forced accept rejected", label);
+  CHECK(GCQpState[1] == expectQp1State, "%s qp1 state %s", label,
+        GCComponentStateName(GCQpState[1]));
+  memcpy(fastInv, InvM, sizeof(fastInv));
+  memcpy(fastPf, PfM, sizeof(fastPf));
+  memcpy(fastState, GCQpState, sizeof(fastState));
+  CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, 0, MULTI_QP) == GC_MALL_OK,
+        "%s rebuild", label);
+  for (qp = 0; qp < MULTI_QP; qp++) {
+    CHECK(fastState[qp] == GCQpState[qp],
+          "%s qp%d state fast=%s rebuild=%s", label, qp,
+          GCComponentStateName(fastState[qp]),
+          GCComponentStateName(GCQpState[qp]));
+    CHECK(close_complex(fastPf[qp], PfM[qp]), "%s qp%d Pf", label, qp);
+    if (GCQpState[qp] == GC_QP_INVERSE) {
+      int row;
+      for (row = 0; row < Ncur; row++) {
+        int column;
+        for (column = 0; column < Ncur; column++) {
+          const size_t index =
+              (size_t)qp * ORBITALS * ORBITALS +
+              (size_t)row * ORBITALS + column;
+          CHECK(close_complex(fastInv[index], InvM[index]),
+                "%s qp%d inverse %d,%d", label, qp, row, column);
+        }
+      }
+    }
+  }
+}
+
+static void test_multiqp_transactions(void) {
+  multiqp_accept(GC_MOVE_HOP, 6U, 0, 0, GC_QP_PFONLY,
+                 "hop into zero row");
+  multiqp_accept(GC_MOVE_HOP, 5U, 0, 1, GC_QP_INVERSE,
+                 "hop out of zero row");
+  multiqp_accept(GC_MOVE_ADD, 0U, 0, 1, GC_QP_PFONLY,
+                 "add into zero row");
+  multiqp_accept(GC_MOVE_REMOVE, 15U, 0, 1, GC_QP_INVERSE,
+                 "remove out of zero row");
+  {
+    int eleIdx[ORBITALS];
+    int eleCfg[ORBITALS];
+    int eleNum[ORBITALS];
+    int eleProjCnt[1];
+    int projCntNew[1];
+    double complex pfMNew[MULTI_QP];
+    double complex logIp;
+    SamplerState before;
+    const double weight = exact_weight(6U, 3U);
+    if (weight < 1.0) {
+      logIp = set_state(6U, eleIdx, eleCfg, eleNum, eleProjCnt);
+      snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp);
+      CHECK(GCAttemptMove(GC_MOVE_HOP, 1, 0,
+                          fmin(0.999999, 0.5 * (1.0 + weight)), eleIdx,
+                          eleCfg, eleNum, eleProjCnt, &logIp, pfMNew,
+                          projCntNew, 0, MULTI_QP, MPI_COMM_SELF) == 0,
+            "multiqp deterministic reject accepted");
+      check_snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp,
+                     "multiqp reject");
+    }
+  }
+}
+
+static void test_multiqp_exact_detailed_balance(void) {
+  double probability[STATE_COUNT];
+  int ix;
+  multiqp_exact_probabilities(probability);
+  for (ix = 0; ix < STATE_COUNT; ix++) {
+    int iy;
+    for (iy = 0; iy < STATE_COUNT; iy++) {
+      const unsigned int removed = evenStates[ix] & ~evenStates[iy];
+      const unsigned int added = evenStates[iy] & ~evenStates[ix];
+      const int nx = popcount(evenStates[ix]);
+      const int ny = popcount(evenStates[iy]);
+      double qxy = 0.0;
+      double qyx = 0.0;
+      double proposalRatio = 1.0;
+      if (nx == ny && popcount(removed) == 1 && popcount(added) == 1) {
+        qxy = class_probability(GC_MOVE_HOP, nx) /
+              ((double)nx * (double)(ORBITALS - nx));
+        qyx = qxy;
+      } else if (ny == nx + 2 && removed == 0U && popcount(added) == 2) {
+        const double pAdd = class_probability(GC_MOVE_ADD, nx);
+        const double pRemove = class_probability(GC_MOVE_REMOVE, ny);
+        qxy = pAdd / choose_two(ORBITALS - nx);
+        qyx = pRemove / choose_two(ny);
+        proposalRatio = GCProposalRatioAdd(nx, ORBITALS, pAdd, pRemove);
+      } else {
+        continue;
+      }
+      {
+        const double targetRatio = probability[iy] / probability[ix];
+        const double lhs =
+            probability[ix] * qxy *
+            fmin(1.0, targetRatio * proposalRatio);
+        const double rhs =
+            probability[iy] * qyx *
+            fmin(1.0, 1.0 / (targetRatio * proposalRatio));
+        CHECK(fabs(lhs - rhs) < 2.0e-13,
+              "multiqp detailed balance %u -> %u", evenStates[ix],
+              evenStates[iy]);
+      }
+    }
+  }
+}
+
+static double production_acceptance(const enum GCMoveClass moveClass,
+                                    const unsigned int mask, const int arg0,
+                                    const int arg1) {
+  double low = 0.0;
+  double high = 1.0;
+  int iteration;
+  for (iteration = 0; iteration < 40; iteration++) {
+    int eleIdx[ORBITALS];
+    int eleCfg[ORBITALS];
+    int eleNum[ORBITALS];
+    int eleProjCnt[1];
+    int projCntNew[1];
+    double complex pfMNew[MULTI_QP];
+    double complex logIp;
+    const double draw = 0.5 * (low + high);
+    logIp = set_state(mask, eleIdx, eleCfg, eleNum, eleProjCnt);
+    if (GCAttemptMove(moveClass, arg0, arg1, draw, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, NQPFull,
+                      MPI_COMM_SELF)) {
+      low = draw;
+    } else {
+      high = draw;
+    }
+  }
+  return 0.5 * (low + high);
+}
+
+static int position_in_state(const unsigned int mask, const int orbital) {
+  return popcount(mask & ((1U << orbital) - 1U));
+}
+
+static int lowest_bit(const unsigned int value) {
+  int bit = 0;
+  while (((value >> bit) & 1U) == 0U) bit++;
+  return bit;
+}
+
+static double proposal_probability(const unsigned int x,
+                                   const unsigned int y, const int anti) {
+  const unsigned int removed = x & ~y;
+  const unsigned int added = y & ~x;
+  const int nx = popcount(x);
+  const int ny = popcount(y);
+  const int m = nx / 2;
+  if (nx == ny && popcount(removed) == 1 && popcount(added) == 1) {
+    if (anti &&
+        lowest_bit(removed) / Nsite != lowest_bit(added) / Nsite) return 0.0;
+    return class_probability(GC_MOVE_HOP, nx) /
+           (anti ? 2.0 * m * (Nsite - m)
+                 : (double)nx * (ORBITALS - nx));
+  }
+  if (ny == nx + 2 && removed == 0U && popcount(added) == 2) {
+    if (anti && popcount(added & ((1U << Nsite) - 1U)) != 1) return 0.0;
+    return class_probability(GC_MOVE_ADD, nx) /
+           (anti ? (double)(Nsite - m) * (Nsite - m)
+                 : choose_two(ORBITALS - nx));
+  }
+  if (ny == nx - 2 && added == 0U && popcount(removed) == 2) {
+    if (anti && popcount(removed & ((1U << Nsite) - 1U)) != 1) return 0.0;
+    return class_probability(GC_MOVE_REMOVE, nx) /
+           (anti ? (double)m * m : choose_two(nx));
+  }
+  return 0.0;
+}
+
+static void run_production_detailed_balance(void (*exact)(double *),
+                                            const int anti) {
+  double probability[STATE_COUNT];
+  int ix;
+  exact(probability);
+  for (ix = 0; ix < STATE_COUNT; ix++) {
+    double total = 0.0;
+    const unsigned int x = evenStates[ix];
+    int iy;
+    if (anti &&
+        popcount(x) != 2 * popcount(x & ((1U << Nsite) - 1U))) continue;
+    for (iy = 0; iy < STATE_COUNT; iy++) {
+      total += proposal_probability(x, evenStates[iy], anti);
+    }
+    CHECK(fabs(total - 1.0) < 1.0e-14,
+          "proposal normalization at %u: %.17g", x, total);
+  }
+  for (ix = 0; ix < STATE_COUNT; ix++) {
+    int iy;
+    for (iy = 0; iy < STATE_COUNT; iy++) {
+      const unsigned int x = evenStates[ix];
+      const unsigned int y = evenStates[iy];
+      const unsigned int removed = x & ~y;
+      const unsigned int added = y & ~x;
+      const int nx = popcount(x);
+      const int ny = popcount(y);
+      const double qxy = proposal_probability(x, y, anti);
+      const double qyx = proposal_probability(y, x, anti);
+      double axy;
+      double ayx;
+      double lhs;
+      double rhs;
+      if (qxy == 0.0 || qyx == 0.0) continue;
+      if (probability[ix] == 0.0 || probability[iy] == 0.0) continue;
+      if (nx == ny && popcount(removed) == 1 && popcount(added) == 1) {
+        const int from = lowest_bit(removed);
+        const int to = lowest_bit(added);
+        axy = production_acceptance(GC_MOVE_HOP, x,
+                                    position_in_state(x, from), to);
+        ayx = production_acceptance(GC_MOVE_HOP, y,
+                                    position_in_state(y, to), from);
+      } else if (ny == nx + 2 && removed == 0U &&
+                 popcount(added) == 2) {
+        const int a = lowest_bit(added);
+        const int b = lowest_bit(added & ~(1U << a));
+        axy = production_acceptance(GC_MOVE_ADD, x, a, b);
+        ayx = production_acceptance(GC_MOVE_REMOVE, y,
+                                    position_in_state(y, a),
+                                    position_in_state(y, b));
+      } else {
+        continue;
+      }
+      lhs = probability[ix] * qxy * axy;
+      rhs = probability[iy] * qyx * ayx;
+      CHECK(fabs(lhs - rhs) <= 1.0e-9 * fmax(lhs, rhs) + 1.0e-14,
+            "production detailed balance %u -> %u lhs=%.17g rhs=%.17g", x,
+            y, lhs, rhs);
+    }
+  }
+}
+
+static void test_multiqp_production_detailed_balance(void) {
+  run_production_detailed_balance(multiqp_exact_probabilities, 0);
+}
+
+static void test_multiqp_production_chains(void) {
+  GCComponentCounters total;
+  run_production_chains(multiqp_exact_probabilities, MULTI_QP);
+  GCComponentCountersTotal(&total);
+  CHECK(total.toPfonly > 0, "chains never entered a PFONLY component");
+  CHECK(total.recover > 0, "chains never recovered a PFONLY component");
+  CHECK(total.directValue > 0, "chains never evaluated a direct Pfaffian");
 }
 
 
@@ -748,9 +1149,9 @@ static double complex set_state_order(const unsigned int mask,
       eleIdx[other] = temporary;
     }
     for (k = 0; k < Ncur; k++) eleCfg[eleIdx[k]] = k;
-    CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, 0, 1) == GC_MALL_OK,
+    CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, 0, NQPFull) == GC_MALL_OK,
           "reversed state mask=%u rebuild", mask);
-    logIp = CalculateLogIP_fcmp(PfM, 0, 1, MPI_COMM_SELF);
+    logIp = CalculateLogIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
   }
   return logIp;
 }
@@ -765,6 +1166,61 @@ static void anti_exact_probabilities(double *probability) {
     normalization += probability[i];
   }
   for (i = 0; i < ANTI_STATE_COUNT; i++) probability[i] /= normalization;
+}
+
+static void enter_multiqp_anti_mode(void) {
+  const double complex F1[2][2] = {
+      {0.0, 0.0}, {0.52 + 0.31 * I, -0.27 + 0.44 * I}};
+  double complex *s1;
+  int i;
+  enter_antiparallel_mode();
+  NQPFull = MULTI_QP;
+  SlaterElm = realloc(
+      SlaterElm, MULTI_QP * ORBITALS * ORBITALS * sizeof(*SlaterElm));
+  InvM = realloc(InvM,
+                 MULTI_QP * ORBITALS * ORBITALS * sizeof(*InvM));
+  PfM = realloc(PfM, MULTI_QP * sizeof(*PfM));
+  QPFullWeight = realloc(QPFullWeight, MULTI_QP * sizeof(*QPFullWeight));
+  CHECK(SlaterElm != NULL && InvM != NULL && PfM != NULL &&
+            QPFullWeight != NULL,
+        "anti multiqp allocation");
+  if (failures != 0) exit(EXIT_FAILURE);
+  QPFullWeight[0] = 0.6 + 0.2 * I;
+  QPFullWeight[1] = 0.4 - 0.3 * I;
+  s1 = SlaterElm + ORBITALS * ORBITALS;
+  memset(s1, 0, ORBITALS * ORBITALS * sizeof(*s1));
+  for (i = 0; i < 2; i++) {
+    int j;
+    for (j = 0; j < 2; j++) {
+      s1[(size_t)i * ORBITALS + (2 + j)] = F1[i][j];
+      s1[(size_t)(2 + j) * ORBITALS + i] = -F1[i][j];
+    }
+  }
+  CHECK(GCComponentInit() == GC_MALL_OK, "anti multiqp component init");
+}
+
+static void multiqp_anti_exact_probabilities(double *probability) {
+  double normalization = 0.0;
+  int i;
+  for (i = 0; i < STATE_COUNT; i++) {
+    const double complex amplitude = composite_amplitude(evenStates[i]);
+    probability[i] =
+        exp(2.0 * creal(Proj[0]) * double_occupancy(evenStates[i])) *
+        creal(amplitude * conj(amplitude));
+    normalization += probability[i];
+    CHECK(spin_balanced(evenStates[i]) || probability[i] == 0.0,
+          "unbalanced anti state %u has weight", evenStates[i]);
+  }
+  for (i = 0; i < STATE_COUNT; i++) probability[i] /= normalization;
+}
+
+static void test_multiqp_anti_chains_and_balance(void) {
+  GCComponentCounters total;
+  run_production_detailed_balance(multiqp_anti_exact_probabilities, 1);
+  run_production_chains(multiqp_anti_exact_probabilities, MULTI_QP);
+  GCComponentCountersTotal(&total);
+  CHECK(total.toPfonly > 0 && total.recover > 0,
+        "anti chains never used the PFONLY path");
 }
 
 /* Guards run before any Pfaffian work: the candidate scratch keeps its
@@ -1328,6 +1784,69 @@ static void test_anti_collective(void) {
         accepted[1], accepted[2]);
 }
 
+static void test_multiqp_collective(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[MULTI_QP];
+  double complex logIp;
+  int qpStart;
+  int qpEnd;
+  int rank;
+  int size;
+  int step;
+  int mismatched = 0;
+  int qp;
+  long long toPfonly;
+  long long toPfonlyTotal;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
+  init_gen_rand(80713U);
+  Ncur = 2;
+  CHECK(makeInitialSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt, qpStart, qpEnd,
+                            MPI_COMM_WORLD) == 0,
+        "multiqp collective initialization");
+  logIp = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, MPI_COMM_WORLD);
+  for (step = 0; step < 4000; step++) {
+    unsigned int localMask;
+    unsigned int masks[2];
+    (void)GCMakeOneStep(eleIdx, eleCfg, eleNum, eleProjCnt, &logIp, pfMNew,
+                        projCntNew, qpStart, qpEnd, MPI_COMM_WORLD);
+    localMask = current_mask(eleNum);
+    MPI_Allreduce(&localMask, &masks[0], 1, MPI_UNSIGNED, MPI_MIN,
+                  MPI_COMM_WORLD);
+    MPI_Allreduce(&localMask, &masks[1], 1, MPI_UNSIGNED, MPI_MAX,
+                  MPI_COMM_WORLD);
+    if (masks[0] != masks[1]) mismatched++;
+  }
+  CHECK(mismatched == 0, "ranks disagreed on %d states", mismatched);
+  CHECK((size == 2 || size == 3) &&
+            (rank < 2 ? qpEnd - qpStart == 1 : qpEnd == qpStart),
+        "rank %d/%d projection range [%d,%d)", rank, size, qpStart, qpEnd);
+  {
+    int fastState[MULTI_QP];
+    memcpy(fastState, GCQpState,
+           (size_t)(qpEnd - qpStart) * sizeof(*GCQpState));
+    CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd) == GC_MALL_OK,
+          "rank %d final rebuild", rank);
+    for (qp = 0; qp < qpEnd - qpStart; qp++) {
+      CHECK(fastState[qp] == GCQpState[qp],
+            "rank %d qp%d state drift", rank, qpStart + qp);
+    }
+  }
+  {
+    GCComponentCounters total;
+    GCComponentCountersTotal(&total);
+    toPfonly = total.toPfonly;
+  }
+  MPI_Allreduce(&toPfonly, &toPfonlyTotal, 1, MPI_LONG_LONG, MPI_SUM,
+                MPI_COMM_WORLD);
+  CHECK(toPfonlyTotal > 0, "no rank entered a PFONLY component");
+}
+
 /* Fatal paths for the death-test wrapper; each must abort with a message. */
 static void anti_death_initialization(void) {
   int eleIdx[ORBITALS];
@@ -1418,6 +1937,48 @@ static int run_antiparallel_death(const char *mode) {
   return 3;
 }
 
+static void death_vacuum_k(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  enter_multiqp_mode();
+  QPFullWeight[0] = 0.5;
+  QPFullWeight[1] = -0.5;
+  Ncur = 0;
+  (void)makeInitialSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt, 0, NQPFull,
+                            MPI_COMM_SELF);
+}
+
+static void death_general_nonfinite(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  int projCntNew[1];
+  double complex pfMNew[1];
+  double complex logIp = set_state(5U, eleIdx, eleCfg, eleNum, eleProjCnt);
+  SlaterElm[(size_t)1 * ORBITALS + 3] = NAN;
+  SlaterElm[(size_t)3 * ORBITALS + 1] = NAN;
+  (void)GCAttemptMove(GC_MOVE_ADD, 1, 3, 0.5, eleIdx, eleCfg, eleNum,
+                      eleProjCnt, &logIp, pfMNew, projCntNew, 0, 1,
+                      MPI_COMM_SELF);
+}
+
+static int run_death(const char *mode) {
+  init_gen_rand(60013U);
+  if (strcmp(mode, "--death-vacuum_k") == 0) {
+    death_vacuum_k();
+  } else if (strcmp(mode, "--death-general_nonfinite") == 0) {
+    death_general_nonfinite();
+  } else {
+    fprintf(stderr, "unknown death mode %s\n", mode);
+    return 2;
+  }
+  fprintf(stderr, "death mode %s returned without aborting\n", mode);
+  return 3;
+}
+
 static void cleanup_globals(void) {
   GCComponentRelease();
   FreeWorkSpaceAll();
@@ -1450,7 +2011,25 @@ int main(int argc, char **argv) {
   if (strncmp(mode, "--antiparallel-death", 20) == 0) {
     return run_antiparallel_death(mode);
   }
-  if (strcmp(mode, "--antiparallel") == 0) {
+  if (strncmp(mode, "--death-", 8) == 0) {
+    return run_death(mode);
+  }
+  if (strcmp(mode, "--multiqp") == 0) {
+    enter_multiqp_mode();
+    test_multiqp_exact_detailed_balance();
+    test_multiqp_production_detailed_balance();
+    test_multiqp_transactions();
+    test_multiqp_production_chains();
+  } else if (strcmp(mode, "--multiqp-collective") == 0) {
+    enter_multiqp_mode();
+    test_multiqp_collective();
+  } else if (strcmp(mode, "--multiqp-anti") == 0) {
+    enter_multiqp_anti_mode();
+    test_multiqp_anti_chains_and_balance();
+  } else if (strcmp(mode, "--multiqp-anti-collective") == 0) {
+    enter_multiqp_anti_mode();
+    test_multiqp_collective();
+  } else if (strcmp(mode, "--antiparallel") == 0) {
     enter_antiparallel_mode();
     test_anti_guards();
     test_anti_initialization();

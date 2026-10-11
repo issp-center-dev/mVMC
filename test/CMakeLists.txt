@@ -138,6 +138,20 @@ add_test(NAME GCSampler_Unit COMMAND gc_sampler_unit)
 add_test(NAME GCSampler_Unit_DebugRebuild COMMAND gc_sampler_unit)
 set_tests_properties(GCSampler_Unit_DebugRebuild PROPERTIES
     ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+add_test(NAME GCSampler_Unit_MultiQP COMMAND gc_sampler_unit --multiqp)
+add_test(NAME GC_AntiPair_Sampler_MultiQP
+    COMMAND gc_sampler_unit --multiqp-anti)
+add_test(NAME GCSampler_Unit_MultiQP_DebugRebuild
+    COMMAND gc_sampler_unit --multiqp)
+set_tests_properties(GCSampler_Unit_MultiQP_DebugRebuild PROPERTIES
+    ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+foreach(gc_death vacuum_k general_nonfinite)
+    add_test(NAME GCSampler_Death_${gc_death}
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+                $<TARGET_FILE:gc_sampler_unit> --death-${gc_death})
+    set_tests_properties(GCSampler_Death_${gc_death} PROPERTIES TIMEOUT 60)
+endforeach()
 if(MPI_FOUND)
     add_test(NAME GCSampler_RebuildStatus_MPI
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
@@ -145,6 +159,20 @@ if(MPI_FOUND)
                 --collective-only ${MPIEXEC_POSTFLAGS})
     set_tests_properties(GCSampler_RebuildStatus_MPI PROPERTIES
         PROCESSORS 2 TIMEOUT 30)
+    foreach(np 2 3)
+        add_test(NAME GCSampler_MultiQP_MPI${np}
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                    --multiqp-collective ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCSampler_MultiQP_MPI${np} PROPERTIES
+            PROCESSORS ${np} TIMEOUT 120)
+        add_test(NAME GC_AntiPair_Sampler_MultiQP_MPI${np}
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                    --multiqp-anti-collective ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GC_AntiPair_Sampler_MultiQP_MPI${np} PROPERTIES
+            PROCESSORS ${np} TIMEOUT 120)
+    endforeach()
 endif()
 add_test(NAME GC_AntiPair_Sampler_Unit COMMAND gc_sampler_unit --antiparallel)
 add_test(NAME GC_AntiPair_Sampler_Debug COMMAND gc_sampler_unit --antiparallel)

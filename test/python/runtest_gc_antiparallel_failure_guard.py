@@ -27,7 +27,8 @@ def executable(path, body):
 def death_guard(work):
     binary = executable(work / "death_child.py", """
 import os, sys
-print('GC anti-parallel sampler nonfinite', file=sys.stderr)
+print('Error: GC sampler met a nonfinite or invalid acceptance input '
+      '(anti-parallel mode, injected).', file=sys.stderr)
 print(os.environ['GUARD_REPORT'], file=getattr(sys, os.environ['GUARD_STREAM']))
 sys.exit(1)
 """)
