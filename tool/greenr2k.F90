@@ -98,8 +98,8 @@ SUBROUTINE read_filename()
   &                       filetail, calctype, numave, interval
   IMPLICIT NONE
   !
-  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start
-  CHARACTER(256) :: modpara, calcmod, keyname, namelist
+  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start, ii
+  CHARACTER(256) :: modpara, calcmod, keyname, namelist, outputdir, line
   !
   WRITE(*,*) 
   WRITE(*,*) "#####  Read HPhi/mVMC Input Files  #####" 
@@ -144,6 +144,7 @@ SUBROUTINE read_filename()
   !
   OPEN(fi,file = TRIM(modpara))
   !
+  outputdir = "output"
   DO
      READ(fi,*,END=20) keyname
      BACKSPACE(fi)
@@ -153,6 +154,17 @@ SUBROUTINE read_filename()
         READ(fi,*) keyname, nsite
      ELSE IF(TRIM(ADJUSTL(keyname)) == "cdatafilehead") THEN
         READ(fi,*) keyname, filehead
+     ELSE IF(TRIM(ADJUSTL(keyname)) == "outputdir") THEN
+        !
+        ! List-directed input stops at '/', so split the line by hand.
+        !
+        READ(fi,'(a)') line
+        DO ii = 1, LEN(line)
+           IF(line(ii:ii) == CHAR(9)) line(ii:ii) = " "
+        END DO
+        line = ADJUSTL(line)
+        line = ADJUSTL(line(INDEX(line, " "):))
+        outputdir = line(1:INDEX(line, " ") - 1)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "numave") THEN
         READ(fi,*) keyname, numave
      ELSE IF(TRIM(ADJUSTL(keyname)) == "lanczos_max") THEN
@@ -173,10 +185,11 @@ SUBROUTINE read_filename()
 20 CONTINUE
   WRITE(*,*) "  Read from ", TRIM(modpara)
   WRITE(*,*) "    FileHead : ", TRIM(ADJUSTL(filehead))
+  WRITE(*,*) "    OutputDir : ", TRIM(outputdir)
   WRITE(*,*) "    Number of site : ", nsite
   CLOSE(FI)
   !
-  filehead = "output/" // TRIM(ADJUSTL(filehead))
+  filehead = TRIM(outputdir) // "/" // TRIM(ADJUSTL(filehead))
   !
   ! Read from CalcMod file
   !
@@ -319,13 +332,13 @@ SUBROUTINE read_geometry()
      READ(fi,*) direct(1:3,ii)
   END DO
   WRITE(*,*) "    Direct LATTICE VECTOR :"
-  WRITE(*,'(4x3f15.10)') direct(1:3, 1:3)
+  WRITE(*,'(4x,3f15.10)') direct(1:3, 1:3)
   !
   ! Bondary phase
   !
   READ(fi,*) phase0(1:3)  
   WRITE(*,*) "    Boundary phase[degree] : "
-  WRITE(*,'(4x3f15.10)') phase0(1:3)
+  WRITE(*,'(4x,3f15.10)') phase0(1:3)
   phase0(1:3) = phase0(1:3) * ACOS(-1.0d0) / 180.0d0
   !
   ! Supercell index (a0w, a0l, a1w, a1l)
@@ -381,7 +394,7 @@ SUBROUTINE read_geometry()
   CALL dgetrf(3, 3, recipr, 3, Ipiv, ii)
   CALL dgetri(3, recipr, 3, ipiv, work, 10, ii)
   WRITE(*,*) "    Reciplocal lattice vector :"
-  WRITE(*,'(4x3f15.10)') recipr(1:3, 1:3)
+  WRITE(*,'(4x,3f15.10)') recipr(1:3, 1:3)
   !
   ! Move original R-vector to the nearest one with periodic boundary cond.
   !
