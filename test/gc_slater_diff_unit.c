@@ -622,6 +622,59 @@ static void free_antiparallel_fixture(void) {
   rebuild_matrix = refresh_slater_elements;
 }
 
+static void run_cofactor_omp_audit(void) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
+  int eleIdx[8];
+  double complex gradient[64];
+  int iteration;
+  int i;
+  if (requiredText == NULL || *requiredText == '\0') return;
+  initialize_antiparallel_fixture(4, 0, 0);
+  memset(SlaterElm, 0, 64U * sizeof(*SlaterElm));
+  SlaterElm[2U * 8U + 3U] = 1.0;
+  SlaterElm[3U * 8U + 2U] = -1.0;
+  SlaterElm[4U * 8U + 5U] = 1.0;
+  SlaterElm[5U * 8U + 4U] = -1.0;
+  SlaterElm[6U * 8U + 7U] = 1.0;
+  SlaterElm[7U * 8U + 6U] = -1.0;
+  for (i = 0; i < 8; i++) eleIdx[i] = i;
+  CHECK(GCComponentRebuild(0, 0, 8, eleIdx,
+                           GCComponentThreadCache()) == GC_MALL_OK,
+        "cofactor audit rebuild");
+  CHECK(GCQpState[0] == GC_QP_PFONLY, "cofactor audit state %s",
+        GCComponentStateName(GCQpState[0]));
+  for (iteration = 0; iteration < 64; iteration++) {
+    CHECK(GCComponentGradient(0, 0, 8, eleIdx, gradient,
+                              GCComponentThreadCache()) == GC_MALL_OK,
+          "cofactor audit gradient iteration=%d", iteration);
+    for (i = 0; i < 8; i++) {
+      int j;
+      for (j = 0; j < 8; j++) {
+        const double complex expected =
+            i == 0 && j == 1 ? 1.0 : i == 1 && j == 0 ? -1.0 : 0.0;
+        CHECK(finite_close(gradient[(size_t)i * 8U + (size_t)j], expected,
+                           1.0e-12),
+              "cofactor audit gradient[%d,%d]", i, j);
+      }
+    }
+  }
+  {
+    const int required = atoi(requiredText);
+    GCComponentOmpAudit audit;
+    GCComponentOmpAuditTotal(GC_OMP_COFACTOR, &audit);
+    CHECK(audit.teamMin == required && audit.teamMax == required,
+          "cofactor audit team min/max=%d/%d expected=%d", audit.teamMin,
+          audit.teamMax, required);
+    CHECK(audit.workers >= 2, "cofactor audit workers=%d", audit.workers);
+    CHECK(audit.workCount == 64LL * 28LL,
+          "cofactor audit work=%lld expected=%lld", audit.workCount,
+          64LL * 28LL);
+  }
+  free_antiparallel_fixture();
+#endif
+}
+
 static void check_all_derivatives(const int ncur, const int *eleIdx) {
   int parameter;
   for (parameter = 0; parameter < NSlater; parameter++) {
@@ -874,6 +927,7 @@ int main(int argc, char **argv) {
     run_antiparallel_checks();
   } else if (argc > 1 && strcmp(argv[1], "--multiqp") == 0) {
     run_multiqp_checks();
+    run_cofactor_omp_audit();
   } else {
     initialize_fixture();
     check_derivative(0, NULL, 0, 1);

@@ -11,6 +11,7 @@ version.
 #include <complex.h>
 #include <math.h>
 
+#include "include/gc_component.h"
 #include "include/gc_size.h"
 #include "include/global.h"
 #include "include/locgrn_gc.h"
@@ -98,6 +99,9 @@ void CalculateGreenFuncGC(const double w, const double complex ip,
     { StartTimer(50); }
 #pragma omp for schedule(dynamic)
     for (idx = 0; idx < NCisAjs; idx++) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+      GCComponentRecordOmpWork(GC_OMP_GREEN);
+#endif
       const int rsi = CisAjsIdx[idx][0] + CisAjsIdx[idx][1] * Nsite;
       const int rsj = CisAjsIdx[idx][2] + CisAjsIdx[idx][3] * Nsite;
       LocalCisAjs[idx] = GreenFunc1GC(
@@ -111,6 +115,9 @@ void CalculateGreenFuncGC(const double w, const double complex ip,
     }
 #pragma omp for schedule(dynamic)
     for (idx = 0; idx < NCisAjsCktAltDC; idx++) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+      GCComponentRecordOmpWork(GC_OMP_GREEN);
+#endif
       const int rsi = CisAjsCktAltDCIdx[idx][0] +
                       CisAjsCktAltDCIdx[idx][1] * Nsite;
       const int rsj = CisAjsCktAltDCIdx[idx][2] +
@@ -185,6 +192,9 @@ void CalculateGreenFuncGC(const double w, const double complex ip,
     }
 #pragma omp for schedule(dynamic)
     for (idx = 0; idx < NAnomalousG; idx++) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+      GCComponentRecordOmpWork(GC_OMP_GREEN);
+#endif
       const int type = AnomalousG[idx][0];
       const int rs1 = AnomalousG[idx][1] + AnomalousG[idx][2] * Nsite;
       const int rs2 = AnomalousG[idx][3] + AnomalousG[idx][4] * Nsite;

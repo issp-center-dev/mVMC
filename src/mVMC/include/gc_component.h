@@ -14,6 +14,21 @@ typedef int GCComponentComm;
 
 typedef struct GCComponentCache GCComponentCache;
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+enum GCComponentOmpPath {
+  GC_OMP_GREEN,
+  GC_OMP_COFACTOR,
+  GC_OMP_PATHS
+};
+
+typedef struct {
+  int teamMin;
+  int teamMax;
+  int workers;
+  long long workCount;
+} GCComponentOmpAudit;
+#endif
+
 typedef struct {
   long long rebuild;
   long long toPfonly;
@@ -48,5 +63,10 @@ int GCComponentProbe(int qpGlobal, int qpLocal, int ncur,
 int GCComponentGradient(int qpGlobal, int qpLocal, int ncur,
                         const int *eleIdx, double complex *gradient,
                         GCComponentCache *cache);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+void GCComponentRecordOmpWork(enum GCComponentOmpPath path);
+void GCComponentOmpAuditTotal(enum GCComponentOmpPath path,
+                              GCComponentOmpAudit *out);
+#endif
 
 #endif

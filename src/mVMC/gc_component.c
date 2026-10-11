@@ -10,6 +10,7 @@
 #include <omp.h>
 #else
 #define omp_get_thread_num() 0
+#define omp_get_num_threads() 1
 #endif
 
 #include "include/absolute_pfaffian.h"
@@ -43,12 +44,20 @@ struct GCComponentCache {
   double complex *minor;
   double complex *vector;
   GCComponentCounters counters;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  int teamMin[GC_OMP_PATHS];
+  int teamMax[GC_OMP_PATHS];
+  long long workCount[GC_OMP_PATHS];
+#endif
 };
 
 static GCComponentCache **gcCaches = NULL;
 static int gcCacheCount = 0;
 static int gcCapacity = 0;
 static int gcQpCapacity = 0;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+static int gcOmpAuditEnabled = 0;
+#endif
 
 const char *GCComponentStateName(const int state) {
   return state == GC_QP_INVERSE ? "INVERSE"
@@ -138,6 +147,9 @@ void GCComponentRelease(void) {
   gcCacheCount = 0;
   gcCapacity = 0;
   gcQpCapacity = 0;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  gcOmpAuditEnabled = 0;
+#endif
   free(GCQpState);
   GCQpState = NULL;
 }
@@ -152,6 +164,13 @@ int GCComponentInit(void) {
     return GC_MALL_OK;
   matrixCount = GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
   GCComponentRelease();
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  {
+    const char *audit = getenv("MVMC_GC_OMP_AUDIT");
+    gcOmpAuditEnabled =
+        audit != NULL && *audit != '\0' && strcmp(audit, "0") != 0;
+  }
+#endif
   GCQpState = (int *)GCCheckedMalloc(
       GCCheckedMulSize(sizeof(int), (size_t)NQPFull), "GCQpState");
   for (t = 0; t < NQPFull; t++) GCQpState[t] = GC_QP_INVERSE;
@@ -227,6 +246,37 @@ void GCComponentCountersTotal(GCComponentCounters *total) {
   }
 }
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+void GCComponentRecordOmpWork(const enum GCComponentOmpPath path) {
+  GCComponentCache *cache;
+  const int team = omp_get_num_threads();
+  if (!gcOmpAuditEnabled || path < 0 || path >= GC_OMP_PATHS) return;
+  cache = GCComponentThreadCache();
+  if (cache->workCount[path] == 0 || team < cache->teamMin[path])
+    cache->teamMin[path] = team;
+  if (team > cache->teamMax[path]) cache->teamMax[path] = team;
+  cache->workCount[path]++;
+}
+
+void GCComponentOmpAuditTotal(const enum GCComponentOmpPath path,
+                              GCComponentOmpAudit *out) {
+  int thread;
+  if (out == NULL) return;
+  memset(out, 0, sizeof(*out));
+  if (path < 0 || path >= GC_OMP_PATHS) return;
+  for (thread = 0; thread < gcCacheCount; thread++) {
+    const GCComponentCache *cache = gcCaches[thread];
+    if (cache->workCount[path] == 0) continue;
+    if (out->workers == 0 || cache->teamMin[path] < out->teamMin)
+      out->teamMin = cache->teamMin[path];
+    if (cache->teamMax[path] > out->teamMax)
+      out->teamMax = cache->teamMax[path];
+    out->workers++;
+    out->workCount += cache->workCount[path];
+  }
+}
+#endif
+
 void GCComponentFinalize(const GCComponentComm comm) {
   GCComponentCounters total;
   long long local[7], global[7];
@@ -255,6 +305,25 @@ void GCComponentFinalize(const GCComponentComm comm) {
            gcCacheCount, global[0], global[1], global[2], global[3],
            global[4], global[5], global[6], total.compositeZero);
   }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if (gcOmpAuditEnabled) {
+    static const char *const pathName[GC_OMP_PATHS] = {
+        "green", "cofactor"};
+    int worldRank = 0;
+    int path;
+#ifdef _mpi_use
+    MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+#endif
+    for (path = 0; path < GC_OMP_PATHS; path++) {
+      GCComponentOmpAudit audit;
+      GCComponentOmpAuditTotal((enum GCComponentOmpPath)path, &audit);
+      printf("GC OMP audit: world_rank=%d path=%s team_min=%d "
+             "team_max=%d workers=%d work=%lld\n",
+             worldRank, pathName[path], audit.teamMin, audit.teamMax,
+             audit.workers, audit.workCount);
+    }
+  }
+#endif
   GCComponentRelease();
 }
 
@@ -522,6 +591,9 @@ int GCComponentGradient(const int qpGlobal, const int qpLocal,
       int minorColumn;
       int status = GC_MALL_OK;
       double complex value = 1.0;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+      GCComponentRecordOmpWork(GC_OMP_COFACTOR);
+#endif
       while (rest >= ncur - 1 - a) {
         rest -= ncur - 1 - a;
         a++;

@@ -48,8 +48,10 @@ void StopTimer(int timer) { (void)timer; }
 #define QPS 2
 #define MAX_N 3
 #define SMALL_COUNT 36
+#define AUDIT_ANOMALOUS_ROWS 4096
 
 static int failures = 0;
+static int multiqpFixture = 0;
 static const int baseEleIdx[ACTIVE] = {0, 2, 4, 7};
 static const uint64_t intGuard = UINT64_C(0x6543cdef1234abcd);
 static const double complex complexGuard = 71.25 - 39.5 * I;
@@ -340,9 +342,13 @@ static void test_anomalous_green_exhaustive(void) {
     int kind;
     for (kind = 0; kind < 4; kind++) {
       int baseIdx[ORBITALS] = {0};
+      int baseSnapshot[ORBITALS];
       int eleCfgL[ORBITALS];
+      int cfgSnapshot[ORBITALS];
       int eleNumL[ORBITALS];
+      int numSnapshot[ORBITALS];
       int projCnt[1];
+      int projSnapshot[1];
       int rs1;
       int rs2;
       double complex ipSorted;
@@ -350,7 +356,15 @@ static void test_anomalous_green_exhaustive(void) {
       GuardedScratch guarded;
       if (ncur < 2 && kind > 0) continue;
       permute_base(bases[b], baseIdx, ncur, kind);
+      {
+        int tail;
+        for (tail = ncur; tail < ORBITALS; tail++) baseIdx[tail] = 999;
+      }
       build_state(baseIdx, ncur, eleCfgL, eleNumL, projCnt);
+      memcpy(baseSnapshot, baseIdx, sizeof(baseSnapshot));
+      memcpy(cfgSnapshot, eleCfgL, sizeof(cfgSnapshot));
+      memcpy(numSnapshot, eleNumL, sizeof(numSnapshot));
+      memcpy(projSnapshot, projCnt, sizeof(projSnapshot));
       CHECK(CalculateMAllGC_fcmp(ncur, baseIdx, 0, NQPFull) == GC_MALL_OK,
             "rebuild failed ncur=%d kind=%d", ncur, kind);
       ipPermuted = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
@@ -401,6 +415,12 @@ static void test_anomalous_green_exhaustive(void) {
                     eleNumL[rs2] == (eleCfgL[rs2] >= 0),
                 "eleNum not restored ncur=%d rs=(%d,%d)",
                 ncur, rs1, rs2);
+          CHECK(memcmp(baseIdx, baseSnapshot, sizeof(baseSnapshot)) == 0 &&
+                    memcmp(eleCfgL, cfgSnapshot, sizeof(cfgSnapshot)) == 0 &&
+                    memcmp(eleNumL, numSnapshot, sizeof(numSnapshot)) == 0 &&
+                    memcmp(projCnt, projSnapshot, sizeof(projSnapshot)) == 0,
+                "anomalous kernel changed state ncur=%d kind=%d rs=(%d,%d)",
+                ncur, kind, rs1, rs2);
         }
       }
       check_scratch_guards(&guarded);
@@ -541,6 +561,7 @@ static void assert_state_unchanged(const int *eleIdx, const int *eleCfg,
                                    const int *eleNum, const int *projCnt,
                                    const double complex *invSnapshot,
                                    const double complex *pfSnapshot,
+                                   const int *stateSnapshot,
                                    const char *label) {
   int expectedCfg[ORBITALS];
   int expectedNum[ORBITALS] = {0};
@@ -572,6 +593,8 @@ static void assert_state_unchanged(const int *eleIdx, const int *eleCfg,
         "%s changed shared InvM", label);
   CHECK(memcmp(PfM, pfSnapshot, QPS * sizeof(*PfM)) == 0,
         "%s changed shared PfM", label);
+  CHECK(memcmp(GCQpState, stateSnapshot, QPS * sizeof(*GCQpState)) == 0,
+        "%s changed component states", label);
 }
 
 static void initialize_state(int *eleIdx, int *eleCfg, int *eleNum,
@@ -598,6 +621,7 @@ static void test_green_kernels(void) {
   int projCnt[1];
   double complex invSnapshot[QPS * ORBITALS * ORBITALS];
   double complex pfSnapshot[QPS];
+  int stateSnapshot[QPS];
   double complex baseOverlap;
   int i;
   int j;
@@ -607,9 +631,17 @@ static void test_green_kernels(void) {
   initialize_state(eleIdx, eleCfg, eleNum, projCnt);
   CHECK(CalculateMAllGC_fcmp(ACTIVE, eleIdx, 0, QPS) == GC_MALL_OK,
         "baseline rebuild failed");
+  if (multiqpFixture) {
+    CHECK(GCQpState[0] == GC_QP_INVERSE &&
+              GCQpState[1] == GC_QP_PFONLY,
+          "multiqp base states %s/%s",
+          GCComponentStateName(GCQpState[0]),
+          GCComponentStateName(GCQpState[1]));
+  }
   baseOverlap = CalculateIP_fcmp(PfM, 0, QPS, MPI_COMM_SELF);
   memcpy(invSnapshot, InvM, sizeof(invSnapshot));
   memcpy(pfSnapshot, PfM, sizeof(pfSnapshot));
+  memcpy(stateSnapshot, GCQpState, sizeof(stateSnapshot));
 
   for (i = 0; i < ORBITALS; i++) {
     for (j = 0; j < ORBITALS; j++) {
@@ -625,7 +657,7 @@ static void test_green_kernels(void) {
             i, j, creal(actual), cimag(actual), creal(expected),
             cimag(expected));
       assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                             pfSnapshot, "Green1");
+                             pfSnapshot, stateSnapshot, "Green1");
     }
   }
 
@@ -645,7 +677,7 @@ static void test_green_kernels(void) {
                 i, j, k, l, creal(actual), cimag(actual), creal(expected),
                 cimag(expected));
           assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                                 pfSnapshot, "Green2");
+                                 pfSnapshot, stateSnapshot, "Green2");
         }
       }
     }
@@ -676,7 +708,7 @@ static void test_green_kernels(void) {
             "GreenN n=%d got=(%.17g,%.17g) expected=(%.17g,%.17g)", n,
             creal(actual), cimag(actual), creal(expected), cimag(expected));
       assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                             pfSnapshot, "GreenN");
+                             pfSnapshot, stateSnapshot, "GreenN");
     }
   }
   check_scratch_guards(&guarded);
@@ -690,6 +722,7 @@ static void test_hamiltonian_and_measurement(void) {
   int projCnt[1];
   double complex invSnapshot[QPS * ORBITALS * ORBITALS];
   double complex pfSnapshot[QPS];
+  int stateSnapshot[QPS];
   double complex baseOverlap;
   double complex baseSortedOverlap;
   double complex expectedEnergy;
@@ -739,12 +772,14 @@ static void test_hamiltonian_and_measurement(void) {
       {1, 0, 0, 0}, {3, 0, 2, 0}, {1, 1, 0, 1}};
   int *nbodyGFactorRows[3] = {
       nbodyGFactors[0], nbodyGFactors[1], nbodyGFactors[2]};
+  int anomalousAuditStorage[AUDIT_ANOMALOUS_ROWS][5];
+  int *anomalousAuditRows[AUDIT_ANOMALOUS_ROWS];
   double complex local[2] = {0.0, 0.0};
   double complex phys1[2] = {0.0, 0.0};
   double complex phys2[1] = {0.0};
   double complex physDC[1] = {0.0};
   double complex physN[1] = {0.0};
-  double complex physAnomalous[4] = {0.0, 0.0, 0.0, 0.0};
+  double complex physAnomalous[AUDIT_ANOMALOUS_ROWS] = {0.0};
   const double measurementWeight = 0.37;
   int create1[1];
   int annihilate1[1];
@@ -757,6 +792,9 @@ static void test_hamiltonian_and_measurement(void) {
   double complex expectedDC;
   double complex expectedN;
   int anomalousIdx;
+  const char *auditText = getenv("MVMC_GC_OMP_AUDIT");
+  const int auditMeasurement =
+      multiqpFixture && auditText != NULL && strcmp(auditText, "1") == 0;
 
   initialize_state(eleIdx, eleCfg, eleNum, projCnt);
   CHECK(CalculateMAllGC_fcmp(ACTIVE, eleIdx, 0, QPS) == GC_MALL_OK,
@@ -765,6 +803,7 @@ static void test_hamiltonian_and_measurement(void) {
   baseSortedOverlap = overlap_for_sorted_state(baseEleIdx, ACTIVE);
   memcpy(invSnapshot, InvM, sizeof(invSnapshot));
   memcpy(pfSnapshot, PfM, sizeof(pfSnapshot));
+  memcpy(stateSnapshot, GCQpState, sizeof(stateSnapshot));
 
   NCoulombIntra = 2;
   CoulombIntra = coulombIntraStorage;
@@ -916,7 +955,7 @@ static void test_hamiltonian_and_measurement(void) {
   anomalousParameter[1] = -anomalousParameter[1];
   CHECK(CalculateSzGC(eleNum) == 0.0, "CalculateSzGC normalization");
   assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                         pfSnapshot, "Hamiltonian");
+                         pfSnapshot, stateSnapshot, "Hamiltonian");
 
   NCisAjs = 2;
   CisAjsIdx = cisRows;
@@ -935,8 +974,15 @@ static void test_hamiltonian_and_measurement(void) {
   PhysCisAjsCktAlt = phys2;
   PhysCisAjsCktAltDC = physDC;
   PhysNBodyG = physN;
-  NAnomalousG = 4;
-  AnomalousG = anomalousRows;
+  NAnomalousG = auditMeasurement ? AUDIT_ANOMALOUS_ROWS : 4;
+  for (anomalousIdx = 0; anomalousIdx < NAnomalousG; anomalousIdx++) {
+    const int source = anomalousIdx % 4;
+    memcpy(anomalousAuditStorage[anomalousIdx],
+           anomalousRowsStorage[source],
+           sizeof(anomalousAuditStorage[anomalousIdx]));
+    anomalousAuditRows[anomalousIdx] = anomalousAuditStorage[anomalousIdx];
+  }
+  AnomalousG = auditMeasurement ? anomalousAuditRows : anomalousRows;
   PhysAnomalousG = physAnomalous;
   create1[0] = 1;
   annihilate1[0] = 0;
@@ -987,7 +1033,7 @@ static void test_hamiltonian_and_measurement(void) {
             cabs(physAnomalous[2]) > 1.0e-6,
         "AnomalousG create/remove fixture is vacuous");
   assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                         pfSnapshot, "measurement");
+                         pfSnapshot, stateSnapshot, "measurement");
 }
 
 /* ------------------------------------------------------------------------
@@ -1340,6 +1386,15 @@ static void initialize_fixture(void) {
   CHECK(GCComponentInit() == GC_MALL_OK, "component init");
 }
 
+static void isolate_orbital_zero_in_qp1(void) {
+  double complex *slater = SlaterElm + (size_t)ORBITALS * ORBITALS;
+  int orbital;
+  for (orbital = 0; orbital < ORBITALS; orbital++) {
+    slater[orbital] = 0.0;
+    slater[(size_t)orbital * ORBITALS] = 0.0;
+  }
+}
+
 static void free_fixture(void) {
   GCComponentRelease();
   FreeWorkSpaceAll();
@@ -1353,10 +1408,11 @@ static void free_fixture(void) {
 int main(int argc, char **argv) {
   const int antiparallel =
       argc == 2 && strcmp(argv[1], "--antiparallel") == 0;
+  const int multiqp = argc == 2 && strcmp(argv[1], "--multiqp") == 0;
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
 #endif
-  if (argc > 1 && !antiparallel) {
+  if (argc > 1 && !antiparallel && !multiqp) {
     fprintf(stderr, "unknown option %s\n", argv[1]);
     return EXIT_FAILURE;
   }
@@ -1364,11 +1420,30 @@ int main(int argc, char **argv) {
   if (antiparallel) {
     test_antiparallel_green();
   } else {
+    multiqpFixture = multiqp;
+    if (multiqp) isolate_orbital_zero_in_qp1();
     test_green_kernels();
     test_anomalous_green_exhaustive();
     test_anomalous_omp_stress();
     test_hamiltonian_and_measurement();
   }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  {
+    const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
+    const char *auditText = getenv("MVMC_GC_OMP_AUDIT");
+    if (requiredText != NULL && *requiredText != '\0' &&
+        auditText != NULL && strcmp(auditText, "1") == 0) {
+      const int required = atoi(requiredText);
+      GCComponentOmpAudit audit;
+      GCComponentOmpAuditTotal(GC_OMP_GREEN, &audit);
+      CHECK(audit.teamMin == required && audit.teamMax == required,
+            "green audit team min/max=%d/%d expected=%d", audit.teamMin,
+            audit.teamMax, required);
+      CHECK(audit.workers >= 2, "green audit workers=%d", audit.workers);
+      CHECK(audit.workCount > 0, "green audit recorded no work");
+    }
+  }
+#endif
   free_fixture();
 #ifdef _mpi_use
   MPI_Finalize();

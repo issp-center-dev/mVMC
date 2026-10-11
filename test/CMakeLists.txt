@@ -198,6 +198,8 @@ endif()
 
 add_executable(gc_slater_diff_unit gc_slater_diff_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(gc_slater_diff_unit PRIVATE
+    MVMC_ENABLE_FAULT_INJECTION)
 target_include_directories(gc_slater_diff_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_slater_diff_unit pfapack ltl2inv
@@ -210,11 +212,18 @@ if(MPI_FOUND)
 endif()
 add_test(NAME GCSlaterDiff_Unit COMMAND gc_slater_diff_unit)
 add_test(NAME GCSlaterDiff_Unit_MultiQP COMMAND gc_slater_diff_unit --multiqp)
+add_test(NAME GCSlaterDiff_Unit_MultiQP_OMP4
+    COMMAND gc_slater_diff_unit --multiqp)
+set_tests_properties(GCSlaterDiff_Unit_MultiQP_OMP4 PROPERTIES
+    ENVIRONMENT
+      "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4;MVMC_GC_OMP_AUDIT=1"
+    TIMEOUT 120)
 add_test(NAME GC_AntiPair_SlaterDiff_Unit
     COMMAND gc_slater_diff_unit --antiparallel)
 
 add_executable(gc_green_unit gc_green_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(gc_green_unit PRIVATE MVMC_ENABLE_FAULT_INJECTION)
 target_include_directories(gc_green_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_green_unit pfapack ltl2inv
@@ -226,6 +235,11 @@ if(MPI_FOUND)
     target_link_libraries(gc_green_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCGreen_Unit COMMAND gc_green_unit)
+add_test(NAME GCGreen_Unit_MultiQP COMMAND gc_green_unit --multiqp)
+add_test(NAME GCGreen_Unit_MultiQP_OMP4 COMMAND gc_green_unit --multiqp)
+set_tests_properties(GCGreen_Unit_MultiQP_OMP4 PROPERTIES
+    ENVIRONMENT
+      "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4;MVMC_GC_OMP_AUDIT=1")
 add_test(NAME GC_AntiPair_Green_Unit COMMAND gc_green_unit --antiparallel)
 set_tests_properties(GC_AntiPair_Green_Unit PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)

@@ -282,7 +282,6 @@ double complex GreenFuncPairRemoveGC(
   int p0;
   int p1;
   int qpidx;
-  (void)eleIdx;
   if (rsi == rsj) return 0.0;
   if (eleNum[rsi] == 0 || eleNum[rsj] == 0) return 0.0;
   if (ncur < 2) return 0.0;
@@ -304,10 +303,22 @@ double complex GreenFuncPairRemoveGC(
   eleNum[rsj] = 1;
 
   for (qpidx = 0; qpidx < NQPFull; qpidx++) {
-    const double complex *invM = InvM + (size_t)qpidx * invStride;
-    scratch->pfMNew[qpidx] =
-        sign * invM[(size_t)p0 * (size_t)NsizeMax + (size_t)p1] *
-        PfM[qpidx];
+    if (GCQpState[qpidx] == GC_QP_PFONLY) {
+      double complex value;
+      if (GCComponentValueExcluding(qpidx, ncur, eleIdx, p0, p1,
+                                    GCComponentThreadCache(),
+                                    &value) != GC_MALL_OK) {
+        scratch->pfMNew[qpidx] = NAN + NAN * I;
+        continue;
+      }
+      scratch->pfMNew[qpidx] =
+          sign * ((((p0 + p1) % 2) == 0) ? -1.0 : 1.0) * value;
+    } else {
+      const double complex *invM = InvM + (size_t)qpidx * invStride;
+      scratch->pfMNew[qpidx] =
+          sign * invM[(size_t)p0 * (size_t)NsizeMax + (size_t)p1] *
+          PfM[qpidx];
+    }
   }
   candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
   return conj(projectionRatio * candidateOverlap / ip);
