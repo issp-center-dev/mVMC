@@ -58,6 +58,19 @@ target_include_directories(gc_config_unit PRIVATE
 target_link_libraries(gc_config_unit m)
 add_test(NAME GCConfig_Unit COMMAND gc_config_unit)
 
+add_executable(gc_antiparallel_unit gc_antiparallel_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_antiparallel.c)
+target_include_directories(gc_antiparallel_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_antiparallel_unit m)
+add_test(NAME GC_AntiPair_Proposal_Unit COMMAND gc_antiparallel_unit)
+
+add_executable(gc_antiparallel_input_unit gc_antiparallel_input_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_antiparallel_input.c)
+target_include_directories(gc_antiparallel_input_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+add_test(NAME GC_AntiPair_Input_Unit COMMAND gc_antiparallel_input_unit)
+
 add_executable(gc_parameter_unit gc_parameter_unit.c
     ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
 target_include_directories(gc_parameter_unit PRIVATE
@@ -130,6 +143,27 @@ if(MPI_FOUND)
     set_tests_properties(GCSampler_RebuildStatus_MPI PROPERTIES
         PROCESSORS 2 TIMEOUT 30)
 endif()
+add_test(NAME GC_AntiPair_Sampler_Unit COMMAND gc_sampler_unit --antiparallel)
+add_test(NAME GC_AntiPair_Sampler_Debug COMMAND gc_sampler_unit --antiparallel)
+set_tests_properties(GC_AntiPair_Sampler_Debug PROPERTIES
+    ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+foreach(gc_anti_death init nonfinite oldlog burn)
+    add_test(NAME GC_AntiPair_Sampler_Death_${gc_anti_death}
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+                $<TARGET_FILE:gc_sampler_unit>
+                --antiparallel-death-${gc_anti_death})
+    set_tests_properties(GC_AntiPair_Sampler_Death_${gc_anti_death}
+        PROPERTIES TIMEOUT 60)
+endforeach()
+if(MPI_FOUND)
+    add_test(NAME GC_AntiPair_Sampler_MPI
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                --antiparallel-collective ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(GC_AntiPair_Sampler_MPI PROPERTIES
+        PROCESSORS 2 TIMEOUT 60)
+endif()
 
 add_executable(gc_slater_diff_unit gc_slater_diff_unit.c)
 target_include_directories(gc_slater_diff_unit PRIVATE
@@ -143,6 +177,8 @@ if(MPI_FOUND)
     target_link_libraries(gc_slater_diff_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCSlaterDiff_Unit COMMAND gc_slater_diff_unit)
+add_test(NAME GC_AntiPair_SlaterDiff_Unit
+    COMMAND gc_slater_diff_unit --antiparallel)
 
 add_executable(gc_green_unit gc_green_unit.c)
 target_include_directories(gc_green_unit PRIVATE
@@ -156,6 +192,9 @@ if(MPI_FOUND)
     target_link_libraries(gc_green_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCGreen_Unit COMMAND gc_green_unit)
+add_test(NAME GC_AntiPair_Green_Unit COMMAND gc_green_unit --antiparallel)
+set_tests_properties(GC_AntiPair_Green_Unit PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)
 add_test(NAME GCGreen_Unit_OMP4 COMMAND gc_green_unit)
 set_tests_properties(GCGreen_Unit_OMP4 PROPERTIES
     ENVIRONMENT

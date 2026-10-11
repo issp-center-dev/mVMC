@@ -19,6 +19,7 @@ extern int omp_get_max_threads(void);
 #include "../src/mVMC/matrix_gc.c"
 #include "../src/mVMC/slater_gc.c"
 #include "../src/mVMC/slater_fsz.c"
+#include "../src/mVMC/slater.c"
 
 #define ORBITALS 4
 #define PARAMETERS 6
@@ -46,6 +47,15 @@ static int *qpOptTransSgnRows[1] = {qpOptTransSgnStorage};
       failures++;                                                               \
     }                                                                           \
   } while (0)
+
+static int finite_close(const double complex actual,
+                        const double complex expected,
+                        const double tolerance) {
+  return isfinite(creal(actual)) && isfinite(cimag(actual)) &&
+         isfinite(creal(expected)) && isfinite(cimag(expected)) &&
+         isfinite(tolerance) && tolerance >= 0.0 &&
+         cabs(actual - expected) <= tolerance;
+}
 
 static void refresh_slater_elements(void);
 /* Matrix builder used by rebuild_overlap(): the test's own expansion or the
@@ -92,22 +102,29 @@ static double complex finite_difference(const int ncur, const int *eleIdx,
 static void check_derivative(const int ncur, const int *eleIdx,
                              const int realParameter,
                              const int imaginaryParameter) {
-  double complex derivative[2 * PARAMETERS];
+  double complex *derivative =
+      calloc((size_t)(2 * NSlater), sizeof(*derivative));
   double complex baseOverlap = rebuild_overlap(ncur, eleIdx);
   double complex expectedReal;
   double complex expectedImag;
-  memset(derivative, 0x5a, sizeof(derivative));
+  if (derivative == NULL) {
+    CHECK(0, "derivative allocation failed");
+    return;
+  }
+  memset(derivative, 0x5a, (size_t)(2 * NSlater) * sizeof(*derivative));
   SlaterElmDiffGC_fcmp(derivative, baseOverlap, eleIdx, ncur);
   expectedReal = finite_difference(ncur, eleIdx, realParameter, 0, 1.0e-5,
                                    baseOverlap);
   expectedImag = finite_difference(ncur, eleIdx, imaginaryParameter, 1, 5.0e-6,
                                    baseOverlap);
-  CHECK(cabs(derivative[2 * realParameter] - expectedReal) < 2.0e-9,
+  CHECK(finite_close(derivative[2 * realParameter], expectedReal,
+                     2.0e-9 * (1.0 + cabs(expectedReal))),
         "real FD ncur=%d parameter=%d got=(%.17g,%.17g) expected=(%.17g,%.17g)",
         ncur, realParameter, creal(derivative[2 * realParameter]),
         cimag(derivative[2 * realParameter]), creal(expectedReal),
         cimag(expectedReal));
-  CHECK(cabs(derivative[2 * imaginaryParameter + 1] - expectedImag) < 2.0e-9,
+  CHECK(finite_close(derivative[2 * imaginaryParameter + 1], expectedImag,
+                     2.0e-9 * (1.0 + cabs(expectedImag))),
         "imag FD ncur=%d parameter=%d got=(%.17g,%.17g) expected=(%.17g,%.17g)",
         ncur, imaginaryParameter,
         creal(derivative[2 * imaginaryParameter + 1]),
@@ -119,12 +136,15 @@ static void check_derivative(const int ncur, const int *eleIdx,
       CHECK(derivative[i] == 0.0, "vacuum derivative[%d] is nonzero", i);
     }
   }
+  free(derivative);
 }
 
 static void initialize_fixture(void) {
   int row;
   int parameter = 0;
   NThread = omp_get_max_threads();
+  /* The general-pair fixture must not rely on the global's zero default. */
+  iFlgOrbitalGeneral = 1;
   Nsite = 2;
   Nsite2 = ORBITALS;
   NsizeMax = ORBITALS;
@@ -325,6 +345,387 @@ static void run_signed_checks(void) {
   rebuild_matrix = refresh_slater_elements;
 }
 
+/* ------------------------------------------------------------------------
+ * Anti-parallel (OrbitalAntiParallel) GC fixtures.  OrbitalIdx/OrbitalSgn are
+ * Nsite x Nsite and SlaterElm is built by the production
+ * UpdateSlaterElm_fcmp() with NSPGaussLeg=1.  Sizes are allocated here and
+ * never shared with the static OrbitalGeneral fixture above.
+ * ---------------------------------------------------------------------- */
+static int **antiIdxRows = NULL;
+static int **antiSgnRows = NULL;
+static int *antiQPTrans = NULL;
+static int *antiQPTransSgn = NULL;
+static int *antiQPOpt = NULL;
+static int *antiQPOptSgn = NULL;
+static int *antiQPTransRows[1];
+static int *antiQPTransSgnRows[1];
+static int *antiQPOptRows[1];
+static int *antiQPOptSgnRows[1];
+
+static int **allocate_rows(const int count) {
+  int **rows = calloc((size_t)count, sizeof(*rows));
+  int row;
+  if (rows == NULL) return NULL;
+  for (row = 0; row < count; row++) {
+    rows[row] = calloc((size_t)count, sizeof(**rows));
+    if (rows[row] == NULL) return NULL;
+  }
+  return rows;
+}
+
+static void free_rows(int **rows, const int count) {
+  int row;
+  if (rows == NULL) return;
+  for (row = 0; row < count; row++) free(rows[row]);
+  free(rows);
+}
+
+static int anti_wraps(const int i, const int j, const int nsite) {
+  return (i == 0 && j == nsite - 1) || (i == nsite - 1 && j == 0);
+}
+
+static void set_antiparallel_translation(const int permuted) {
+  int site;
+  for (site = 0; site < Nsite; site++) {
+    antiQPTrans[site] = permuted ? (site + 1) % Nsite : site;
+    antiQPTransSgn[site] = (permuted && site == Nsite - 1) ? -1 : 1;
+    antiQPOpt[site] = site;
+    antiQPOptSgn[site] = 1;
+  }
+}
+
+/* shared: parameters indexed by (i+j)%2 for two sites and by (4i+j)%5 for
+ * four sites (two classes would make the 4x4 F singular), with the (1,1)
+ * entry flipped so a class enters with both signs.  ap: wrapping pairs
+ * (0,L-1) and (L-1,0) carry the sign -1. */
+static int anti_shared_index(const int i, const int j, const int nsite) {
+  return nsite == 2 ? (i + j) % 2 : (nsite * i + j) % 5;
+}
+
+static void initialize_antiparallel_fixture(const int nsite, const int shared,
+                                            const int ap) {
+  int i;
+  int j;
+  int parameter;
+  NThread = omp_get_max_threads();
+  iFlgOrbitalGeneral = 0;
+  Nsite = nsite;
+  Nsite2 = 2 * nsite;
+  NsizeMax = Nsite2;
+  NQPFull = 1;
+  NQPFix = 1;
+  NMPTrans = 1;
+  NSPGaussLeg = 1;
+  NQPOptTrans = 1;
+  NSlater = shared ? (nsite == 2 ? 2 : 5) : nsite * nsite;
+  LapackLWork = 1024;
+  antiIdxRows = allocate_rows(nsite);
+  antiSgnRows = allocate_rows(nsite);
+  antiQPTrans = calloc((size_t)nsite, sizeof(int));
+  antiQPTransSgn = calloc((size_t)nsite, sizeof(int));
+  antiQPOpt = calloc((size_t)nsite, sizeof(int));
+  antiQPOptSgn = calloc((size_t)nsite, sizeof(int));
+  Slater = malloc((size_t)NSlater * sizeof(*Slater));
+  SlaterElm = malloc((size_t)Nsite2 * (size_t)Nsite2 * sizeof(*SlaterElm));
+  InvM = malloc((size_t)NsizeMax * (size_t)NsizeMax * sizeof(*InvM));
+  PfM = malloc(sizeof(*PfM));
+  QPFullWeight = malloc(sizeof(*QPFullWeight));
+  SPGLCosSin = malloc(sizeof(*SPGLCosSin));
+  SPGLCosCos = malloc(sizeof(*SPGLCosCos));
+  SPGLSinSin = malloc(sizeof(*SPGLSinSin));
+  if (antiIdxRows == NULL || antiSgnRows == NULL || antiQPTrans == NULL ||
+      antiQPTransSgn == NULL || antiQPOpt == NULL || antiQPOptSgn == NULL ||
+      Slater == NULL || SlaterElm == NULL || InvM == NULL || PfM == NULL ||
+      QPFullWeight == NULL || SPGLCosSin == NULL || SPGLCosCos == NULL ||
+      SPGLSinSin == NULL) {
+    fprintf(stderr, "anti-parallel fixture allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  for (i = 0; i < nsite; i++) {
+    for (j = 0; j < nsite; j++) {
+      int sign = (ap && anti_wraps(i, j, nsite)) ? -1 : 1;
+      if (shared && i == 1 && j == 1) sign = -sign;
+      antiIdxRows[i][j] =
+          shared ? anti_shared_index(i, j, nsite) : i * nsite + j;
+      antiSgnRows[i][j] = sign;
+    }
+  }
+  for (parameter = 0; parameter < NSlater; parameter++) {
+    Slater[parameter] = (0.25 + 0.4 * cos(0.7 * parameter + 0.3)) +
+                        0.3 * sin(1.3 * parameter + 0.2) * I;
+  }
+  OrbitalIdx = antiIdxRows;
+  OrbitalSgn = antiSgnRows;
+  antiQPTransRows[0] = antiQPTrans;
+  antiQPTransSgnRows[0] = antiQPTransSgn;
+  antiQPOptRows[0] = antiQPOpt;
+  antiQPOptSgnRows[0] = antiQPOptSgn;
+  QPTrans = antiQPTransRows;
+  QPTransSgn = antiQPTransSgnRows;
+  QPOptTrans = antiQPOptRows;
+  QPOptTransSgn = antiQPOptSgnRows;
+  set_antiparallel_translation(0);
+  QPFullWeight[0] = 0.73 - 0.21 * I;
+  SPGLCosSin[0] = 0.0;
+  SPGLCosCos[0] = 1.0;
+  SPGLSinSin[0] = 0.0;
+  rebuild_matrix = UpdateSlaterElm_fcmp;
+  initializeWorkSpaceAll();
+}
+
+static void free_antiparallel_fixture(void) {
+  FreeWorkSpaceAll();
+  free(SPGLSinSin);
+  free(SPGLCosCos);
+  free(SPGLCosSin);
+  free(QPFullWeight);
+  free(PfM);
+  free(InvM);
+  free(SlaterElm);
+  free(Slater);
+  free(antiQPOptSgn);
+  free(antiQPOpt);
+  free(antiQPTransSgn);
+  free(antiQPTrans);
+  free_rows(antiSgnRows, Nsite);
+  free_rows(antiIdxRows, Nsite);
+  antiIdxRows = antiSgnRows = NULL;
+  SPGLCosSin = SPGLCosCos = SPGLSinSin = NULL;
+  rebuild_matrix = refresh_slater_elements;
+}
+
+static void check_all_derivatives(const int ncur, const int *eleIdx) {
+  int parameter;
+  for (parameter = 0; parameter < NSlater; parameter++) {
+    check_derivative(ncur, eleIdx, parameter, parameter);
+  }
+}
+
+/* d/df_shared must equal sum_ij sgn_ij d/dF_ij of the one-parameter-per-pair
+ * expansion that represents the identical matrix. */
+static void check_shared_sum(const int ncur, const int *eleIdx) {
+  const int nsite = Nsite;
+  const int sharedCount = NSlater;
+  double complex *sharedValues = malloc((size_t)sharedCount * sizeof(*sharedValues));
+  double complex *sharedDerivative =
+      calloc((size_t)(2 * sharedCount), sizeof(*sharedDerivative));
+  double complex *expandedDerivative =
+      calloc((size_t)(2 * nsite * nsite), sizeof(*expandedDerivative));
+  double complex *expandedSlater =
+      malloc((size_t)nsite * (size_t)nsite * sizeof(*expandedSlater));
+  int **sharedIdx = OrbitalIdx;
+  int **sharedSgn = OrbitalSgn;
+  int **expandedIdx = allocate_rows(nsite);
+  int **expandedSgn = allocate_rows(nsite);
+  double complex *sharedSlater = Slater;
+  double complex sharedPf;
+  double complex expandedPf;
+  int i;
+  int j;
+  int parameter;
+  if (sharedValues == NULL || sharedDerivative == NULL ||
+      expandedDerivative == NULL || expandedSlater == NULL ||
+      expandedIdx == NULL || expandedSgn == NULL) {
+    fprintf(stderr, "shared-sum allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  memcpy(sharedValues, Slater, (size_t)sharedCount * sizeof(*sharedValues));
+  sharedPf = rebuild_overlap(ncur, eleIdx);
+  SlaterElmDiffGC_fcmp(sharedDerivative, sharedPf, eleIdx, ncur);
+  for (i = 0; i < nsite; i++) {
+    for (j = 0; j < nsite; j++) {
+      expandedIdx[i][j] = i * nsite + j;
+      expandedSgn[i][j] = 1;
+      expandedSlater[i * nsite + j] =
+          (double)sharedSgn[i][j] * sharedValues[sharedIdx[i][j]];
+    }
+  }
+  OrbitalIdx = expandedIdx;
+  OrbitalSgn = expandedSgn;
+  Slater = expandedSlater;
+  NSlater = nsite * nsite;
+  expandedPf = rebuild_overlap(ncur, eleIdx);
+  SlaterElmDiffGC_fcmp(expandedDerivative, expandedPf, eleIdx, ncur);
+  CHECK(finite_close(expandedPf, sharedPf, 2.0e-12 * (1.0 + cabs(sharedPf))),
+        "shared/expanded overlap differ ncur=%d", ncur);
+  for (parameter = 0; parameter < sharedCount; parameter++) {
+    int component;
+    for (component = 0; component < 2; component++) {
+      double complex sum = 0.0;
+      for (i = 0; i < nsite; i++) {
+        for (j = 0; j < nsite; j++) {
+          if (sharedIdx[i][j] == parameter) {
+            sum += (double)sharedSgn[i][j] *
+                   expandedDerivative[2 * (i * nsite + j) + component];
+          }
+        }
+      }
+      CHECK(finite_close(sharedDerivative[2 * parameter + component], sum,
+                         2.0e-12 * (1.0 + cabs(sum))),
+            "shared parameter %d component %d is not the sum of its "
+            "contributions (ncur=%d)",
+            parameter, component, ncur);
+    }
+  }
+  OrbitalIdx = sharedIdx;
+  OrbitalSgn = sharedSgn;
+  Slater = sharedSlater;
+  NSlater = sharedCount;
+  free_rows(expandedSgn, nsite);
+  free_rows(expandedIdx, nsite);
+  free(expandedSlater);
+  free(expandedDerivative);
+  free(sharedDerivative);
+  free(sharedValues);
+}
+
+/* The same state written as OrbitalGeneral: upper-triangle parameter F/2 on
+ * up-down pairs and 0 on same-spin pairs, built by UpdateSlaterElm_fsz().
+ * Pfaffians agree, and d/dp = 2 d/dF by the chain rule (identity
+ * translation, one parameter per anti-parallel pair). */
+static void check_general_equivalence(const int ncur, const int *eleIdx) {
+  const int nsite = Nsite;
+  const int orbitals = 2 * nsite;
+  const int generalCount = nsite * (2 * nsite - 1);
+  int **antiIdx = OrbitalIdx;
+  int **antiSgn = OrbitalSgn;
+  double complex *antiSlater = Slater;
+  const int antiCount = NSlater;
+  int **generalIdx = allocate_rows(orbitals);
+  int **generalSgn = allocate_rows(orbitals);
+  double complex *generalSlater =
+      calloc((size_t)generalCount, sizeof(*generalSlater));
+  double complex *antiDerivative =
+      calloc((size_t)(2 * antiCount), sizeof(*antiDerivative));
+  double complex *generalDerivative =
+      calloc((size_t)(2 * generalCount), sizeof(*generalDerivative));
+  int pairIndex[2 * 8][2 * 8];
+  double complex antiPf;
+  double complex generalPf;
+  int first;
+  int parameter = 0;
+  if (generalIdx == NULL || generalSgn == NULL || generalSlater == NULL ||
+      antiDerivative == NULL || generalDerivative == NULL || orbitals > 16) {
+    fprintf(stderr, "general-equivalence allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  antiPf = rebuild_overlap(ncur, eleIdx);
+  SlaterElmDiffGC_fcmp(antiDerivative, antiPf, eleIdx, ncur);
+  for (first = 0; first < orbitals; first++) {
+    int second;
+    for (second = first + 1; second < orbitals; second++) {
+      generalIdx[first][second] = parameter;
+      generalIdx[second][first] = parameter;
+      generalSgn[first][second] = 1;
+      generalSgn[second][first] = -1;
+      pairIndex[first][second] = parameter;
+      if (first < nsite && second >= nsite) {
+        const int i = first;
+        const int j = second - nsite;
+        generalSlater[parameter] =
+            0.5 * (double)antiSgn[i][j] * antiSlater[antiIdx[i][j]];
+      }
+      parameter++;
+    }
+  }
+  OrbitalIdx = generalIdx;
+  OrbitalSgn = generalSgn;
+  Slater = generalSlater;
+  NSlater = generalCount;
+  iFlgOrbitalGeneral = 1;
+  rebuild_matrix = UpdateSlaterElm_fsz;
+  generalPf = rebuild_overlap(ncur, eleIdx);
+  SlaterElmDiffGC_fcmp(generalDerivative, generalPf, eleIdx, ncur);
+  CHECK(finite_close(generalPf, antiPf, 2.0e-12 * (1.0 + cabs(antiPf))),
+        "General F/2 overlap differs ncur=%d anti=(%.17g,%.17g) "
+        "general=(%.17g,%.17g)",
+        ncur, creal(antiPf), cimag(antiPf), creal(generalPf),
+        cimag(generalPf));
+  {
+    int i;
+    for (i = 0; i < nsite; i++) {
+      int j;
+      for (j = 0; j < nsite; j++) {
+        const int k = antiIdx[i][j];
+        const int p = pairIndex[i][j + nsite];
+        int component;
+        for (component = 0; component < 2; component++) {
+          const double complex expected =
+              0.5 * (double)antiSgn[i][j] *
+              generalDerivative[2 * p + component];
+          CHECK(finite_close(antiDerivative[2 * k + component], expected,
+                             2.0e-10 * (1.0 + cabs(expected))),
+                "General chain rule pair (%d,%d) component %d ncur=%d", i, j,
+                component, ncur);
+        }
+      }
+    }
+  }
+  OrbitalIdx = antiIdx;
+  OrbitalSgn = antiSgn;
+  Slater = antiSlater;
+  NSlater = antiCount;
+  iFlgOrbitalGeneral = 0;
+  rebuild_matrix = UpdateSlaterElm_fcmp;
+  free(generalDerivative);
+  free(antiDerivative);
+  free(generalSlater);
+  free_rows(generalSgn, orbitals);
+  free_rows(generalIdx, orbitals);
+}
+
+static void run_antiparallel_checks(void) {
+  /* fused index = site + spin*Nsite; electron order is arbitrary. */
+  const int occupied2[] = {3, 0};
+  const int occupied4[] = {2, 0, 3, 1};
+  const int four2[] = {5, 2};
+  const int four4[] = {6, 1, 0, 5};
+  const int four6[] = {7, 3, 4, 0, 6, 2};
+  const int four8[] = {4, 1, 7, 2, 0, 5, 3, 6};
+  int shared;
+  int ap;
+
+  for (shared = 0; shared < 2; shared++) {
+    for (ap = 0; ap < 2; ap++) {
+      initialize_antiparallel_fixture(2, shared, ap);
+      check_all_derivatives(0, NULL);
+      check_all_derivatives(2, occupied2);
+      check_all_derivatives(4, occupied4);
+      if (shared) {
+        check_shared_sum(2, occupied2);
+        check_shared_sum(4, occupied4);
+      } else {
+        check_general_equivalence(2, occupied2);
+        check_general_equivalence(4, occupied4);
+      }
+      set_antiparallel_translation(1);
+      check_all_derivatives(2, occupied2);
+      check_all_derivatives(4, occupied4);
+      free_antiparallel_fixture();
+
+      initialize_antiparallel_fixture(4, shared, ap);
+      check_all_derivatives(0, NULL);
+      check_all_derivatives(2, four2);
+      check_all_derivatives(4, four4);
+      check_all_derivatives(6, four6);
+      check_all_derivatives(8, four8);
+      if (shared) {
+        check_shared_sum(4, four4);
+        check_shared_sum(8, four8);
+      } else {
+        check_general_equivalence(2, four2);
+        check_general_equivalence(4, four4);
+        check_general_equivalence(6, four6);
+        check_general_equivalence(8, four8);
+      }
+      set_antiparallel_translation(1);
+      check_all_derivatives(4, four4);
+      check_all_derivatives(8, four8);
+      free_antiparallel_fixture();
+    }
+  }
+}
+
 static void free_fixture(void) {
   FreeWorkSpaceAll();
   free(QPFullWeight);
@@ -339,16 +740,17 @@ int main(int argc, char **argv) {
   const int eleIdx4[4] = {0, 1, 2, 3};
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
-#else
-  (void)argc;
-  (void)argv;
 #endif
-  initialize_fixture();
-  check_derivative(0, NULL, 0, 1);
-  check_derivative(2, eleIdx2, 0, 0);
-  check_derivative(4, eleIdx4, 1, 4);
-  run_signed_checks();
-  free_fixture();
+  if (argc > 1 && strcmp(argv[1], "--antiparallel") == 0) {
+    run_antiparallel_checks();
+  } else {
+    initialize_fixture();
+    check_derivative(0, NULL, 0, 1);
+    check_derivative(2, eleIdx2, 0, 0);
+    check_derivative(4, eleIdx4, 1, 4);
+    run_signed_checks();
+    free_fixture();
+  }
 #ifdef _mpi_use
   MPI_Finalize();
 #endif

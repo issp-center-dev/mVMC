@@ -12,7 +12,9 @@ version.
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
+#include "include/gc_antiparallel.h"
 #include "include/global.h"
 #include "include/locgrn_gc.h"
 #include "include/matrix_gc.h"
@@ -35,6 +37,17 @@ static void clearStoredOSampleRangeGC(const int sampleStart,
   for (i = 0; i < count; i++) SROptO_Store[offset + i] = 0.0;
 }
 
+/* Anti-parallel samples were saved from nonzero amplitudes in the Sz=0
+ * sector, so a sample that cannot be evaluated is an error rather than a
+ * silently skipped contribution. */
+static void GCAntiMeasurementAbort(const char *what, const int rank,
+                                   const int sample, MPI_Comm comm) {
+  fprintf(stderr,
+          "Error: GC anti-parallel measurement rank:%d sample:%d %s.\n",
+          rank, sample, what);
+  MPI_Abort(comm, EXIT_FAILURE);
+}
+
 void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
   int sampleStart;
   int sampleEnd;
@@ -43,6 +56,7 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
   int size;
   double w = 0.0;
   double complex e = 0.0;
+  const int anti = GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral);
   (void)comm_parent;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
@@ -66,9 +80,16 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
     double sz;
     int info;
 
+    if (anti && !GCAntiValidateConfig(eleIdx, eleCfg, eleNum, Nsite, ncur)) {
+      GCAntiMeasurementAbort("is not a consistent Sz=0 configuration", rank,
+                             sample, comm);
+    }
     StartTimer(40);
     info = CalculateMAllGC_fcmp(ncur, eleIdx, 0, NQPFull);
     StopTimer(40);
+    if (info != GC_MALL_OK && anti) {
+      GCAntiMeasurementAbort("failed the matrix rebuild", rank, sample, comm);
+    }
     if (info != GC_MALL_OK) {
       fprintf(stderr,
               "warning: VMCMainCalGC rank:%d sample:%d status:%d "
@@ -77,12 +98,21 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
       continue;
     }
     ip = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
+    if (anti && (!isfinite(creal(ip)) || !isfinite(cimag(ip)) ||
+                 cabs(ip) == 0.0)) {
+      GCAntiMeasurementAbort("has a zero or nonfinite amplitude", rank,
+                             sample, comm);
+    }
     x = LogProjVal(eleProjCnt);
     if (reweight == 1) {
       w = exp(2.0 * (log(cabs(ip)) + x) -
               logSqPfFullSlater[sample]);
     } else {
       w = 1.0;
+    }
+    if (!isfinite(w) && anti) {
+      GCAntiMeasurementAbort("has a nonfinite reweight factor", rank, sample,
+                             comm);
     }
     if (!isfinite(w)) {
       fprintf(stderr, "warning: VMCMainCalGC rank:%d sample:%d w=%e\n",
@@ -95,6 +125,10 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
                                eleProjCnt);
     sz = CalculateSzGC(eleNum);
     StopTimer(41);
+    if ((!isfinite(creal(e)) || !isfinite(cimag(e))) && anti) {
+      GCAntiMeasurementAbort("has a nonfinite local energy", rank, sample,
+                             comm);
+    }
     if (!isfinite(creal(e)) || !isfinite(cimag(e))) {
       fprintf(stderr,
               "warning: VMCMainCalGC rank:%d sample:%d e=(%e,%e)\n",

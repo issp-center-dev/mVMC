@@ -52,6 +52,12 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_D
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_death.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_failure_guard.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/gc_antiparallel_failure.py
+    DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_hphi_anomalous.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1291,7 +1297,8 @@ add_gc_invalid_test(GC_Invalid_BackFlow "does not support BackFlow" gc_backflow)
 add_gc_invalid_test(GC_Invalid_FlagRange "must be 0 or 1" NGrandCanonical=2)
 add_gc_invalid_test(GC_Invalid_HintOver "NGCInitNelec must satisfy" NGCInitNelec=999)
 add_gc_invalid_test(GC_Invalid_HintNegative "NGCInitNelec must satisfy" NGCInitNelec=-2)
-add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires OrbitalGeneral" gc_noorbgen)
+# OrbitalAntiParallel alone selects anti-parallel GC; 2Sz=-1 is rejected.
+add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires 2Sz=0" gc_noorbgen)
 add_gc_invalid_test(GC_Invalid_RealParameter "requires complex variational parameters" gc_realparam)
 add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires NSPGaussLeg=1, NQPOptTrans<=1" NSPGaussLeg=2)
 add_gc_invalid_test(GC_Invalid_MPTrans "requires NMPTrans=+1 or -1 (got 2)" NMPTrans=2)
@@ -1461,6 +1468,121 @@ add_test(NAME GC_AP_Oracle_SelfTest
     COMMAND ${PYTHON_EXECUTABLE} grandcanonical_ap_oracle.py)
 set_tests_properties(GC_AP_Oracle_SelfTest PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+
+# Grand-canonical anti-parallel pairing (OrbitalAntiParallel only, 2Sz=0).
+add_test(NAME GC_AntiPair_Oracle
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_antiparallel_oracle.py)
+set_tests_properties(GC_AntiPair_Oracle PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1")
+function(add_gc_antiparallel_test name)
+    add_test(NAME ${name} COMMAND ${PYTHON_EXECUTABLE}
+        runtest_gc_antiparallel.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1"
+        TIMEOUT 600)
+endfunction()
+set(GC_ANTIPAIR_INPUT_MUTATIONS header_missing header_norb_zero
+    header_norb_negative header_norb_int_overflow header_norb_llong_overflow
+    header_norb_decimal header_complex_type pair_missing pair_surplus
+    pair_duplicate pair_site_range pair_negative_site pair_param_range
+    pair_two_columns pair_five_columns pair_long_line pair_blank_middle
+    pair_comment sign_missing sign_zero sign_two sign_decimal
+    sign_int_overflow opt_missing opt_surplus opt_duplicate opt_negative_index
+    opt_upper_index opt_flag_minus1 opt_flag_two opt_decimal opt_three_columns
+    opt_blank_middle orbital_file_missing sz_transfer_flip sz_interall_net2
+    sz_nbody_net1 sz_anomalous_same_spin zero_nonconserving_rows alias_orbital
+    start_vacuum start_full start_default start_odd ncond_ignored
+    twosz_missing twosz_minus1 twosz_two alias_duplicate all_real gaussleg2
+    mptrans2 opttrans backflow rbm locspin lanczos srcg exupdate updateweight)
+list(APPEND GC_ANTIPAIR_INPUT_MUTATIONS
+    twosz_fractional twosz_negative_fractional twosz_garbage twosz_suffix
+    twosz_decimal twosz_nan twosz_inf twosz_minus_inf
+    twosz_int_overflow twosz_int_underflow twosz_llong_overflow twosz_extra_column
+    twosz_before_gc twosz_alias_fractional twosz_invalid_then_zero
+    twosz_plus_zero_before_gc twosz_long_token twosz_long_token_before_gc
+    twosz_long_tail twosz_long_tail_before_gc twosz_long_mode_override
+    twosz_final_no_newline
+    header_width_254 header_width_255 header_width_256 header_width_300
+    header_width_4094 header_too_long)
+string(REPLACE ";" "," GC_ANTIPAIR_INPUT_MUTATION_CSV
+    "${GC_ANTIPAIR_INPUT_MUTATIONS}")
+add_gc_antiparallel_test(GC_AntiPair_Input_Inventory inventory
+    --mutation ${GC_ANTIPAIR_INPUT_MUTATION_CSV})
+add_gc_antiparallel_test(GC_AntiPair_ComparatorGuard comparator_guard)
+foreach(guard death audit)
+    add_test(NAME GC_AntiPair_FailureGuard_${guard}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_antiparallel_failure_guard.py ${guard})
+    set_tests_properties(GC_AntiPair_FailureGuard_${guard} PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1"
+        TIMEOUT 180)
+endforeach()
+add_gc_antiparallel_test(GC_AntiPair_Sample sample
+    --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/AntiParallel)
+add_gc_antiparallel_test(GC_AntiPair_Mutation_ap_sign_flip_apbc
+    mutation --boundary apbc --mutation ap_sign_flip)
+foreach(boundary pbc apbc)
+    add_gc_antiparallel_test(GC_AntiPair_Hamiltonian_${boundary}
+        hamiltonian --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_Audit_${boundary}
+        audit --boundary ${boundary} --np 1)
+    set_tests_properties(GC_AntiPair_Audit_${boundary} PROPERTIES TIMEOUT 60)
+    if(MPI_FOUND)
+        add_gc_antiparallel_test(GC_AntiPair_Audit_${boundary}_mpi
+            audit --boundary ${boundary} --np 2)
+        set_tests_properties(GC_AntiPair_Audit_${boundary}_mpi PROPERTIES
+            TIMEOUT 60 PROCESSORS 2)
+    endif()
+    add_gc_antiparallel_test(GC_AntiPair_Physical_${boundary}
+        physical --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_SR_${boundary}
+        sr --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_Optimization_${boundary}
+        optimization --boundary ${boundary})
+    foreach(mode 0 1)
+        add_gc_antiparallel_test(GC_AntiPair_Replay_${boundary}_m${mode}
+            replay --boundary ${boundary} --mode ${mode})
+        set_tests_properties(GC_AntiPair_Replay_${boundary}_m${mode}
+            PROPERTIES TIMEOUT 180)
+        foreach(store 0 1)
+            add_gc_antiparallel_test(
+                GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}
+                smoke --boundary ${boundary} --np 1 --nsplit 1
+                --mode ${mode} --store ${store})
+            set_tests_properties(GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}
+                PROPERTIES TIMEOUT 180)
+            if(MPI_FOUND)
+                foreach(split 1 2)
+                    set(name
+                        GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}_s${split}_mpi)
+                    add_gc_antiparallel_test(${name} smoke
+                        --boundary ${boundary} --np 2 --nsplit ${split}
+                        --mode ${mode} --store ${store})
+                    set_tests_properties(${name} PROPERTIES
+                        TIMEOUT 180 PROCESSORS 2)
+                endforeach()
+            endif()
+        endforeach()
+    endforeach()
+    foreach(mutation general general_full_f anomalous_sign
+            pairhop_duplicate_reverse transfer_missing_hc exchange_double_hc)
+        add_gc_antiparallel_test(GC_AntiPair_Mutation_${mutation}_${boundary}
+            mutation --boundary ${boundary} --mutation ${mutation})
+    endforeach()
+    foreach(mutation ${GC_ANTIPAIR_INPUT_MUTATIONS})
+        add_gc_antiparallel_test(GC_AntiPair_Input_${mutation}_${boundary}
+            input --boundary ${boundary} --np 1 --mutation ${mutation})
+        set_tests_properties(GC_AntiPair_Input_${mutation}_${boundary}
+            PROPERTIES TIMEOUT 60)
+        if(MPI_FOUND)
+            add_gc_antiparallel_test(
+                GC_AntiPair_Input_${mutation}_${boundary}_mpi
+                input --boundary ${boundary} --np 2 --mutation ${mutation})
+            set_tests_properties(GC_AntiPair_Input_${mutation}_${boundary}_mpi
+                PROPERTIES TIMEOUT 60 PROCESSORS 2)
+        endif()
+    endforeach()
+endforeach()
+
 function(add_gc_ap_test test_name case_name)
     add_test(NAME ${test_name}
         COMMAND ${PYTHON_EXECUTABLE} runtest_gc_ap.py ${case_name})

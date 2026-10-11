@@ -52,7 +52,7 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
       const int ri = rsi % Nsite;
       const int si = rsi / Nsite;
       const int ori = xqpOpt[ri];
-      const int tri = xqp[ori] + si * Nsite;
+      const int ti = xqp[ori];
       const int sgni = xqpSgn[ori] * xqpOptSgn[ri];
       int msj;
       for (msj = 0; msj < ncur; msj++) {
@@ -60,14 +60,28 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
         const int rj = rsj % Nsite;
         const int sj = rsj / Nsite;
         const int orj = xqpOpt[rj];
-        const int trj = xqp[orj] + sj * Nsite;
+        const int tj = xqp[orj];
         const int sgnj = xqpSgn[orj] * xqpOptSgn[rj];
-        const int orbitalIndex = OrbitalIdx[tri][trj];
         /* matrix_gc stores (-SlaterElm)^-1, while the legacy fixed-Sz
          * derivative receives the opposite inverse convention. */
-        qpBuffer[orbitalIndex] +=
-            inverse[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
-            pfaffian * (double)(sgni * sgnj * OrbitalSgn[tri][trj]);
+        if (iFlgOrbitalGeneral == 0) {
+          /* Anti-parallel table F_ij (Nsite x Nsite) enters A_{i up,j down}
+           * once; the 1/2 of d ln Pf = Tr/2 cancels the (i,j)/(j,i) pair,
+           * so only the up-down ordering contributes. */
+          if (si == 0 && sj == 1) {
+            const int orbitalIndex = OrbitalIdx[ti][tj];
+            qpBuffer[orbitalIndex] +=
+                inverse[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
+                pfaffian * (double)(sgni * sgnj * OrbitalSgn[ti][tj]);
+          }
+        } else {
+          const int tri = ti + si * Nsite;
+          const int trj = tj + sj * Nsite;
+          const int orbitalIndex = OrbitalIdx[tri][trj];
+          qpBuffer[orbitalIndex] +=
+              inverse[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
+              pfaffian * (double)(sgni * sgnj * OrbitalSgn[tri][trj]);
+        }
       }
     }
   }

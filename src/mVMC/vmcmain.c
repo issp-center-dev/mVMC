@@ -92,15 +92,27 @@ static void DumpGCInputAudit(void) {
     fprintf(stderr, "Error: failed to open MVMC_GC_INPUT_AUDIT '%s'.\n", path);
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  for (i = 0; i < Nsite2; i++) {
-    for (j = i + 1; j < Nsite2; j++) {
-      if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    /* Anti-parallel tables are Nsite x Nsite (up site i, down site j). */
+    for (i = 0; i < Nsite; i++) {
+      for (j = 0; j < Nsite; j++) {
+        if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+      }
+    }
+  } else {
+    for (i = 0; i < Nsite2; i++) {
+      for (j = i + 1; j < Nsite2; j++) {
+        if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+      }
     }
   }
   for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
     for (i = 0; i < Nsite; i++) {
       if (QPTransSgn[mpidx][i] < 0) negativeQPTransSignCount++;
     }
+  }
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    fprintf(fp, "orbital_mode antiparallel\n");
   }
   fprintf(fp, "ap_flag %d\n", APFlag);
   fprintf(fp, "nsite %d\n", Nsite);
@@ -109,10 +121,20 @@ static void DumpGCInputAudit(void) {
   fprintf(fp, "negative_orbital_input_sign_count %d\n",
           negativeOrbitalInputSignCount);
   fprintf(fp, "negative_qptrans_sign_count %d\n", negativeQPTransSignCount);
-  for (i = 0; i < Nsite2; i++) {
-    for (j = i + 1; j < Nsite2; j++) {
-      fprintf(fp, "ORBITAL %d %d %d %d\n", i, j, OrbitalIdx[i][j],
-              OrbitalSgn[i][j]);
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    /* Spin-orbital numbering: up site i is i, down site j is j+Nsite. */
+    for (i = 0; i < Nsite; i++) {
+      for (j = 0; j < Nsite; j++) {
+        fprintf(fp, "ORBITAL %d %d %d %d\n", i, j + Nsite, OrbitalIdx[i][j],
+                OrbitalSgn[i][j]);
+      }
+    }
+  } else {
+    for (i = 0; i < Nsite2; i++) {
+      for (j = i + 1; j < Nsite2; j++) {
+        fprintf(fp, "ORBITAL %d %d %d %d\n", i, j, OrbitalIdx[i][j],
+                OrbitalSgn[i][j]);
+      }
     }
   }
   for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
