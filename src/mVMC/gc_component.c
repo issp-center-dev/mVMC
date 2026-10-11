@@ -400,4 +400,79 @@ int GCComponentValueExcluding(const int qpGlobal, const int ncur,
   return GCComponentValue(qpGlobal, ncur - 2, cache->idx, cache, pf);
 }
 
+static double GCComponentProbeEntry(GCComponentCache *cache,
+                                    const int probe, const int i) {
+  if (probe == 0) return 1.0;
+  if (probe == 1) return (i % 2 == 0) ? 1.0 : -1.0;
+  cache->probeSeed = cache->probeSeed * 1664525u + 1013904223u;
+  return ((cache->probeSeed >> 16) & 1u) ? 1.0 : -1.0;
+}
+
+int GCComponentProbe(const int qpGlobal, const int qpLocal,
+                     const int ncur, const int *eleIdx,
+                     GCComponentCache *cache) {
+  const size_t slaterStride =
+      GCCheckedMulSize((size_t)Nsite2, (size_t)Nsite2);
+  const size_t invStride =
+      GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
+  const double tolerance =
+      GC_COMPONENT_RESIDUAL_FACTOR * DBL_EPSILON * (double)ncur;
+  const double complex *slater;
+  const double complex *invM;
+  double complex *v;
+  double complex *u;
+  double xScale = 0.0;
+  double invScale = 0.0;
+  double residual = 0.0;
+  double denominator;
+  int probe, i, j;
+  if (cache == NULL ||
+      !GCComponentArgumentsValid(qpGlobal, ncur, eleIdx) ||
+      qpLocal < 0 || qpLocal >= NQPFull)
+    return 0;
+  if (ncur == 0) return 1;
+  slater = SlaterElm + (size_t)qpGlobal * slaterStride;
+  invM = InvM + (size_t)qpLocal * invStride;
+  v = cache->vector;
+  u = cache->vector + NsizeMax;
+  for (i = 0; i < ncur; i++) {
+    for (j = 0; j < ncur; j++) {
+      const double xv =
+          cabs(slater[(size_t)eleIdx[i] * (size_t)Nsite2 +
+                      (size_t)eleIdx[j]]);
+      const double iv =
+          cabs(invM[(size_t)i * (size_t)NsizeMax + (size_t)j]);
+      if (!isfinite(xv) || !isfinite(iv)) return 0;
+      if (xv > xScale) xScale = xv;
+      if (iv > invScale) invScale = iv;
+    }
+  }
+  denominator = (double)ncur * xScale * invScale;
+  if (!isfinite(denominator)) return 0;
+  if (denominator < 1.0) denominator = 1.0;
+  for (probe = 0; probe < 3; probe++) {
+    for (i = 0; i < ncur; i++)
+      v[i] = GCComponentProbeEntry(cache, probe, i);
+    for (i = 0; i < ncur; i++) {
+      double complex sum = 0.0;
+      for (j = 0; j < ncur; j++)
+        sum += invM[(size_t)i * (size_t)NsizeMax + (size_t)j] * v[j];
+      if (!isfinite(creal(sum)) || !isfinite(cimag(sum))) return 0;
+      u[i] = sum;
+    }
+    for (i = 0; i < ncur; i++) {
+      double complex sum = 0.0;
+      double diff;
+      for (j = 0; j < ncur; j++)
+        sum -= slater[(size_t)eleIdx[i] * (size_t)Nsite2 +
+                      (size_t)eleIdx[j]] * u[j];
+      diff = cabs(sum - v[i]);
+      if (!isfinite(diff)) return 0;
+      if (diff > residual) residual = diff;
+    }
+  }
+  residual /= denominator;
+  return isfinite(residual) && residual <= tolerance;
+}
+
 #endif
