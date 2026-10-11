@@ -13,6 +13,7 @@ version.
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "include/gc_antiparallel.h"
 #include "include/global.h"
@@ -37,16 +38,35 @@ static void clearStoredOSampleRangeGC(const int sampleStart,
   for (i = 0; i < count; i++) SROptO_Store[offset + i] = 0.0;
 }
 
-/* Anti-parallel samples were saved from nonzero amplitudes in the Sz=0
- * sector, so a sample that cannot be evaluated is an error rather than a
- * silently skipped contribution. */
-static void GCAntiMeasurementAbort(const char *what, const int rank,
-                                   const int sample, MPI_Comm comm) {
-  fprintf(stderr,
-          "Error: GC anti-parallel measurement rank:%d sample:%d %s.\n",
-          rank, sample, what);
+static void GCMeasurementAbort(const char *what, const int rank,
+                               const int sample, MPI_Comm comm) {
+  fprintf(stderr, "Error: GC measurement rank:%d sample:%d %s.\n", rank,
+          sample, what);
   MPI_Abort(comm, EXIT_FAILURE);
 }
+
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+static int GCMeasureFaultActive(const char *kind, const int sample,
+                                const int ncur) {
+  const char *spec = getenv("MVMC_GC_FAULT_MEASURE");
+  char name[32];
+  int target = -1;
+  int targetRank = -1;
+  int worldRank = 0;
+  if (spec == NULL || *spec == '\0') return 0;
+  if (sscanf(spec, "%31[a-z_]:%d:rank=%d", name, &target, &targetRank) < 2)
+    return 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  if (strcmp(name, kind) != 0 || target != sample ||
+      (targetRank >= 0 && targetRank != worldRank))
+    return 0;
+  fprintf(stderr,
+          "GC fault injected: kind=%s world_rank=%d sample=%d ncur=%d\n",
+          kind, worldRank, sample, ncur);
+  fflush(stderr);
+  return 1;
+}
+#endif
 
 void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
   int sampleStart;
@@ -79,29 +99,40 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
     double x;
     double sz;
     int info;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    const int injectRebuild =
+        GCMeasureFaultActive("rebuild_nonfinite", sample, ncur);
+#endif
 
     if (anti && !GCAntiValidateConfig(eleIdx, eleCfg, eleNum, Nsite, ncur)) {
-      GCAntiMeasurementAbort("is not a consistent Sz=0 configuration", rank,
-                             sample, comm);
+      GCMeasurementAbort("is not a consistent Sz=0 configuration", rank,
+                         sample, comm);
     }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if (injectRebuild && ncur >= 2) {
+      SlaterElm[(size_t)eleIdx[0] * (size_t)Nsite2 +
+                (size_t)eleIdx[1]] = NAN;
+      SlaterElm[(size_t)eleIdx[1] * (size_t)Nsite2 +
+                (size_t)eleIdx[0]] = NAN;
+    }
+#endif
     StartTimer(40);
     info = CalculateMAllGC_fcmp(ncur, eleIdx, 0, NQPFull);
     StopTimer(40);
-    if (info != GC_MALL_OK && anti) {
-      GCAntiMeasurementAbort("failed the matrix rebuild", rank, sample, comm);
-    }
     if (info != GC_MALL_OK) {
-      fprintf(stderr,
-              "warning: VMCMainCalGC rank:%d sample:%d status:%d "
-              "(CalculateMAllGC_fcmp)\n",
-              rank, sample, info);
-      continue;
+      GCMeasurementAbort("failed the matrix rebuild", rank, sample, comm);
     }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if (injectRebuild && ncur < 2) PfM[0] = NAN;
+    if (GCMeasureFaultActive("zero_ip", sample, ncur)) {
+      int qp;
+      for (qp = 0; qp < NQPFull; qp++) PfM[qp] = 0.0;
+    }
+#endif
     ip = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
-    if (anti && (!isfinite(creal(ip)) || !isfinite(cimag(ip)) ||
-                 cabs(ip) == 0.0)) {
-      GCAntiMeasurementAbort("has a zero or nonfinite amplitude", rank,
-                             sample, comm);
+    if (!isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
+      GCMeasurementAbort("has a zero or nonfinite amplitude", rank, sample,
+                         comm);
     }
     x = LogProjVal(eleProjCnt);
     if (reweight == 1) {
@@ -110,14 +141,9 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
     } else {
       w = 1.0;
     }
-    if (!isfinite(w) && anti) {
-      GCAntiMeasurementAbort("has a nonfinite reweight factor", rank, sample,
-                             comm);
-    }
     if (!isfinite(w)) {
-      fprintf(stderr, "warning: VMCMainCalGC rank:%d sample:%d w=%e\n",
-              rank, sample, w);
-      continue;
+      GCMeasurementAbort("has a nonfinite reweight factor", rank, sample,
+                         comm);
     }
 
     StartTimer(41);
@@ -125,15 +151,9 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
                                eleProjCnt);
     sz = CalculateSzGC(eleNum);
     StopTimer(41);
-    if ((!isfinite(creal(e)) || !isfinite(cimag(e))) && anti) {
-      GCAntiMeasurementAbort("has a nonfinite local energy", rank, sample,
-                             comm);
-    }
     if (!isfinite(creal(e)) || !isfinite(cimag(e))) {
-      fprintf(stderr,
-              "warning: VMCMainCalGC rank:%d sample:%d e=(%e,%e)\n",
-              rank, sample, creal(e), cimag(e));
-      continue;
+      GCMeasurementAbort("has a nonfinite local energy", rank, sample,
+                         comm);
     }
 
     Wc += w;

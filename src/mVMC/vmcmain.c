@@ -624,6 +624,11 @@ int main(int argc, char* argv[])
   StartTimer(12);
   if(rank0==0) fprintf(stdout,"Start: Set memories.\n");
   SetMemory();
+  if (FlagGrandCanonical != 0 && GCComponentInit() != GC_MALL_OK) {
+    if (rank0 == 0)
+      fprintf(stderr, "Error: GC component initialization failed.\n");
+    MPI_Abort(comm0, EXIT_FAILURE);
+  }
   if(rank0==0) fprintf(stdout,"End  : Set memories.\n");
   StopTimer(12);
 
@@ -714,6 +719,7 @@ int main(int argc, char* argv[])
   if(rank0==0) CloseFile(rank0);
 
   if(rank0==0) fprintf(stdout,"Start: Free Memory.\n");
+  if (FlagGrandCanonical != 0) GCComponentFinalize(comm0);
   FreeMemory();
   FreeMemoryDef();
   if(rank0==0) fprintf(stdout,"End: Free Memory.\n");

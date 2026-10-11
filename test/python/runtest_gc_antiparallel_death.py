@@ -4,13 +4,21 @@ import sys
 from gc_antiparallel_failure import reject_signal_reports, require_expected_failure
 
 EXPECTED = {
-    '--antiparallel-death-init': ['makeInitialSampleGC exceeded 100 attempts',
-                                  'anti-parallel', 'Ncur=2'],
-    '--antiparallel-death-nonfinite': ['GC anti-parallel sampler',
-                                       'nonfinite'],
-    '--antiparallel-death-oldlog': ['GC anti-parallel sampler', 'nonfinite'],
+    '--antiparallel-death-init': ['zero projected amplitude',
+                                  'anti-parallel mode', 'Ncur=2'],
+    '--antiparallel-death-nonfinite': ['GC sampler met a nonfinite',
+                                       'anti-parallel mode'],
+    '--antiparallel-death-oldlog': ['GC sampler met a nonfinite',
+                                    'anti-parallel mode'],
     '--antiparallel-death-burn': ['GC anti-parallel', 'restored',
                                   'Sz=0'],
+    '--death-vacuum_k': ['zero projected amplitude', 'after 1 attempt',
+                         'general mode', 'Ncur=0'],
+    '--death-general_nonfinite': ['GC sampler met a nonfinite',
+                                  'general mode'],
+    '--death-cache_uninitialized': ['component cache is not initialized'],
+    '--death-rebuild_zero': ['zero projected amplitude',
+                             'after periodic rebuild'],
 }
 
 binary, mode = sys.argv[1:]

@@ -10,6 +10,7 @@ version.
 
 #include <complex.h>
 
+#include "include/gc_component.h"
 #include "include/gc_size.h"
 #include "include/global.h"
 #include "include/slater.h"
@@ -26,13 +27,20 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
       GCCheckedSizeToInt(bufferCount, "GC Slater derivative workspace");
   const size_t inverseStride =
       GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
+  const int inverseWorkCount =
+      GCCheckedSizeToInt(inverseStride, "GC gradient matrix");
+  const int totalWorkCount = GCCheckedSizeToInt(
+      GCCheckedAddSize(bufferCount, inverseStride),
+      "GC Slater derivative workspace total");
   const double complex invIP = 1.0 / ip;
   double complex *buffer;
+  double complex *gradient;
   int orbital;
   int qpidx;
 
-  RequestWorkSpaceComplex(bufferWorkCount);
+  RequestWorkSpaceComplex(totalWorkCount);
   buffer = GetWorkSpaceComplex(bufferWorkCount);
+  gradient = GetWorkSpaceComplex(inverseWorkCount);
   for (orbital = 0; orbital < bufferWorkCount; orbital++) buffer[orbital] = 0.0;
 
   for (qpidx = 0; qpidx < NQPFull; qpidx++) {
@@ -42,10 +50,17 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
     const int *xqpOptSgn = QPOptTransSgn[optidx];
     const int *xqp = QPTrans[mpidx];
     const int *xqpSgn = QPTransSgn[mpidx];
-    const double complex pfaffian = PfM[qpidx];
-    const double complex *inverse = InvM + (size_t)qpidx * inverseStride;
     double complex *qpBuffer = buffer + (size_t)qpidx * (size_t)NSlater;
     int msi;
+
+    /* The measurement path owns every projection component locally, so its
+     * global and local qp indices coincide here. */
+    if (GCComponentGradient(qpidx, qpidx, ncur, eleIdx, gradient,
+                            GCComponentThreadCache()) != GC_MALL_OK) {
+      fprintf(stderr, "Error: GC Slater derivative failed at qp=%d.\n",
+              qpidx);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
 
     for (msi = 0; msi < ncur; msi++) {
       const int rsi = eleIdx[msi];
@@ -71,16 +86,16 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
           if (si == 0 && sj == 1) {
             const int orbitalIndex = OrbitalIdx[ti][tj];
             qpBuffer[orbitalIndex] +=
-                inverse[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
-                pfaffian * (double)(sgni * sgnj * OrbitalSgn[ti][tj]);
+                gradient[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
+                (double)(sgni * sgnj * OrbitalSgn[ti][tj]);
           }
         } else {
           const int tri = ti + si * Nsite;
           const int trj = tj + sj * Nsite;
           const int orbitalIndex = OrbitalIdx[tri][trj];
           qpBuffer[orbitalIndex] +=
-              inverse[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
-              pfaffian * (double)(sgni * sgnj * OrbitalSgn[tri][trj]);
+              gradient[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
+              (double)(sgni * sgnj * OrbitalSgn[tri][trj]);
         }
       }
     }

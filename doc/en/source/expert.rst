@@ -608,6 +608,25 @@ Keywords and parameters
    OptTrans, UpdateWeight, local spins, and SR-CG are not supported in this
    first phase.
 
+   Each quantum-projection component is kept either with its inverse matrix or,
+   when its Pfaffian is zero or the factorization is classified singular or
+   near-singular by the scale-aware tests of the absolute Pfaffian backend, as a
+   Pfaffian-only component whose candidate amplitudes and parameter derivatives
+   are evaluated directly (full Pfaffian and cofactor expansion). Such components
+   are not errors; the run stops only on nonfinite values, invalid arguments,
+   factorization or workspace failures, and builds compiled with fast-math
+   (for example, ``-ffast-math`` or ``-Ofast`` without ``-fno-fast-math``).
+   When CMake identifies the C compiler as GNU or Clang, the ``vmc.out``
+   target adds ``-fno-fast-math``; other toolchains require an equivalent
+   strict floating-point option. At the end of a run one line
+   ``GC component stats: ...`` reports how often each path was used. A
+   measurement sample that cannot be evaluated now stops every rank instead
+   of being skipped, and an initial configuration whose projected amplitude
+   is zero is reported with a request to raise ``NGCInitNelec`` or to check
+   the ``TransSym`` weights. Acceptance is decided in the log domain for both
+   pairing forms, so a finite but large amplitude ratio is accepted rather
+   than rejected by an overflowing weight.
+
    ``NMPTrans=-1`` selects anti-periodic boundary conditions (APBC). Only
    the first ``TransSym`` pattern is used; momentum projection over several
    translations is not performed. ``NMPTrans=-1`` does not modify the

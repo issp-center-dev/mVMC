@@ -48,7 +48,13 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINAR
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_gc_failure_validation.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+add_test(NAME GC_FailureValidator
+    COMMAND ${PYTHON_EXECUTABLE} test_gc_failure_validation.py)
+set_tests_properties(GC_FailureValidator PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/gc_component_stats.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1639,6 +1645,52 @@ add_test(NAME GC_VacuumStorage_Positive_mpi
     "initial GC particle number is 0" allow_success NGCInitNelec=0)
 set_tests_properties(GC_VacuumStorage_Positive_mpi PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+
+add_test(NAME GC_MeasureFault_Disabled
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "Finish calculation." allow_success NSplitSize=1
+    "work_tag:measure_fault_disabled")
+set_tests_properties(GC_MeasureFault_Disabled PROPERTIES TIMEOUT 60
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+
+foreach(gc_fault rebuild_nonfinite zero_ip)
+    if(gc_fault STREQUAL "rebuild_nonfinite")
+        set(gc_fault_reason rebuild_fault_reason)
+    else()
+        set(gc_fault_reason "expect:has a zero or nonfinite amplitude")
+    endif()
+    foreach(gc_fault_mode general anti)
+        if(gc_fault_mode STREQUAL "anti")
+            set(gc_fault_extra gc_noorbgen 2Sz=0)
+        else()
+            set(gc_fault_extra "")
+        endif()
+        add_test(NAME GC_MeasureFault_${gc_fault}_${gc_fault_mode}
+            COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
+            gc_invalid/base "Error: GC measurement rank:0 sample:0"
+            ${gc_fault_extra} NSplitSize=1 ${gc_fault_reason}
+            "expect:GC fault injected: kind=${gc_fault} world_rank=0 sample=0"
+            "work_tag:measure_${gc_fault}_${gc_fault_mode}_serial")
+        set_tests_properties(
+            GC_MeasureFault_${gc_fault}_${gc_fault_mode} PROPERTIES
+            TIMEOUT 60
+            ENVIRONMENT
+              "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_GC_FAULT_MEASURE=${gc_fault}:0")
+        if(MPI_FOUND)
+            add_test(NAME GC_MeasureFault_${gc_fault}_${gc_fault_mode}_mpi
+                COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
+                gc_invalid/base "Error: GC measurement rank:0 sample:0"
+                ${gc_fault_extra} NSplitSize=1 ${gc_fault_reason}
+                "expect:GC fault injected: kind=${gc_fault} world_rank=1 sample=0"
+                "work_tag:measure_${gc_fault}_${gc_fault_mode}_mpi")
+            set_tests_properties(
+                GC_MeasureFault_${gc_fault}_${gc_fault_mode}_mpi PROPERTIES
+                TIMEOUT 60 PROCESSORS 2
+                ENVIRONMENT
+                  "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_GC_FAULT_MEASURE=${gc_fault}:0:rank=1")
+        endif()
+    endforeach()
+endforeach()
 
 foreach(real_rbm_case
     family-charge

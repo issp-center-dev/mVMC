@@ -92,7 +92,8 @@ if(Require_BLIS)
 endif()
 add_test(NAME BackFlow_Stable_Occupied_Unit COMMAND backflow_stable_unit)
 
-add_executable(gc_matrix_unit gc_matrix_unit.c)
+add_executable(gc_matrix_unit gc_matrix_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(gc_matrix_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_matrix_unit pfapack ltl2inv
@@ -105,7 +106,8 @@ if(MPI_FOUND)
 endif()
 add_test(NAME GCMatrix_Unit COMMAND gc_matrix_unit)
 
-add_executable(gc_pfupdate_unit gc_pfupdate_unit.c)
+add_executable(gc_pfupdate_unit gc_pfupdate_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(gc_pfupdate_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_pfupdate_unit pfapack ltl2inv
@@ -119,6 +121,7 @@ endif()
 add_test(NAME GCPfUpdate_Unit COMMAND gc_pfupdate_unit)
 
 add_executable(gc_sampler_unit gc_sampler_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
     ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
 target_include_directories(gc_sampler_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include
@@ -135,6 +138,20 @@ add_test(NAME GCSampler_Unit COMMAND gc_sampler_unit)
 add_test(NAME GCSampler_Unit_DebugRebuild COMMAND gc_sampler_unit)
 set_tests_properties(GCSampler_Unit_DebugRebuild PROPERTIES
     ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+add_test(NAME GCSampler_Unit_MultiQP COMMAND gc_sampler_unit --multiqp)
+add_test(NAME GC_AntiPair_Sampler_MultiQP
+    COMMAND gc_sampler_unit --multiqp-anti)
+add_test(NAME GCSampler_Unit_MultiQP_DebugRebuild
+    COMMAND gc_sampler_unit --multiqp)
+set_tests_properties(GCSampler_Unit_MultiQP_DebugRebuild PROPERTIES
+    ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")
+foreach(gc_death vacuum_k general_nonfinite cache_uninitialized rebuild_zero)
+    add_test(NAME GCSampler_Death_${gc_death}
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+                $<TARGET_FILE:gc_sampler_unit> --death-${gc_death})
+    set_tests_properties(GCSampler_Death_${gc_death} PROPERTIES TIMEOUT 60)
+endforeach()
 if(MPI_FOUND)
     add_test(NAME GCSampler_RebuildStatus_MPI
         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
@@ -142,6 +159,28 @@ if(MPI_FOUND)
                 --collective-only ${MPIEXEC_POSTFLAGS})
     set_tests_properties(GCSampler_RebuildStatus_MPI PROPERTIES
         PROCESSORS 2 TIMEOUT 30)
+    foreach(np 2 3)
+        add_test(NAME GCSampler_MultiQP_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                    --multiqp-collective ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCSampler_MultiQP_np${np}_mpi PROPERTIES
+            PROCESSORS ${np} TIMEOUT 120)
+        add_test(NAME GC_AntiPair_Sampler_MultiQP_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                    --multiqp-anti-collective ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GC_AntiPair_Sampler_MultiQP_np${np}_mpi PROPERTIES
+            PROCESSORS ${np} TIMEOUT 120)
+    endforeach()
+    add_test(NAME GCSampler_ComponentStats_np2_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_component_stats.py
+                $<TARGET_FILE:gc_sampler_unit>)
+    set_tests_properties(GCSampler_ComponentStats_np2_mpi PROPERTIES
+        ENVIRONMENT
+          "MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+        PROCESSORS 2 TIMEOUT 60)
 endif()
 add_test(NAME GC_AntiPair_Sampler_Unit COMMAND gc_sampler_unit --antiparallel)
 add_test(NAME GC_AntiPair_Sampler_Debug COMMAND gc_sampler_unit --antiparallel)
@@ -165,7 +204,10 @@ if(MPI_FOUND)
         PROCESSORS 2 TIMEOUT 60)
 endif()
 
-add_executable(gc_slater_diff_unit gc_slater_diff_unit.c)
+add_executable(gc_slater_diff_unit gc_slater_diff_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(gc_slater_diff_unit PRIVATE
+    MVMC_ENABLE_FAULT_INJECTION)
 target_include_directories(gc_slater_diff_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_slater_diff_unit pfapack ltl2inv
@@ -177,10 +219,19 @@ if(MPI_FOUND)
     target_link_libraries(gc_slater_diff_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCSlaterDiff_Unit COMMAND gc_slater_diff_unit)
+add_test(NAME GCSlaterDiff_Unit_MultiQP COMMAND gc_slater_diff_unit --multiqp)
+add_test(NAME GCSlaterDiff_Unit_MultiQP_OMP4
+    COMMAND gc_slater_diff_unit --multiqp)
+set_tests_properties(GCSlaterDiff_Unit_MultiQP_OMP4 PROPERTIES
+    ENVIRONMENT
+      "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4;MVMC_GC_OMP_AUDIT=1"
+    TIMEOUT 120)
 add_test(NAME GC_AntiPair_SlaterDiff_Unit
     COMMAND gc_slater_diff_unit --antiparallel)
 
-add_executable(gc_green_unit gc_green_unit.c)
+add_executable(gc_green_unit gc_green_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(gc_green_unit PRIVATE MVMC_ENABLE_FAULT_INJECTION)
 target_include_directories(gc_green_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_green_unit pfapack ltl2inv
@@ -192,6 +243,11 @@ if(MPI_FOUND)
     target_link_libraries(gc_green_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCGreen_Unit COMMAND gc_green_unit)
+add_test(NAME GCGreen_Unit_MultiQP COMMAND gc_green_unit --multiqp)
+add_test(NAME GCGreen_Unit_MultiQP_OMP4 COMMAND gc_green_unit --multiqp)
+set_tests_properties(GCGreen_Unit_MultiQP_OMP4 PROPERTIES
+    ENVIRONMENT
+      "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4;MVMC_GC_OMP_AUDIT=1")
 add_test(NAME GC_AntiPair_Green_Unit COMMAND gc_green_unit --antiparallel)
 set_tests_properties(GC_AntiPair_Green_Unit PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)

@@ -599,6 +599,19 @@ ModParaファイル (modpara.def)
    ``NQPOptTrans<=1`` が必要です。Phase 1ではRBM、BackFlow、Lanczos、
    OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
 
+   各量子数射影成分は、逆行列を持つ成分か、Pfaffian が 0 または absolute
+   Pfaffian backend の scale-aware な判定で特異・準特異と分類された
+   「Pfaffian のみ」の成分かのどちらかとして保持されます。後者では候補振幅と
+   パラメータ微分を直接（完全な Pfaffian と余因子展開で）評価します。これは
+   エラーではなく、非有限値・引数異常・分解や workspace の失敗・fast-math
+   （例: ``-fno-fast-math`` を伴わない ``-ffast-math`` や ``-Ofast``）を使った
+   build だけが計算を停止します。CMake が C compiler を GNU または Clang と
+   識別する場合、``vmc.out`` target は ``-fno-fast-math`` を追加します。他の
+   toolchain では同等の strict floating-point option が必要です。計算終了時に
+   ``GC component stats: ...`` の1行で各経路の使用回数を出力します。評価できない
+   測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
+   ``NGCInitNelec`` の増加または ``TransSym`` の重みの確認を求める診断で停止します。
+
    ``NMPTrans=-1`` は反周期境界条件（APBC）を指定します。並進射影は
    TransSym の先頭1個だけを使い、複数並進による運動量射影は行いません。
    ``NMPTrans=-1`` 自体は Hamiltonian を変更しないため、次の3つを

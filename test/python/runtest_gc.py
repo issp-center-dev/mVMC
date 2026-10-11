@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import sys
 
+from gc_component_stats import parse_component_stats
+
 from grandcanonical_exact_oracle import (
     ANOMALOUS_G_OPERATORS,
     EVEN_BASIS,
@@ -695,9 +697,11 @@ def physical_case(rootdir):
     samples = int(os.environ.get("MVMC_GC_SAMPLES", "60000"))
     workdir = prepare_work(rootdir, "GC_Exact_Physical")
     write_fixture(workdir, mode=1, samples=samples, iterations=2)
-    run_binary(rootdir, workdir,
-               extra_env={"MVMC_GC_STATE_DUMP": "gc_state.dat",
-                          "MVMC_GC_DEBUG_REBUILD_INTERVAL": "97"})
+    output = run_binary(
+        rootdir, workdir,
+        extra_env={"MVMC_GC_STATE_DUMP": "gc_state.dat",
+                   "MVMC_GC_DEBUG_REBUILD_INTERVAL": "97"})
+    parse_component_stats(output)
     records = state_dump_records(os.path.join(workdir, "gc_state.dat.rank0"))
     sample_count, chi_square = validate_distribution(records)
     validate_physical(workdir, sample_count)

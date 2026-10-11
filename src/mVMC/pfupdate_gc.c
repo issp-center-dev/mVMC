@@ -30,6 +30,13 @@ void CalculateNewPfMHopGC(const int ma, double complex *pfMNew,
   const size_t slaterStride = GCSlaterStride();
   int qpidx;
   for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+    if (GCQpState[qpidx] == GC_QP_PFONLY) {
+      if (GCComponentValue(qpStart + qpidx, ncur, eleIdx,
+                           GCComponentThreadCache(), &pfMNew[qpidx]) !=
+          GC_MALL_OK)
+        pfMNew[qpidx] = NAN + NAN * I;
+      continue;
+    }
     const int rsa = eleIdx[ma];
     const double complex *slater =
         SlaterElm + (size_t)(qpStart + qpidx) * slaterStride;
@@ -47,7 +54,7 @@ void CalculateNewPfMHopGC(const int ma, double complex *pfMNew,
   }
 }
 
-static void UpdateMAllHopGCChild(
+void UpdateMAllHopGCQp(
     const int ma, const int *eleIdx, const int ncur, const int qpStart,
     const int qpidx, double complex *vec1, double complex *vec2) {
   const size_t invStride = GCInvStride();
@@ -109,7 +116,7 @@ void UpdateMAllHopGC(const int ma, const int *eleIdx, const int ncur,
     double complex *vec2 = GetWorkSpaceThreadComplex(ncur);
 #pragma omp for
     for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
-      UpdateMAllHopGCChild(ma, eleIdx, ncur, qpStart, qpidx, vec1, vec2);
+      UpdateMAllHopGCQp(ma, eleIdx, ncur, qpStart, qpidx, vec1, vec2);
     }
   }
   ReleaseWorkSpaceThreadComplex();
@@ -177,6 +184,13 @@ void CalculateNewPfMTwoHopGC(const int ma, const int mb,
     double complex *vecA = GetWorkSpaceComplex(ncur);
     double complex *vecB = GetWorkSpaceComplex(ncur);
     for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+      if (GCQpState[qpidx] == GC_QP_PFONLY) {
+        if (GCComponentValue(qpStart + qpidx, ncur, eleIdx,
+                             GCComponentThreadCache(), &pfMNew[qpidx]) !=
+            GC_MALL_OK)
+          pfMNew[qpidx] = NAN + NAN * I;
+        continue;
+      }
       pfMNew[qpidx] = CalculateNewPfMTwoHopGCChild(
           ma, mb, eleIdx, ncur, qpStart, qpidx, vecA, vecB);
     }
@@ -194,6 +208,13 @@ void CalculateNewPfMTwoHopGCWorkspace(
     return;
   }
   for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+    if (GCQpState[qpidx] == GC_QP_PFONLY) {
+      if (GCComponentValue(qpStart + qpidx, ncur, eleIdx,
+                           GCComponentThreadCache(), &pfMNew[qpidx]) !=
+          GC_MALL_OK)
+        pfMNew[qpidx] = NAN + NAN * I;
+      continue;
+    }
     pfMNew[qpidx] = CalculateNewPfMTwoHopGCChild(
         ma, mb, eleIdx, ncur, qpStart, qpidx, vecA, vecB);
   }
@@ -224,6 +245,14 @@ double complex CalculateNewPfMNGC(
       vec == NULL || w == NULL || smallMat == NULL || pfIWork == NULL ||
       pfWork == NULL || pfRWork == NULL) {
     return NAN + NAN * I;
+  }
+  /* This API is used only when the rank-local and global QP indices match. */
+  if (GCQpState[qpidx] == GC_QP_PFONLY) {
+    double complex value;
+    if (GCComponentValue(qpidx, ncur, eleIdx, GCComponentThreadCache(),
+                         &value) != GC_MALL_OK)
+      return NAN + NAN * I;
+    return value;
   }
   n2 = GCCheckedSizeToInt(GCCheckedMulSize(2, (size_t)n),
                           "GC n-row dimension");
@@ -366,13 +395,20 @@ void CalculateNewPfMAddGCWorkspace(
   /* d01 = Pf(X_new)/Pf(X) with X = -SlaterElm.  PfM stores Pf(SlaterElm_x)
    * (see CalculateMAllGC), and adding two particles flips (-1)^{n/2}. */
   for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+    if (GCQpState[qpidx] == GC_QP_PFONLY) {
+      if (GCComponentValueAppended(qpStart + qpidx, ncurOld, eleIdx,
+                                   rsa, rsb, GCComponentThreadCache(),
+                                   &pfMNew[qpidx]) != GC_MALL_OK)
+        pfMNew[qpidx] = NAN + NAN * I;
+      continue;
+    }
     const double complex d01 =
         GCAddSchur(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0, y1);
     pfMNew[qpidx] = -d01 * PfM[qpidx];
   }
 }
 
-static void UpdateMAllAddGCChild(
+void UpdateMAllAddGCQp(
     const int rsa, const int rsb, const int *eleIdx, const int ncurOld,
     const int qpStart, const int qpidx, double complex *y0,
     double complex *y1) {
@@ -421,8 +457,8 @@ void UpdateMAllAddGC(const int rsa, const int rsb, const int *eleIdx,
     double complex *y1 = GetWorkSpaceThreadComplex(ncurOld);
 #pragma omp for
     for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
-      UpdateMAllAddGCChild(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0,
-                           y1);
+      UpdateMAllAddGCQp(rsa, rsb, eleIdx, ncurOld, qpStart, qpidx, y0,
+                        y1);
     }
   }
   ReleaseWorkSpaceThreadComplex();
@@ -466,15 +502,20 @@ void CalculateNewPfMRemoveGC(const int pos0, const int pos1,
                              const int ncurOld, const int qpStart,
                              const int qpEnd) {
   int qpidx;
-  (void)eleIdx;
-  (void)qpStart;
   for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+    if (GCQpState[qpidx] == GC_QP_PFONLY) {
+      if (GCComponentValue(qpStart + qpidx, ncurOld - 2, eleIdx,
+                           GCComponentThreadCache(), &pfMNew[qpidx]) !=
+          GC_MALL_OK)
+        pfMNew[qpidx] = NAN + NAN * I;
+      continue;
+    }
     pfMNew[qpidx] =
         GCRemoveRatio(pos0, pos1, ncurOld, qpidx) * PfM[qpidx];
   }
 }
 
-static void UpdateMAllRemoveGCChild(
+void UpdateMAllRemoveGCQp(
     const int pos0, const int pos1, const int ncurOld, const int qpidx,
     double complex *oldInv) {
   const size_t invStride = GCInvStride();
@@ -534,10 +575,81 @@ void UpdateMAllRemoveGC(const int pos0, const int pos1,
     double complex *oldInv = GetWorkSpaceThreadComplex(workspaceCount);
 #pragma omp for
     for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
-      UpdateMAllRemoveGCChild(pos0, pos1, ncurOld, qpidx, oldInv);
+      UpdateMAllRemoveGCQp(pos0, pos1, ncurOld, qpidx, oldInv);
     }
   }
   ReleaseWorkSpaceThreadComplex();
+}
+
+int GCCommitAccepted(const int moveKind, const int arg0, const int arg1,
+                     const double complex *pfMNew, const int *eleIdx,
+                     const int ncurOld, const int ncurNew,
+                     const int qpStart, const int qpEnd) {
+  size_t oldMatrix;
+  int vecCount;
+  int oldInvCount;
+  int failure = GC_MALL_OK;
+  int qpidx;
+  if (pfMNew == NULL || (ncurNew > 0 && eleIdx == NULL) ||
+      ncurOld < 0 || ncurOld > NsizeMax || (ncurOld % 2) != 0 ||
+      ncurNew < 0 || ncurNew > NsizeMax || (ncurNew % 2) != 0 ||
+      qpStart < 0 || qpEnd < qpStart ||
+      qpEnd > NQPFull || moveKind < GC_COMMIT_HOP ||
+      moveKind > GC_COMMIT_REMOVE)
+    return GC_MALL_INVALID_ARGUMENT;
+  oldMatrix = GCCheckedMulSize((size_t)ncurOld, (size_t)ncurOld);
+  vecCount = ncurOld > 0 ? ncurOld : 1;
+  oldInvCount = GCCheckedSizeToInt(
+      oldMatrix > 0 ? oldMatrix : 1, "GC commit old inverse");
+  RequestWorkSpaceThreadComplex(GCCheckedSizeToInt(
+      GCCheckedAddSize(GCCheckedMulSize(2, (size_t)vecCount),
+                       (size_t)oldInvCount),
+      "GC commit workspace"));
+#pragma omp parallel default(shared)
+  {
+    GCComponentCache *cache = GCComponentThreadCache();
+    double complex *vecA = GetWorkSpaceThreadComplex(vecCount);
+    double complex *vecB = GetWorkSpaceThreadComplex(vecCount);
+    double complex *oldInv = GetWorkSpaceThreadComplex(oldInvCount);
+#pragma omp for
+    for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
+      const int qpGlobal = qpStart + qpidx;
+      int status = GC_MALL_OK;
+      if (ncurNew == 0) {
+        PfM[qpidx] = 1.0;
+        GCQpState[qpidx] = GC_QP_INVERSE;
+      } else if (pfMNew[qpidx] == 0.0) {
+        if (GCQpState[qpidx] == GC_QP_INVERSE)
+          cache->counters.toPfonly++;
+        PfM[qpidx] = 0.0;
+        GCQpState[qpidx] = GC_QP_PFONLY;
+      } else if (GCQpState[qpidx] == GC_QP_PFONLY) {
+        cache->counters.recover++;
+        status = GCComponentRebuild(qpGlobal, qpidx, ncurNew, eleIdx,
+                                    cache);
+      } else {
+        if (moveKind == GC_COMMIT_HOP)
+          UpdateMAllHopGCQp(arg0, eleIdx, ncurOld, qpStart, qpidx, vecA,
+                            vecB);
+        else if (moveKind == GC_COMMIT_ADD)
+          UpdateMAllAddGCQp(arg0, arg1, eleIdx, ncurOld, qpStart, qpidx,
+                            vecA, vecB);
+        else
+          UpdateMAllRemoveGCQp(arg0, arg1, ncurOld, qpidx, oldInv);
+        if (!GCComponentProbe(qpGlobal, qpidx, ncurNew, eleIdx, cache)) {
+          cache->counters.probeRebuild++;
+          status = GCComponentRebuild(qpGlobal, qpidx, ncurNew, eleIdx,
+                                      cache);
+        }
+      }
+      if (status != GC_MALL_OK) {
+#pragma omp critical
+        failure = status;
+      }
+    }
+  }
+  ReleaseWorkSpaceThreadComplex();
+  return failure;
 }
 
 #endif

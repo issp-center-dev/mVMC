@@ -7,6 +7,8 @@
 #define GC_MALL_GETRI 3
 #define GC_MALL_NONFINITE 4
 #define GC_MALL_INVALID_ARGUMENT 5
+#define GC_MALL_FP_MODE 6
+#define GC_MALL_ALLOCATION 7
 
 int CalculateMAllGC_fcmp(int ncur, const int *eleIdx, int qpStart,
                          int qpEnd);

@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,38 @@ def make_workdir_name(model, updates):
     for key in sorted(updates):
         pieces.append("{}_{}".format(key, updates[key]))
     return safe_path_component("__".join(pieces))
+
+
+def validate_process_result(returncode, output, expected,
+                            allow_success=False):
+    if returncode < 0 or returncode >= 128:
+        raise AssertionError("signal/abnormal exit: {}".format(returncode))
+    crash = (r"AddressSanitizer|LeakSanitizer|UndefinedBehaviorSanitizer|"
+             r"runtime error:|Segmentation fault|Bus error|core dumped|"
+             r"(?:signal|Signal)\s+(?:6|7|8|9|11)\b")
+    if re.search(crash, output):
+        raise AssertionError("crash or sanitizer report")
+    if (returncode == 0) != allow_success:
+        raise AssertionError("unexpected exit status: {}".format(returncode))
+    for needle in expected:
+        if needle not in output:
+            raise AssertionError("missing diagnostic: {}".format(needle))
+
+
+def validate_rebuild_fault_reason(output):
+    marker = re.search(
+        r"GC fault injected: kind=rebuild_nonfinite "
+        r"world_rank=\d+ sample=\d+ ncur=(\d+)", output)
+    if marker is None:
+        raise AssertionError("missing rebuild fault marker with ncur")
+    ncur = int(marker.group(1))
+    if ncur >= 2:
+        reason = "failed the matrix rebuild"
+    else:
+        reason = "has a zero or nonfinite amplitude"
+    if reason not in output:
+        raise AssertionError(
+            "missing rebuild diagnostic for ncur={}: {}".format(ncur, reason))
 
 
 def update_modpara(filename, updates):
@@ -346,6 +379,8 @@ def main():
     opttrans_mode = False
     gc_fixture_mutations = []
     modpara_updates = {}
+    work_tag = ""
+    rebuild_fault_reason = False
     for arg in sys.argv[3:]:
         if arg == "allow_success":
             allow_success = True
@@ -359,6 +394,10 @@ def main():
             gc_fixture_mutations.append(arg)
         elif arg.startswith("expect:"):
             expected_substrings.append(arg[len("expect:"):])
+        elif arg.startswith("work_tag:"):
+            work_tag = safe_path_component(arg[len("work_tag:"):])
+        elif arg == "rebuild_fault_reason":
+            rebuild_fault_reason = True
         elif "=" in arg:
             key, value = arg.split("=", 1)
             modpara_updates[key] = value
@@ -372,6 +411,8 @@ def main():
     if not os.path.exists(workroot):
         os.makedirs(workroot)
     case_name = make_workdir_name(model, modpara_updates)
+    if work_tag:
+        case_name = "{}__{}".format(case_name, work_tag)
     workdir = os.path.join(workroot, "{}_{}".format(case_name, os.getpid()))
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
@@ -418,19 +459,16 @@ def main():
     with open("invalid_test.log", "w") as f:
         f.write(proc.stdout)
 
-    for expected_substring in expected_substrings:
-        if expected_substring not in proc.stdout:
-            print("ERROR: expected error substring not found: {}".format(
-                expected_substring))
-            print("---- output begin ----")
-            print(proc.stdout)
-            print("---- output end ----")
-            return -1
-    # Default: invalid input must terminate with non-zero.
-    # Some legacy readers only emit error messages and continue;
-    # those cases can opt in to allow_success mode.
-    if not allow_success and proc.returncode == 0:
-        print("ERROR: vmc.out unexpectedly succeeded for invalid input.")
+    try:
+        validate_process_result(proc.returncode, proc.stdout,
+                                expected_substrings, allow_success)
+        if rebuild_fault_reason:
+            validate_rebuild_fault_reason(proc.stdout)
+    except AssertionError as error:
+        print("ERROR: {}".format(error))
+        print("---- output begin ----")
+        print(proc.stdout)
+        print("---- output end ----")
         return -1
     return 0
 

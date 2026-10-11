@@ -91,6 +91,7 @@ extern void omp_set_num_threads(int);
 #include "../gc_antiparallel_input.c"
 #include "../gc_config.c"
 #include "../gc_size.c"
+#include "../gc_component.c"
 #include "../slater.c"
 #include "../backflow_slater.c"
 #include "../slater_fsz.c"

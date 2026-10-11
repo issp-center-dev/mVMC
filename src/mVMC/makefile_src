@@ -51,6 +51,7 @@ calham_gc.c \
 gc_antiparallel.c \
 gc_antiparallel_input.c \
 gc_config.c \
+gc_component.c \
 gc_size.c \
 gauleg.c \
 initfile.c \
@@ -116,6 +117,7 @@ HEADERS = \
 ./include/gc_antiparallel.h \
 ./include/gc_antiparallel_input.h \
 ./include/gc_config.h \
+./include/gc_component.h \
 ./include/gc_size.h \
 ./include/gauleg.h \
 ./include/global.h \
