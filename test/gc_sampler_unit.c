@@ -307,6 +307,48 @@ static void test_transactions(void) {
                        "remove transaction");
 }
 
+static void test_debug_rebuild_preserves_workspace(void) {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int eleProjCnt[1];
+  double complex logIp =
+      set_state(3U, eleIdx, eleCfg, eleNum, eleProjCnt);
+  const size_t invCount = (size_t)NsizeMax * (size_t)NsizeMax;
+  const size_t complexCount = invCount + 1U;
+  int *outerInt;
+  int *intCursor;
+  double complex *outerComplex;
+  double complex *complexCursor;
+
+  RequestWorkSpaceInt(NProj + 1);
+  outerInt = GetWorkSpaceInt(NProj);
+  outerInt[0] = 271828;
+  WorkSpaceInt[NProj] = 314159;
+  intCursor = WorkSpaceIntNow;
+
+  RequestWorkSpaceComplex((int)complexCount + 1);
+  outerComplex = GetWorkSpaceComplex(1);
+  outerComplex[0] = 2.71828 + 3.14159 * I;
+  WorkSpaceComplex[complexCount] = -7.0 + 11.0 * I;
+  complexCursor = WorkSpaceComplexNow;
+
+  GCDebugCheckFastState(eleIdx, &logIp, 0, 1, MPI_COMM_SELF);
+
+  CHECK(outerInt[0] == 271828 && WorkSpaceInt[NProj] == 314159,
+        "debug rebuild changed the caller int workspace");
+  CHECK(WorkSpaceIntNow == intCursor,
+        "debug rebuild changed the caller int workspace cursor");
+  CHECK(outerComplex[0] == 2.71828 + 3.14159 * I &&
+            WorkSpaceComplex[complexCount] == -7.0 + 11.0 * I,
+        "debug rebuild changed the caller complex workspace");
+  CHECK(WorkSpaceComplexNow == complexCursor,
+        "debug rebuild changed the caller complex workspace cursor");
+
+  ReleaseWorkSpaceComplex();
+  ReleaseWorkSpaceInt();
+}
+
 static double pfaffian_mask(const unsigned int mask);
 static void test_exact_detailed_balance(void);
 
@@ -2047,6 +2089,7 @@ int main(int argc, char **argv) {
       test_selector();
       test_exact_detailed_balance();
       test_transactions();
+      test_debug_rebuild_preserves_workspace();
       test_signed_matrix();
       test_burn_and_save();
       test_production_chains();

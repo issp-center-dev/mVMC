@@ -339,17 +339,16 @@ static void GCDebugCheckFastState(const int *eleIdx,
       GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
   const size_t qpCount = (size_t)(qpEnd - qpStart);
   const size_t invCount = GCCheckedMulSize(qpCount, invStride);
-  const size_t totalCount = GCCheckedAddSize(invCount, qpCount);
-  const int workspaceCount =
-      GCCheckedSizeToInt(totalCount, "GC debug rebuild workspace");
+  double complex *fastInv = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(invCount, sizeof(*fastInv)),
+      "GC debug inverse snapshot");
+  double complex *fastPf = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(qpCount, sizeof(*fastPf)), "GC debug Pf snapshot");
+  int *fastState = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(qpCount, sizeof(*fastState)),
+      "GC debug state snapshot");
   size_t index;
-  RequestWorkSpaceComplex(workspaceCount);
-  RequestWorkSpaceInt(GCCheckedSizeToInt(qpCount,
-                                         "GC debug state workspace"));
   {
-    double complex *fastInv = GetWorkSpaceComplex((int)invCount);
-    double complex *fastPf = GetWorkSpaceComplex((int)qpCount);
-    int *fastState = GetWorkSpaceInt((int)qpCount);
     memcpy(fastInv, InvM, invCount * sizeof(*fastInv));
     memcpy(fastPf, PfM, qpCount * sizeof(*fastPf));
     memcpy(fastState, GCQpState, qpCount * sizeof(*fastState));
@@ -403,8 +402,9 @@ static void GCDebugCheckFastState(const int *eleIdx,
       }
     }
   }
-  ReleaseWorkSpaceInt();
-  ReleaseWorkSpaceComplex();
+  free(fastState);
+  free(fastPf);
+  free(fastInv);
   *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
 }
 
