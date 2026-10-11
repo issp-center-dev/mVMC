@@ -605,8 +605,9 @@ ModParaファイル (modpara.def)
    パラメータ微分を直接（完全な Pfaffian と余因子展開で）評価します。これは
    エラーではなく、非有限値・引数異常・分解や workspace の失敗・fast-math
    （例: ``-fno-fast-math`` を伴わない ``-ffast-math`` や ``-Ofast``）を使った
-   build だけが計算を停止します。CMake による ``vmc.out`` の build では
-   fast-math は無効化済みです。計算終了時に
+   build だけが計算を停止します。CMake が C compiler を GNU または Clang と
+   識別する場合、``vmc.out`` target は ``-fno-fast-math`` を追加します。他の
+   toolchain では同等の strict floating-point option が必要です。計算終了時に
    ``GC component stats: ...`` の1行で各経路の使用回数を出力します。評価できない
    測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
    ``NGCInitNelec`` の増加または ``TransSym`` の重みの確認を求める診断で停止します。
