@@ -18,6 +18,7 @@ extern int omp_get_max_threads(void);
 
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
+#include "../src/mVMC/gc_component.c"
 #include "../src/mVMC/projection.c"
 #include "../src/mVMC/gc_config.c"
 #include "../src/mVMC/matrix_gc.c"
@@ -175,6 +176,7 @@ static void setup_globals(void) {
   GutzwillerIdx[0] = 0;
   GutzwillerIdx[1] = 0;
   fill_slater();
+  CHECK(GCComponentInit() == GC_MALL_OK, "component init");
 }
 
 static double complex set_state(const unsigned int mask, int *eleIdx,
@@ -715,6 +717,8 @@ static void enter_antiparallel_mode(void) {
   iFlgOrbitalGeneral = 0;
   TwoSz = 0;
   fill_slater_antiparallel();
+  CHECK(GCComponentInit() == GC_MALL_OK,
+        "anti-parallel component init");
 }
 
 static int anti_state_index(const unsigned int mask) {
@@ -1160,6 +1164,8 @@ static void test_anti_chains_three_sites(void) {
     fprintf(stderr, "three-site allocation failed\n");
     exit(EXIT_FAILURE);
   }
+  CHECK(GCComponentInit() == GC_MALL_OK,
+        "three-site component init");
   for (i = 0; i < THREE_SITES; i++) {
     int j;
     for (j = 0; j < THREE_SITES; j++) {
@@ -1413,6 +1419,7 @@ static int run_antiparallel_death(const char *mode) {
 }
 
 static void cleanup_globals(void) {
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(SlaterElm);
   free(InvM);

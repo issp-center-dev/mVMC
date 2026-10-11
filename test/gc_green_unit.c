@@ -18,6 +18,7 @@ extern int omp_get_num_threads(void);
 
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
+#include "../src/mVMC/gc_component.c"
 #include "../src/mVMC/projection.c"
 #include "../src/mVMC/gc_config.c"
 #include "../src/mVMC/matrix_gc.c"
@@ -1336,9 +1337,11 @@ static void initialize_fixture(void) {
     }
   }
   initializeWorkSpaceAll();
+  CHECK(GCComponentInit() == GC_MALL_OK, "component init");
 }
 
 static void free_fixture(void) {
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(QPFullWeight);
   free(PfM);

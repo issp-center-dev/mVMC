@@ -482,6 +482,7 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
                         const int qpEnd, MPI_Comm comm) {
   int attempt;
   int rank;
+  double complex logIp;
   MPI_Comm_rank(comm, &rank);
   for (attempt = 0; attempt < 100; attempt++) {
     int position;
@@ -533,17 +534,37 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
     MakeProjCnt(eleProjCnt, eleNum);
     status = CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd);
     globalStatus = GCCollectiveRebuildStatus(status, comm);
-    if (globalStatus == GC_MALL_OK) return 0;
+    if (globalStatus != GC_MALL_OK) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: GC initial rebuild failed (status=%d).\n",
+                globalStatus);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    logIp = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+    if (isfinite(creal(logIp)) && isfinite(cimag(logIp))) return 0;
+    if (!(creal(logIp) == -INFINITY && isfinite(cimag(logIp)))) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: GC initial configuration has a nonfinite projected "
+                "amplitude.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+    if (Ncur == 0) {
+      attempt = 1;
+      break;
+    }
   }
   if (rank == 0) {
-    if (GCAntiMode()) {
-      fprintf(stderr,
-              "Error: makeInitialSampleGC exceeded 100 attempts "
-              "(anti-parallel mode, Ncur=%d).\n",
-              Ncur);
-    } else {
-      fprintf(stderr, "Error: makeInitialSampleGC exceeded 100 attempts.\n");
-    }
+    fprintf(stderr,
+            "Error: GC initial configuration has zero projected amplitude "
+            "after %d attempt(s) (%s, Ncur=%d). Increase NGCInitNelec or "
+            "check the TransSym weights.\n",
+            attempt, GCAntiMode() ? "anti-parallel mode" : "general mode",
+            Ncur);
   }
   MPI_Abort(comm, EXIT_FAILURE);
   return 1;

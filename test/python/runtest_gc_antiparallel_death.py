@@ -4,8 +4,8 @@ import sys
 from gc_antiparallel_failure import reject_signal_reports, require_expected_failure
 
 EXPECTED = {
-    '--antiparallel-death-init': ['makeInitialSampleGC exceeded 100 attempts',
-                                  'anti-parallel', 'Ncur=2'],
+    '--antiparallel-death-init': ['zero projected amplitude',
+                                  'anti-parallel mode', 'Ncur=2'],
     '--antiparallel-death-nonfinite': ['GC anti-parallel sampler',
                                        'nonfinite'],
     '--antiparallel-death-oldlog': ['GC anti-parallel sampler', 'nonfinite'],

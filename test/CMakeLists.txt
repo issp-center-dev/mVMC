@@ -92,7 +92,8 @@ if(Require_BLIS)
 endif()
 add_test(NAME BackFlow_Stable_Occupied_Unit COMMAND backflow_stable_unit)
 
-add_executable(gc_matrix_unit gc_matrix_unit.c)
+add_executable(gc_matrix_unit gc_matrix_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(gc_matrix_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_matrix_unit pfapack ltl2inv
@@ -105,7 +106,8 @@ if(MPI_FOUND)
 endif()
 add_test(NAME GCMatrix_Unit COMMAND gc_matrix_unit)
 
-add_executable(gc_pfupdate_unit gc_pfupdate_unit.c)
+add_executable(gc_pfupdate_unit gc_pfupdate_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(gc_pfupdate_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_pfupdate_unit pfapack ltl2inv
@@ -119,6 +121,7 @@ endif()
 add_test(NAME GCPfUpdate_Unit COMMAND gc_pfupdate_unit)
 
 add_executable(gc_sampler_unit gc_sampler_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
     ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
 target_include_directories(gc_sampler_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include
@@ -165,7 +168,8 @@ if(MPI_FOUND)
         PROCESSORS 2 TIMEOUT 60)
 endif()
 
-add_executable(gc_slater_diff_unit gc_slater_diff_unit.c)
+add_executable(gc_slater_diff_unit gc_slater_diff_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(gc_slater_diff_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_slater_diff_unit pfapack ltl2inv
@@ -180,7 +184,8 @@ add_test(NAME GCSlaterDiff_Unit COMMAND gc_slater_diff_unit)
 add_test(NAME GC_AntiPair_SlaterDiff_Unit
     COMMAND gc_slater_diff_unit --antiparallel)
 
-add_executable(gc_green_unit gc_green_unit.c)
+add_executable(gc_green_unit gc_green_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_include_directories(gc_green_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 target_link_libraries(gc_green_unit pfapack ltl2inv

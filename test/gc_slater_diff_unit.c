@@ -16,6 +16,7 @@ extern int omp_get_max_threads(void);
 
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
+#include "../src/mVMC/gc_component.c"
 #include "../src/mVMC/matrix_gc.c"
 #include "../src/mVMC/slater_gc.c"
 #include "../src/mVMC/slater_fsz.c"
@@ -189,6 +190,7 @@ static void initialize_fixture(void) {
   }
   QPFullWeight[0] = 0.73 - 0.21 * I;
   initializeWorkSpaceAll();
+  CHECK(GCComponentInit() == GC_MALL_OK, "component init");
 }
 
 /*
@@ -471,9 +473,12 @@ static void initialize_antiparallel_fixture(const int nsite, const int shared,
   SPGLSinSin[0] = 0.0;
   rebuild_matrix = UpdateSlaterElm_fcmp;
   initializeWorkSpaceAll();
+  CHECK(GCComponentInit() == GC_MALL_OK,
+        "anti-parallel component init");
 }
 
 static void free_antiparallel_fixture(void) {
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(SPGLSinSin);
   free(SPGLCosCos);
@@ -727,6 +732,7 @@ static void run_antiparallel_checks(void) {
 }
 
 static void free_fixture(void) {
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(QPFullWeight);
   free(PfM);

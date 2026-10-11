@@ -18,6 +18,7 @@ extern int omp_get_max_threads(void);
  * global.h, so exercise the exact translation-unit chain used by vmc.out. */
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
+#include "../src/mVMC/gc_component.c"
 #include "../src/mVMC/matrix_gc.c"
 #include "../src/mVMC/gc_config.c"
 #include "../src/mVMC/pfupdate_gc.c"
@@ -93,6 +94,7 @@ static void setup_dimension(const int dimension) {
   if (SlaterElm == NULL || InvM == NULL || PfM == NULL) exit(EXIT_FAILURE);
   fill_slater_block(SlaterElm, dimension, 1.0, 0.031);
   fill_slater_block(SlaterElm + block, dimension, 1.43, -0.047);
+  CHECK(GCComponentInit() == GC_MALL_OK, "component init");
 }
 
 static void save_state(PfState *state) {
@@ -477,6 +479,7 @@ int main(int argc, char **argv) {
   test_m8_noncontracted_n3();
   test_add_remove_exhaustive();
   test_add_conjugate_transpose_mutation();
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(SlaterElm);
   free(InvM);
