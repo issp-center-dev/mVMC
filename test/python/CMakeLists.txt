@@ -1648,6 +1648,8 @@ add_gc_mp_test(GC_MP_Replay_anti_apbc_k1_zero_m0
     replay --mode anti --boundary apbc --k 1 --calmode 0 --zero)
 add_gc_mp_test(GC_MP_Vacuum_K vacuum)
 add_gc_mp_test(GC_MP_Mutation mutation)
+add_gc_mp_test(GC_MP_Sample sample
+    --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/MomentumProjection)
 if(MPI_FOUND)
     foreach(gc_mp_mode general anti)
         add_gc_mp_test(GC_MP_${gc_mp_mode}_NSplit2_m1_np2_mpi
@@ -1668,6 +1670,18 @@ if(MPI_FOUND)
             PROPERTIES PROCESSORS 3)
     endforeach()
 endif()
+add_gc_mp_test(GC_MP_Replay_OMP4_general_apbc_k1_m1
+    replay --mode general --boundary apbc --k 1 --calmode 1
+    --expect-threads 4)
+set_tests_properties(GC_MP_Replay_OMP4_general_apbc_k1_m1 PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    PROCESSORS 4)
+add_gc_mp_test(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0
+    replay --mode anti --boundary pbc --k 2 --calmode 0 --zero
+    --expect-threads 4)
+set_tests_properties(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0 PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    PROCESSORS 4)
 
 add_test(NAME GC_HPhi_CrossCheck
     COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)

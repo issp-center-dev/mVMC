@@ -604,9 +604,9 @@ Keywords and parameters
    canonical runs is not applied, because it would change the relative
    weights of particle-number sectors. Both forms require complex
    variational parameters, ``NExUpdatePath=0``, ``NSPGaussLeg=1``,
-   ``NMPTrans=1`` or ``-1``, and ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos,
-   OptTrans, UpdateWeight, local spins, and SR-CG are not supported in this
-   first phase.
+   a nonzero ``NMPTrans`` with ``abs(NMPTrans) <= NQPTrans``, and
+   ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
+   spins, and SR-CG are not supported.
 
    Each quantum-projection component is kept either with its inverse matrix or,
    when its Pfaffian is zero or the factorization is classified singular or
@@ -627,10 +627,29 @@ Keywords and parameters
    pairing forms, so a finite but large amplitude ratio is accepted rather
    than rejected by an overflowing weight.
 
-   ``NMPTrans=-1`` selects anti-periodic boundary conditions (APBC). Only
-   the first ``TransSym`` pattern is used; momentum projection over several
-   translations is not performed. ``NMPTrans=-1`` does not modify the
-   Hamiltonian, so keep the following three inputs consistent.
+   Momentum projection uses the first ``abs(NMPTrans)`` patterns of
+   ``TransSym`` with their complex weights, as in canonical runs: for a
+   translation by :math:`R` the weight :math:`e^{-iKR}/N_{\rm T}` selects
+   the total momentum :math:`K`. Because the component for a translation
+   :math:`R` evaluates the pair function at the translated sites, the
+   projected state satisfies
+   :math:`\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle`. For
+   :math:`K\ne0` the vacuum has zero projected amplitude, so give
+   ``NGCInitNelec>=2``; an initial configuration with zero amplitude stops
+   with a diagnostic. A pair function that is not translation invariant
+   makes the projection nontrivial. Configurations whose translated
+   components vanish are handled as Pfaffian-only components (a direct
+   Pfaffian per candidate), which is correct but slower than the inverse
+   update. :math:`\langle H^2\rangle` in ``zvo_out`` remains the sample
+   average of :math:`|E_{\rm loc}|^2` over configurations with nonzero
+   amplitude. Thus, with pair-creation terms and an exact node such as the
+   :math:`K\ne0` vacuum, it is smaller than
+   :math:`\|H\Psi\|^2/\|\Psi\|^2` by the nodal contribution.
+
+   A negative ``NMPTrans`` selects the boundary-sign columns in the orbital
+   input, while its absolute value selects the number of ``TransSym``
+   patterns. It does not modify the Hamiltonian, so keep the following
+   inputs consistent for anti-periodic boundary conditions (APBC).
 
    * The Hamiltonian (``Trans`` etc.): coefficients that cross an
      anti-periodic boundary carry the boundary phase :math:`-1` (for a
@@ -641,9 +660,9 @@ Keywords and parameters
    * ``OrbitalAntiParallel`` / ``Orbital`` (anti-parallel pairing): the
      fourth column of every pair row is the sign :math:`\pm1` that
      multiplies :math:`F_{ij}`.
-   * ``TransSym``: the first pattern is the identity map with weight 1 and
-     sign +1 on every site. APBC does not require a negative sign on the
-     identity map.
+   * ``TransSym``: its site mappings include the boundary signs. The identity
+     pattern has sign +1 on every site; APBC does not require a negative sign
+     on that pattern.
 
    With ``2Sz=-1`` and ``phase0=180`` or similar settings, StdFace writes a
    ``Trans`` file that includes the boundary phases and an
@@ -658,9 +677,10 @@ Keywords and parameters
    in GC mode, so give ``NGCInitNelec`` and explicit complex initial
    parameters. StdFace uses ``NMPTrans=-1`` by default also for periodic
    inputs, so that value alone does not indicate a physical APBC. General
-   twist angles, projection over several translations, and BackFlow are not
-   supported. A four-site chain example and the conversion script are in
-   ``samples/GrandCanonical/APBC_chain``.
+   twist angles and BackFlow are not supported. A four-site identity-only
+   example and its conversion script are in
+   ``samples/GrandCanonical/APBC_chain``; a multi-translation example is in
+   ``samples/GrandCanonical/MomentumProjection``.
 
    For anti-parallel pairing, run StdFace with ``2Sz=0``, ``phase0=180`` (or
    similar), and ``ComplexType=1``. It writes the boundary phases into

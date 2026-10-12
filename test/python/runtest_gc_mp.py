@@ -12,6 +12,7 @@ import math
 import os
 import random
 import re
+import shutil
 import statistics
 
 import grandcanonical_ap_oracle as oracle
@@ -49,10 +50,16 @@ TWO_BODY_KEYS = (((0, 0), (5, 5)), ((0, 1), (1, 0)))
 PILOT_SEEDS = (1001, 2003, 3011, 4019, 5021, 6037, 7043, 8053)
 VALIDATION_SEED = 91807
 VALIDATION_SAMPLES = 60000
+# Filled from the fixed Linux pilot before the Physical/SR tests are enabled.
+THRESHOLDS = {}
 
 
 def fused_fields(orbital):
     return orbital % NSITE, orbital // NSITE
+
+
+def popcount(value):
+    return bin(value).count("1")
 
 
 def factors_text(pairs):
@@ -149,7 +156,8 @@ def make_parameters(fixture):
 
 
 def write_modpara(workdir, fixture, mode_cal, samples, seed, nstore, nsplit,
-                  iterations, init_nelec, nmptrans, freeze_parameters):
+                  iterations, init_nelec, nmptrans, freeze_parameters,
+                  warmup):
     data_qty = iterations if mode_cal == 1 else 1
     opt_steps = iterations if mode_cal == 0 else 1
     step = 0.0 if freeze_parameters else 0.002
@@ -180,7 +188,7 @@ NSROptItrSmp   1
 DSROptRedCut   0.000000000001
 DSROptStaDel   0.01
 DSROptStepDt   {step}
-NVMCWarmUp     2000
+NVMCWarmUp     {warmup}
 NVMCInterval   4
 NVMCSample     {samples}
 NExUpdatePath  0
@@ -193,7 +201,7 @@ NGCInitNelec   {init_nelec}
 """.format(mode=mode_cal, data_qty=data_qty, nsite=NSITE,
            two_sz=two_sz, nmptrans=nmptrans, opt_steps=opt_steps,
            step=fmt(step), samples=samples, seed=seed, nsplit=nsplit,
-           nstore=nstore, init_nelec=init_nelec)
+           nstore=nstore, init_nelec=init_nelec, warmup=warmup)
     write(os.path.join(workdir, "modpara.def"), text)
 
 
@@ -305,11 +313,12 @@ def write_initial(workdir, parameters):
 
 def write_fixture(workdir, fixture, parameters, mode_cal, samples, seed,
                   nstore, nsplit, iterations, init_nelec, optimize,
-                  nmptrans=None, freeze_parameters=False):
+                  nmptrans=None, freeze_parameters=False, warmup=2000):
     if nmptrans is None:
         nmptrans = -NSITE if fixture.boundary == "apbc" else NSITE
     write_modpara(workdir, fixture, mode_cal, samples, seed, nstore, nsplit,
-                  iterations, init_nelec, nmptrans, freeze_parameters)
+                  iterations, init_nelec, nmptrans, freeze_parameters,
+                  warmup)
     write_projection(workdir, fixture, optimize)
     write_translations(workdir, fixture.lattice, fixture.k)
     if fixture.mode == "anti":
@@ -392,7 +401,7 @@ def replay_iterations(records, samples=REPLAY_SAMPLES):
         elif label == "SAMPLE":
             if len(groups) >= 2 or (groups and not restored):
                 raise AssertionError("missing restore before second iteration")
-            if record[2] != record[3].bit_count():
+            if record[2] != popcount(record[3]):
                 raise AssertionError("sample Ncur/occupation mismatch")
             current.append(record)
         elif label == "STORE":
@@ -438,13 +447,13 @@ def expected_outputs(masks, local, wave, fixture, parameters, workdir,
     energy = mean_over_masks(masks, local["energy"])
     energy2 = sum(abs(local["energy"][mask]) ** 2 for mask in masks) / \
         float(len(masks))
-    numbers = dict((mask, mask.bit_count()) for mask in unique)
+    numbers = dict((mask, popcount(mask)) for mask in unique)
     number = mean_over_masks(masks, numbers)
     number2 = sum(numbers[mask] ** 2 for mask in masks) / float(len(masks))
     sz_values = {}
     for mask in unique:
-        n_up = (mask & ((1 << NSITE) - 1)).bit_count()
-        n_down = (mask >> NSITE).bit_count()
+        n_up = popcount(mask & ((1 << NSITE) - 1))
+        n_down = popcount(mask >> NSITE)
         sz_values[mask] = 0.5 * (n_up - n_down)
     sz = mean_over_masks(masks, sz_values)
     sz2 = sum(sz_values[mask] ** 2 for mask in masks) / float(len(masks))
@@ -701,8 +710,8 @@ def replay_case(rootdir, args):
     for iteration, sample_records in enumerate(replay_iterations(records)):
         masks = [record[3] for record in sample_records]
         if fixture.mode == "anti" and any(
-                mask.bit_count() != 2 *
-                (mask & ((1 << NSITE) - 1)).bit_count()
+                popcount(mask) != 2 *
+                popcount(mask & ((1 << NSITE) - 1))
                 for mask in masks):
             raise AssertionError("anti-parallel sample is not Sz=0")
         if any(wave[mask] == 0 for mask in masks):
@@ -1020,7 +1029,8 @@ def pilot_case(rootdir, args):
             write_fixture(
                 workdir, fixture, parameters, mode_cal=mode_cal,
                 samples=VALIDATION_SAMPLES, seed=seed, nstore=1, nsplit=1,
-                iterations=1, init_nelec=4, optimize=(mode_cal == 0))
+                iterations=1, init_nelec=4, optimize=(mode_cal == 0),
+                warmup=20000)
             environment = ({"MVMC_GC_SR_DUMP": "sr.dat"}
                            if mode_cal == 0 else {})
             run_binary(rootdir, workdir, 1, extra_env=environment)
@@ -1053,11 +1063,142 @@ def pilot_case(rootdir, args):
                       "summary": all_summary}, sort_keys=True))
 
 
+def threshold_key(fixture):
+    return (fixture.mode, fixture.boundary, fixture.k,
+            fixture.structural_zero)
+
+
+def physical_case(rootdir, args):
+    fixture = Fixture(args.mode, args.boundary, args.k, args.zero)
+    limits = THRESHOLDS.get(threshold_key(fixture))
+    if limits is None:
+        raise AssertionError("no pilot-fixed thresholds for " + fixture.label())
+    parameters = make_parameters(fixture)
+    workdir = prepare_work(rootdir, fixture.label() + "_physical")
+    write_fixture(
+        workdir, fixture, parameters, mode_cal=1,
+        samples=VALIDATION_SAMPLES, seed=VALIDATION_SEED, nstore=1,
+        nsplit=1, iterations=1, init_nelec=4, optimize=False,
+        warmup=20000)
+    run_binary(rootdir, workdir, 1)
+    exact = exact_physical(fixture, parameters, workdir)
+    actual = parse_physical(workdir, 1, 0)
+    for key in ("energy", "energy2", "number", "number2"):
+        compare("physical {} {}".format(fixture.label(), key),
+                actual[key], exact[key], limits[key])
+    greens = parse_greens(workdir, 1)
+    for group, limit_name in (("onebody", "green"),
+                              ("anomalous", "anomalous")):
+        actual_rows = dict(greens[group])
+        exact_rows = exact[group]
+        if set(actual_rows) != set(exact_rows):
+            raise AssertionError("physical {} inventory differs".format(
+                group))
+        for key in sorted(exact_rows):
+            compare("physical {} {} {}".format(
+                fixture.label(), group, key), actual_rows[key],
+                exact_rows[key], limits[limit_name])
+    print("GC MP physical {} passed".format(fixture.label()))
+
+
+def sr_case(rootdir, args):
+    fixture = Fixture(args.mode, args.boundary, args.k, args.zero)
+    limits = THRESHOLDS.get(threshold_key(fixture))
+    if limits is None:
+        raise AssertionError("no pilot-fixed thresholds for " + fixture.label())
+    parameters = make_parameters(fixture)
+    runs = {}
+    exact = None
+    for store in (0, 1):
+        workdir = prepare_work(
+            rootdir, fixture.label() + "_sr_o{}".format(store))
+        write_fixture(
+            workdir, fixture, parameters, mode_cal=0,
+            samples=VALIDATION_SAMPLES, seed=VALIDATION_SEED, nstore=store,
+            nsplit=1, iterations=1, init_nelec=4, optimize=True,
+            warmup=20000)
+        run_binary(rootdir, workdir, 1,
+                   extra_env={"MVMC_GC_STATE_DUMP": "state.dat",
+                              "MVMC_GC_SR_DUMP": "sr.dat"})
+        if exact is None:
+            exact = exact_sr(fixture, parameters, workdir)
+        rows = parse_sr_dump(os.path.join(workdir, "sr.dat"))[0]["p"]
+        masks = [record[3] for record in state_dump_records(
+            os.path.join(workdir, "state.dat.rank0"))
+                 if record[0] == "SAMPLE"]
+        runs[store] = (rows, masks)
+        for packed, tolerance in sorted(limits["sr"].items()):
+            compare("SR {} NStoreO={} P{}".format(
+                fixture.label(), store, packed), rows[packed][4],
+                exact[packed], tolerance)
+    if runs[0][1] != runs[1][1]:
+        raise AssertionError("NStoreO changed sampled configurations")
+    first_rows, second_rows = runs[0][0], runs[1][0]
+    if set(first_rows) != set(second_rows):
+        raise AssertionError("NStoreO changed SR row inventory")
+    for index in sorted(first_rows):
+        for column, (first, second) in enumerate(
+                zip(first_rows[index], second_rows[index])):
+            compare("NStoreO {} P{} column {}".format(
+                fixture.label(), index, column), first, second,
+                5.0e-10 * (1.0 + abs(first)))
+    print("GC MP SR {} passed (components {})".format(
+        fixture.label(), sorted(limits["sr"])))
+
+
+def sample_case(rootdir, args):
+    if not args.sample_dir:
+        raise AssertionError("sample case requires --sample-dir")
+    fixture = Fixture("anti", "pbc", 2, False)
+    parameters = make_parameters(fixture)
+    generated = prepare_work(rootdir, "gc_mp_sample_expected")
+    write_fixture(
+        generated, fixture, parameters, mode_cal=1, samples=10000,
+        seed=VALIDATION_SEED, nstore=1, nsplit=1, iterations=1,
+        init_nelec=4, optimize=False)
+    generated_files = sorted(name for name in os.listdir(generated)
+                             if name.endswith(".def"))
+    sample_files = sorted(name for name in os.listdir(args.sample_dir)
+                          if name.endswith(".def"))
+    if generated_files != sample_files:
+        raise AssertionError("sample file inventory differs")
+    for name in generated_files:
+        with open(os.path.join(generated, name), "rb") as stream:
+            expected = stream.read()
+        with open(os.path.join(args.sample_dir, name), "rb") as stream:
+            actual = stream.read()
+        if actual != expected:
+            raise AssertionError("sample {} differs from generator".format(
+                name))
+    smoke = prepare_work(rootdir, "gc_mp_sample_smoke")
+    for name in generated_files:
+        shutil.copy2(os.path.join(args.sample_dir, name),
+                     os.path.join(smoke, name))
+    modpara = os.path.join(smoke, "modpara.def")
+    with open(modpara) as stream:
+        text = stream.read()
+    old = "NVMCSample     10000\n"
+    if text.count(old) != 1:
+        raise AssertionError("sample NVMCSample line changed")
+    write(modpara, text.replace(old, "NVMCSample     500\n"))
+    output = run_binary(rootdir, smoke, 1)
+    values = parse_physical(smoke, 1, 0)
+    for key, value in values.items():
+        number = complex(value)
+        if not (math.isfinite(number.real) and math.isfinite(number.imag)):
+            raise AssertionError("sample produced nonfinite {}".format(key))
+    stats_line(output)
+    print("GC MP sample matches the generator and smoke test passed")
+
+
 CASES = {
     "mpi": mpi_case,
     "mutation": mutation_case,
     "pilot": pilot_case,
+    "physical": physical_case,
     "replay": replay_case,
+    "sample": sample_case,
+    "sr": sr_case,
     "vacuum": vacuum_case,
 }
 
@@ -1076,6 +1217,7 @@ def main():
     parser.add_argument("--nsplit", type=int, default=1)
     parser.add_argument("--store", type=int, default=1)
     parser.add_argument("--seeds", default=None)
+    parser.add_argument("--sample-dir", default=None)
     parser.add_argument("--expect-threads", type=int, default=None)
     args = parser.parse_args()
     CASES[args.case](os.getcwd(), args)
