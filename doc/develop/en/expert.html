@@ -597,9 +597,9 @@ the part of <span class="math notranslate nohighlight">\(H|\phi\rangle\)</span> 
 canonical runs is not applied, because it would change the relative
 weights of particle-number sectors. Both forms require complex
 variational parameters, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>,
-<code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code> or <code class="docutils literal notranslate"><span class="pre">-1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos,
-OptTrans, UpdateWeight, local spins, and SR-CG are not supported in this
-first phase.</p>
+a nonzero <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> with <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span> <span class="pre">&lt;=</span> <span class="pre">NQPTrans</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
+spins, and SR-CG are not supported.</p>
 <p>Each quantum-projection component is kept either with its inverse matrix or,
 when its Pfaffian is zero or the factorization is classified singular or
 near-singular by the scale-aware tests of the absolute Pfaffian backend, as a
@@ -618,10 +618,28 @@ is zero is reported with a request to raise <code class="docutils literal notran
 the <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> weights. Acceptance is decided in the log domain for both
 pairing forms, so a finite but large amplitude ratio is accepted rather
 than rejected by an overflowing weight.</p>
-<p><code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> selects anti-periodic boundary conditions (APBC). Only
-the first <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> pattern is used; momentum projection over several
-translations is not performed. <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> does not modify the
-Hamiltonian, so keep the following three inputs consistent.</p>
+<p>Momentum projection uses the first <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> patterns of
+<code class="docutils literal notranslate"><span class="pre">TransSym</span></code> with their complex weights, as in canonical runs: for a
+translation by <span class="math notranslate nohighlight">\(R\)</span> the weight <span class="math notranslate nohighlight">\(e^{-iKR}/N_{\rm T}\)</span> selects
+the total momentum <span class="math notranslate nohighlight">\(K\)</span>. Because the component for a translation
+<span class="math notranslate nohighlight">\(R\)</span> evaluates the pair function at the translated sites, the
+projected state satisfies
+<span class="math notranslate nohighlight">\(\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle\)</span>. For
+<span class="math notranslate nohighlight">\(K\ne0\)</span> the vacuum has zero projected amplitude, so give
+<code class="docutils literal notranslate"><span class="pre">NGCInitNelec&gt;=2</span></code>; an initial configuration with zero amplitude stops
+with a diagnostic. A pair function that is not translation invariant
+makes the projection nontrivial. Configurations whose translated
+components vanish are handled as Pfaffian-only components (a direct
+Pfaffian per candidate), which is correct but slower than the inverse
+update. <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> in <code class="docutils literal notranslate"><span class="pre">zvo_out</span></code> remains the sample
+average of <span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span> over configurations with nonzero
+amplitude. Thus, with pair-creation terms and an exact node such as the
+<span class="math notranslate nohighlight">\(K\ne0\)</span> vacuum, it is smaller than
+<span class="math notranslate nohighlight">\(\|H\Psi\|^2/\|\Psi\|^2\)</span> by the nodal contribution.</p>
+<p>A negative <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> selects the boundary-sign columns in the orbital
+input, while its absolute value selects the number of <code class="docutils literal notranslate"><span class="pre">TransSym</span></code>
+patterns. It does not modify the Hamiltonian, so keep the following
+inputs consistent for anti-periodic boundary conditions (APBC).</p>
 <ul class="simple">
 <li><p>The Hamiltonian (<code class="docutils literal notranslate"><span class="pre">Trans</span></code> etc.): coefficients that cross an
 anti-periodic boundary carry the boundary phase <span class="math notranslate nohighlight">\(-1\)</span> (for a
@@ -632,9 +650,9 @@ chain, <span class="math notranslate nohighlight">\(c_{L}=-c_{0}\)</span> flips 
 <li><p><code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> / <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> (anti-parallel pairing): the
 fourth column of every pair row is the sign <span class="math notranslate nohighlight">\(\pm1\)</span> that
 multiplies <span class="math notranslate nohighlight">\(F_{ij}\)</span>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">TransSym</span></code>: the first pattern is the identity map with weight 1 and
-sign +1 on every site. APBC does not require a negative sign on the
-identity map.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TransSym</span></code>: its site mappings include the boundary signs. The identity
+pattern has sign +1 on every site; APBC does not require a negative sign
+on that pattern.</p></li>
 </ul>
 <p>With <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> and <code class="docutils literal notranslate"><span class="pre">phase0=180</span></code> or similar settings, StdFace writes a
 <code class="docutils literal notranslate"><span class="pre">Trans</span></code> file that includes the boundary phases and an
@@ -649,9 +667,10 @@ when <code class="docutils literal notranslate"><span class="pre">2Sz</span></co
 in GC mode, so give <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> and explicit complex initial
 parameters. StdFace uses <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> by default also for periodic
 inputs, so that value alone does not indicate a physical APBC. General
-twist angles, projection over several translations, and BackFlow are not
-supported. A four-site chain example and the conversion script are in
-<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/APBC_chain</span></code>.</p>
+twist angles and BackFlow are not supported. A four-site identity-only
+example and its conversion script are in
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/APBC_chain</span></code>; a multi-translation example is in
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/MomentumProjection</span></code>.</p>
 <p>For anti-parallel pairing, run StdFace with <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>, <code class="docutils literal notranslate"><span class="pre">phase0=180</span></code> (or
 similar), and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code>. It writes the boundary phases into
 <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and a four-column <code class="docutils literal notranslate"><span class="pre">orbitalidx.def</span></code> (pair table with one sign

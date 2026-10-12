@@ -595,9 +595,10 @@ ModParaファイル (modpara.def)
 
    どちらの形式でも、canonical計算で行うpairパラメータの一様な再スケールは
    粒子数sector間の重みを変えるため行いません。両形式とも複素変分パラメータ、
-   ``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=1`` または ``-1``、
-   ``NQPOptTrans<=1`` が必要です。Phase 1ではRBM、BackFlow、Lanczos、
-   OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
+   ``NExUpdatePath=0``、``NSPGaussLeg=1``、0でなく
+   ``abs(NMPTrans) <= NQPTrans`` を満たす ``NMPTrans``、
+   ``NQPOptTrans<=1`` が必要です。RBM、BackFlow、Lanczos、OptTrans、
+   UpdateWeight、局在spin、SR-CGは未対応です。
 
    各量子数射影成分は、逆行列を持つ成分か、Pfaffian が 0 または absolute
    Pfaffian backend の scale-aware な判定で特異・準特異と分類された
@@ -612,10 +613,23 @@ ModParaファイル (modpara.def)
    測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
    ``NGCInitNelec`` の増加または ``TransSym`` の重みの確認を求める診断で停止します。
 
-   ``NMPTrans=-1`` は反周期境界条件（APBC）を指定します。並進射影は
-   TransSym の先頭1個だけを使い、複数並進による運動量射影は行いません。
-   ``NMPTrans=-1`` 自体は Hamiltonian を変更しないため、次の3つを
-   整合させてください。
+   運動量射影は canonical 計算と同様に、``TransSym`` の先頭
+   ``abs(NMPTrans)`` 個のpatternと複素重みを使います。並進 :math:`R` に
+   :math:`e^{-iKR}/N_{\rm T}` を与えると全運動量 :math:`K` を選択し、各成分が
+   並進先siteのpair関数を評価する規約では
+   :math:`\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle` となります。
+   :math:`K\ne0` では真空の射影振幅が0なので ``NGCInitNelec>=2`` を指定して
+   ください。振幅0の初期配置は診断を出して停止します。並進不変でないpair関数を
+   使うと射影は非自明になり、並進成分が0になる配置は Pfaffian-only 成分として
+   候補ごとに完全な Pfaffian を評価します。これは正しい処理ですが、逆行列更新より
+   遅くなります。``zvo_out`` の :math:`\langle H^2\rangle` は振幅非零の
+   配置上の :math:`|E_{\rm loc}|^2` のsample平均です。そのためpair生成項と
+   :math:`K\ne0` の真空のような節がある場合、節の寄与だけ
+   :math:`\|H\Psi\|^2/\|\Psi\|^2` より小さくなります。
+
+   負の ``NMPTrans`` は軌道入力の境界符号列を選び、その絶対値が使用する
+   ``TransSym`` pattern数です。``NMPTrans`` 自体は Hamiltonian を変更しない
+   ため、反周期境界条件（APBC）では次の入力を整合させてください。
 
    * ``Trans`` 等の Hamiltonian：反周期方向の境界をまたぐ係数に
      境界位相 :math:`-1` を含める（例: 1次元鎖では
@@ -625,7 +639,7 @@ ModParaファイル (modpara.def)
      :math:`s_{JI}=-s_{IJ}`）。
    * ``OrbitalAntiParallel`` / ``Orbital`` （反平行pair）：全pair行の4列目に
      :math:`F_{ij}` に掛かる符号 :math:`\pm1` を指定する。
-   * ``TransSym``：先頭のpatternは恒等写像・重み1・全siteの符号+1とする。
+   * ``TransSym``：site写像に境界符号を含める。恒等patternは全siteの符号+1で、
      APBCのために恒等写像へ負符号を付ける必要はありません。
 
    StdFaceで ``2Sz=-1`` と ``phase0=180`` 等を指定すると、境界位相を含む
@@ -640,9 +654,10 @@ ModParaファイル (modpara.def)
    ``Ncond`` はGCでは粒子数を拘束しないため、``NGCInitNelec`` と複素の
    初期パラメータを明示してください。StdFaceの既定値 ``NMPTrans=-1`` は
    周期境界の入力にも使われるため、それだけでは物理的なAPBCを意味しません。
-   一般のtwist角、複数並進射影、BackFlowとの併用には対応していません。
+   一般のtwist角とBackFlowとの併用には対応していません。恒等写像だけを使う
    4サイト鎖の入力例と変換スクリプトは
-   ``samples/GrandCanonical/APBC_chain`` にあります。
+   ``samples/GrandCanonical/APBC_chain``、複数並進の例は
+   ``samples/GrandCanonical/MomentumProjection`` にあります。
 
    反平行pairでは、StdFaceを ``2Sz=0``、``phase0=180`` 等、
    ``ComplexType=1`` で実行します。境界位相を含む ``Trans`` と、``Orbital``

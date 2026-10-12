@@ -582,9 +582,10 @@ Hamiltonianは各項全体で <span class="math notranslate nohighlight">\(S^z\)
 </ul>
 <p>どちらの形式でも、canonical計算で行うpairパラメータの一様な再スケールは
 粒子数sector間の重みを変えるため行いません。両形式とも複素変分パラメータ、
-<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>、<code class="docutils literal notranslate"><span class="pre">NMPTrans=1</span></code> または <code class="docutils literal notranslate"><span class="pre">-1</span></code>、
-<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code> が必要です。Phase 1ではRBM、BackFlow、Lanczos、
-OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。</p>
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>、0でなく
+<code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span> <span class="pre">&lt;=</span> <span class="pre">NQPTrans</span></code> を満たす <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code>、
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code> が必要です。RBM、BackFlow、Lanczos、OptTrans、
+UpdateWeight、局在spin、SR-CGは未対応です。</p>
 <p>各量子数射影成分は、逆行列を持つ成分か、Pfaffian が 0 または absolute
 Pfaffian backend の scale-aware な判定で特異・準特異と分類された
 「Pfaffian のみ」の成分かのどちらかとして保持されます。後者では候補振幅と
@@ -597,10 +598,22 @@ toolchain では同等の strict floating-point option が必要です。計算�
 <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">component</span> <span class="pre">stats:</span> <span class="pre">...</span></code> の1行で各経路の使用回数を出力します。評価できない
 測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
 <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> の増加または <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> の重みの確認を求める診断で停止します。</p>
-<p><code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> は反周期境界条件（APBC）を指定します。並進射影は
-TransSym の先頭1個だけを使い、複数並進による運動量射影は行いません。
-<code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> 自体は Hamiltonian を変更しないため、次の3つを
-整合させてください。</p>
+<p>運動量射影は canonical 計算と同様に、<code class="docutils literal notranslate"><span class="pre">TransSym</span></code> の先頭
+<code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> 個のpatternと複素重みを使います。並進 <span class="math notranslate nohighlight">\(R\)</span> に
+<span class="math notranslate nohighlight">\(e^{-iKR}/N_{\rm T}\)</span> を与えると全運動量 <span class="math notranslate nohighlight">\(K\)</span> を選択し、各成分が
+並進先siteのpair関数を評価する規約では
+<span class="math notranslate nohighlight">\(\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle\)</span> となります。
+<span class="math notranslate nohighlight">\(K\ne0\)</span> では真空の射影振幅が0なので <code class="docutils literal notranslate"><span class="pre">NGCInitNelec&gt;=2</span></code> を指定して
+ください。振幅0の初期配置は診断を出して停止します。並進不変でないpair関数を
+使うと射影は非自明になり、並進成分が0になる配置は Pfaffian-only 成分として
+候補ごとに完全な Pfaffian を評価します。これは正しい処理ですが、逆行列更新より
+遅くなります。<code class="docutils literal notranslate"><span class="pre">zvo_out</span></code> の <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> は振幅非零の
+配置上の <span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span> のsample平均です。そのためpair生成項と
+<span class="math notranslate nohighlight">\(K\ne0\)</span> の真空のような節がある場合、節の寄与だけ
+<span class="math notranslate nohighlight">\(\|H\Psi\|^2/\|\Psi\|^2\)</span> より小さくなります。</p>
+<p>負の <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> は軌道入力の境界符号列を選び、その絶対値が使用する
+<code class="docutils literal notranslate"><span class="pre">TransSym</span></code> pattern数です。<code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> 自体は Hamiltonian を変更しない
+ため、反周期境界条件（APBC）では次の入力を整合させてください。</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Trans</span></code> 等の Hamiltonian：反周期方向の境界をまたぐ係数に
 境界位相 <span class="math notranslate nohighlight">\(-1\)</span> を含める（例: 1次元鎖では
@@ -610,7 +623,7 @@ TransSym の先頭1個だけを使い、複数並進による運動量射影は�
 <span class="math notranslate nohighlight">\(s_{JI}=-s_{IJ}\)</span>）。</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> / <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> （反平行pair）：全pair行の4列目に
 <span class="math notranslate nohighlight">\(F_{ij}\)</span> に掛かる符号 <span class="math notranslate nohighlight">\(\pm1\)</span> を指定する。</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">TransSym</span></code>：先頭のpatternは恒等写像・重み1・全siteの符号+1とする。
+<li><p><code class="docutils literal notranslate"><span class="pre">TransSym</span></code>：site写像に境界符号を含める。恒等patternは全siteの符号+1で、
 APBCのために恒等写像へ負符号を付ける必要はありません。</p></li>
 </ul>
 <p>StdFaceで <code class="docutils literal notranslate"><span class="pre">2Sz=-1</span></code> と <code class="docutils literal notranslate"><span class="pre">phase0=180</span></code> 等を指定すると、境界位相を含む
@@ -625,9 +638,10 @@ APBCのために恒等写像へ負符号を付ける必要はありません。<
 <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> はGCでは粒子数を拘束しないため、<code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> と複素の
 初期パラメータを明示してください。StdFaceの既定値 <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> は
 周期境界の入力にも使われるため、それだけでは物理的なAPBCを意味しません。
-一般のtwist角、複数並進射影、BackFlowとの併用には対応していません。
+一般のtwist角とBackFlowとの併用には対応していません。恒等写像だけを使う
 4サイト鎖の入力例と変換スクリプトは
-<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/APBC_chain</span></code> にあります。</p>
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/APBC_chain</span></code>、複数並進の例は
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/MomentumProjection</span></code> にあります。</p>
 <p>反平行pairでは、StdFaceを <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>、<code class="docutils literal notranslate"><span class="pre">phase0=180</span></code> 等、
 <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> で実行します。境界位相を含む <code class="docutils literal notranslate"><span class="pre">Trans</span></code> と、<code class="docutils literal notranslate"><span class="pre">Orbital</span></code>
 から参照される4列の <code class="docutils literal notranslate"><span class="pre">orbitalidx.def</span></code> （行ごとに符号を持つpair表）が
