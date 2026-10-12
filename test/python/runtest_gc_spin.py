@@ -9,9 +9,13 @@ quadrature is checked to converge to the exact S=0 projection.
 from __future__ import print_function
 
 import argparse
+import concurrent.futures
+import hashlib
+import json
 import math
 import os
 import re
+import statistics
 import subprocess
 from fractions import Fraction
 
@@ -1067,6 +1071,442 @@ def mutation_case(rootdir, args):
     print("GC SP oracle mutations detected: {}".format(sorted(mutants)))
 
 
+# ---------------------------------------------------------------------------
+# Statistical gates (Linux Release pilot, fixed before validation)
+# ---------------------------------------------------------------------------
+PILOT_SEEDS = (1001, 2003, 3011, 4019, 5021, 6037, 7043, 8053,
+               9067, 10079, 11087, 12097, 13109, 14119, 15121, 16127)
+VALIDATION_SEED = 91807
+ALPHA_FAMILY = 0.002699796063260207  # two-sided normal 3 sigma
+PILOT_SAMPLES = 60000
+PILOT_WARMUP = 1000
+PILOT_GAUSS = 8
+PILOT_FIXTURES = (("pbc", 1), ("apbc", 1), ("pbc", 0), ("apbc", 0))
+THRESHOLD_FILE = "gc_spin_thresholds.json"
+THRESHOLD_SCHEMA = 1
+# Readiness-review criterion: twice the largest Phase 2 MP pilot gate of the
+# same observable class.  S^2 is derived from Green rows and only recorded.
+OVERSIZE_LIMITS = {"energy": 0.096, "energy2": 1.36, "number": 0.094,
+                   "number2": 0.50, "green": 0.038, "anomalous": 0.032,
+                   "sr": 0.26}
+
+
+def student_t_cdf(t, dof):
+    if dof < 1:
+        raise ValueError("positive dof required")
+
+    def integral_cos_power(theta, power):
+        base = theta if power % 2 == 0 else math.sin(theta)
+        start = 2 if power % 2 == 0 else 3
+        for m in range(start, power + 1, 2):
+            base = (math.sin(theta) * math.cos(theta) ** (m - 1) / m
+                    + (m - 1) * base / m)
+        return base
+
+    theta = math.atan(abs(t) / math.sqrt(dof))
+    ratio = (integral_cos_power(theta, dof - 1) /
+             integral_cos_power(math.pi / 2, dof - 1))
+    return 0.5 + math.copysign(0.5 * ratio, t)
+
+
+def family_critical(nseed, comparisons, alpha):
+    if comparisons < 1 or nseed < 2 or not 0.0 < alpha < 1.0:
+        raise ValueError("invalid family-wise critical value request")
+    target = 1.0 - alpha / (2.0 * comparisons)
+    lo, hi = 0.0, 1.0
+    while student_t_cdf(hi, nseed - 1) < target:
+        hi *= 2.0
+    for unused in range(100):
+        mid = (lo + hi) / 2.0
+        if student_t_cdf(mid, nseed - 1) < target:
+            lo = mid
+        else:
+            hi = mid
+    return hi
+
+
+def summarize_pilot(values, expected, critical):
+    if len(values) != len(PILOT_SEEDS) or \
+            not all(math.isfinite(v) for v in values):
+        raise ValueError("16 finite seed means required")
+    if not (math.isfinite(expected) and math.isfinite(critical)):
+        raise ValueError("finite expectation and critical value required")
+    mean = statistics.mean(values)
+    sd = statistics.stdev(values)
+    deterministic = 2.e-9 * (1.0 + abs(expected))
+    if sd == 0.0:
+        if abs(mean - expected) > deterministic:
+            raise AssertionError("zero-scatter biased pilot")
+        return {"mean": mean, "sd": sd, "gate": deterministic}
+    if abs(mean - expected) > critical * sd / 4.0:
+        raise AssertionError("family-wise pilot bias gate")
+    # Upward two-significant-digit rounding, fixed before validation.
+    raw = max(6.0 * sd, deterministic)
+    unit = 10.0 ** (math.floor(math.log10(raw)) - 1)
+    gate = math.ceil(raw / unit) * unit
+    return {"mean": mean, "sd": sd, "gate": gate}
+
+
+def _expect_raise(label, function, kinds=(AssertionError, ValueError)):
+    try:
+        function()
+    except kinds:
+        return
+    raise AssertionError("pilot statistics accepted " + label)
+
+
+def pilotstats_case(rootdir, args):
+    """Unit checks of the CDF, critical value and pilot summary."""
+    for t in (-3.0, -0.4, 0.0, 0.7, 5.0):
+        if abs(student_t_cdf(t, 1) - (0.5 + math.atan(t) / math.pi)) > 2e-15:
+            raise AssertionError("dof=1 CDF")
+        if abs(student_t_cdf(t, 15) + student_t_cdf(-t, 15) - 1.0) > 2e-15:
+            raise AssertionError("CDF symmetry")
+    previous = -1.0
+    for step in range(-40, 41):
+        value = student_t_cdf(step / 8.0, 15)
+        if value < previous:
+            raise AssertionError("CDF is not monotone")
+        previous = value
+    for t, reference in ((2.0, 0.9680274963576401),
+                         (4.0, 0.9994203415751196)):
+        if abs(student_t_cdf(t, 15) - reference) > 2e-13:
+            raise AssertionError("dof=15 CDF({})".format(t))
+    base = family_critical(16, 100, ALPHA_FAMILY)
+    if not family_critical(16, 1000, ALPHA_FAMILY) > base > \
+            family_critical(16, 10, ALPHA_FAMILY):
+        raise AssertionError("critical value must grow with the family size")
+    target = 1.0 - ALPHA_FAMILY / 200.0
+    if abs(student_t_cdf(base, 15) - target) > 1e-12:
+        raise AssertionError("critical value does not solve the CDF equation")
+    scatter = [0.01 * ((-1) ** k) * (1 + k % 3) for k in range(16)]
+    centered = [value - statistics.mean(scatter) for value in scatter]
+    narrow = summarize_pilot([1.0 + 0.1 * v for v in centered], 1.0, base)
+    wide = summarize_pilot([1.0 + v for v in centered], 1.0, base)
+    if not wide["gate"] > narrow["gate"]:
+        raise AssertionError("6 SD gate does not follow the scatter")
+    _expect_raise("a known bias", lambda: summarize_pilot(
+        [1.5 + v for v in centered], 1.0, base))
+    _expect_raise("NaN", lambda: summarize_pilot(
+        [float("nan")] + [1.0] * 15, 1.0, base))
+    _expect_raise("a missing seed", lambda: summarize_pilot(
+        [1.0] * 15, 1.0, base))
+    exact = summarize_pilot([0.0] * 16, 0.0, base)
+    if exact["gate"] != 2.0e-9:
+        raise AssertionError("SD=0 must use the deterministic tolerance")
+    _expect_raise("an SD=0 mismatch", lambda: summarize_pilot(
+        [0.1] * 16, 0.0, base))
+    print("GC SP pilot statistics: t_crit(15, M=100)={:.6f}".format(base))
+
+
+def observable_class(key):
+    head = key.split(":")[0]
+    if head in ("onebody", "twobody", "nbody"):
+        return "green"
+    if head == "s2":
+        return "s2"
+    if head in ("sz", "sz2"):
+        return "sz"
+    return head
+
+
+def physical_observations(workdir):
+    observed = {}
+    physical = mp.parse_physical(workdir, 1, 0)
+    observed["energy:re"] = physical["energy"].real
+    observed["energy:im"] = physical["energy"].imag
+    for key in ("energy2", "number", "number2", "sz", "sz2"):
+        observed[key] = float(physical[key])
+    groups = parse_greens(workdir, 1, 1)
+    s2 = production_s2(groups, physical["sz2"])
+    observed["s2:re"], observed["s2:im"] = s2.real, s2.imag
+    for group in ("onebody", "twobody", "nbody", "anomalous"):
+        for key, value in groups[group]:
+            name = "{}:{}".format(group, json.dumps(key, separators=(",", ":")))
+            observed[name + ":re"] = value.real
+            observed[name + ":im"] = value.imag
+    return observed
+
+
+def sr_observations(workdir):
+    rows = parse_sr_dump(os.path.join(workdir, "sr.dat"))[0]["p"]
+    observed = {}
+    for index in sorted(rows):
+        for column, value in enumerate(rows[index]):
+            observed["sr:{}:{}".format(index, column)] = value
+    return observed
+
+
+def exact_reference(fixture, nodes, F, calmode):
+    """|Psi|^2-weighted expectations of every compared scalar."""
+    wave = spin.project_finite(F, nodes, fixture.log_charge,
+                               reference_nodes=spin.independent_nodes(
+                                   fixture.gauss))
+    support = sorted(mask for mask, value in wave.items() if value != 0)
+    norm = sum(abs(wave[mask]) ** 2 for mask in support)
+    probability = dict((mask, abs(wave[mask]) ** 2 / norm) for mask in support)
+    tables = local_tables(wave, fixture.terms(), support, calmode)
+
+    def weighted(values):
+        return sum(probability[mask] * values[mask] for mask in support)
+
+    energy = weighted(tables["energy"])
+    reference = {}
+    if calmode == 1:
+        reference["energy:re"] = energy.real
+        reference["energy:im"] = energy.imag
+        reference["energy2"] = weighted(dict(
+            (mask, abs(tables["energy"][mask]) ** 2) for mask in support))
+        counts = dict((mask, popcount(mask)) for mask in support)
+        reference["number"] = weighted(counts)
+        reference["number2"] = weighted(dict(
+            (mask, counts[mask] ** 2) for mask in support))
+        reference["sz"] = 0.0
+        reference["sz2"] = 0.0
+        s2 = weighted(tables["s2"])
+        reference["s2:re"], reference["s2:im"] = s2.real, s2.imag
+        for group in ("onebody", "twobody", "nbody", "anomalous"):
+            for key, values in tables[group].items():
+                name = "{}:{}".format(group, json.dumps(
+                    key, separators=(",", ":")))
+                value = weighted(values)
+                reference[name + ":re"] = value.real
+                reference[name + ":im"] = value.imag
+        return reference
+    derivatives = mp.projection_derivatives(fixture.mp, support)
+    orbital = spin.log_derivatives(F, nodes, support, fixture.log_charge)
+
+    def rows_for(index, values):
+        mean_o = weighted(values)
+        mean_oh = weighted(dict((mask, tables["energy"][mask] * values[mask])
+                                for mask in support))
+        gradient = 2.0 * (mean_oh.real - energy.real * mean_o.real)
+        for column, value in enumerate((mean_o.real, mean_o.imag,
+                                        mean_oh.real, mean_oh.imag,
+                                        gradient)):
+            reference["sr:{}:{}".format(index, column)] = value
+
+    for index in range(NPROJ):
+        for imaginary in (0, 1):
+            rows_for(2 * index + imaginary, dict(
+                (mask, complex(derivatives[index][mask]) if not imaginary
+                 else 0.0j) for mask in support))
+    for parameter in range(NSITE * NSITE):
+        for imaginary in (0, 1):
+            rows_for(2 * (NPROJ + parameter) + imaginary, dict(
+                (mask, complex(orbital[mask][2 * parameter + imaginary]))
+                for mask in support))
+    return reference
+
+
+def expected_comparison_count():
+    physical = (9 + 2 * NORBITAL * NORBITAL + 2 * len(TWO_BODY_KEYS) +
+                2 * len(NBODY_KEYS) + 2 * len(ANOMALOUS_KEYS))
+    sr = 5 * 2 * (NPROJ + NSITE * NSITE)
+    return sum(physical if calmode == 1 else sr
+               for unused, calmode in PILOT_FIXTURES)
+
+
+def statistical_run(rootdir, boundary, calmode, seed, samples, label):
+    fixture = SpinFixture(boundary, PILOT_GAUSS)
+    workdir = prepare_work(rootdir, "{}_{}_m{}_seed{}".format(
+        fixture.label(), label, calmode, seed))
+    write_fixture(workdir, fixture, calmode=calmode, store=1, nsplit=1,
+                  samples=samples, seed=seed, iterations=1, freeze=True,
+                  warmup=PILOT_WARMUP)
+    environment = {"MVMC_GC_SR_DUMP": "sr.dat"} if calmode == 0 else {}
+    run_with_dump(rootdir, workdir, 1, environment)
+    observed = (physical_observations(workdir) if calmode == 1
+                else sr_observations(workdir))
+    return fixture, workdir, observed
+
+
+def fixture_reference(fixture, workdir, calmode):
+    nodes = read_dump(workdir, fixture.gauss)
+    spin.validate_coefficients(nodes, fixture.gauss)
+    F = read_pair_matrix(workdir)
+    check_readback(F, fixture.parameters())
+    return exact_reference(fixture, nodes, F, calmode)
+
+
+def file_sha256(path):
+    with open(path, "rb") as stream:
+        return hashlib.sha256(stream.read()).hexdigest()
+
+
+def pilot_case(rootdir, args):
+    """Linux Release pilot: 16 seeds x 4 fixtures; writes the gate file."""
+    samples = args.samples or PILOT_SAMPLES
+    comparisons = expected_comparison_count()
+    critical = family_critical(len(PILOT_SEEDS), comparisons, ALPHA_FAMILY)
+    jobs = []
+    with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
+        for boundary, calmode in PILOT_FIXTURES:
+            for seed in PILOT_SEEDS:
+                jobs.append(((boundary, calmode, seed), pool.submit(
+                    statistical_run, rootdir, boundary, calmode, seed,
+                    samples, "pilot")))
+        results = dict((key, job.result()) for key, job in jobs)
+    rows = []
+    raw = {}
+    oversize = []
+    for boundary, calmode in PILOT_FIXTURES:
+        first = results[(boundary, calmode, PILOT_SEEDS[0])]
+        reference = fixture_reference(first[0], first[1], calmode)
+        label = "{}_m{}".format(boundary, calmode)
+        keys = sorted(reference)
+        for seed in PILOT_SEEDS:
+            observed = results[(boundary, calmode, seed)][2]
+            if sorted(observed) != keys:
+                raise AssertionError("pilot {} seed {} inventory differs".format(
+                    label, seed))
+            raw["{}:seed{}".format(label, seed)] = observed
+        for key in keys:
+            values = [results[(boundary, calmode, seed)][2][key]
+                      for seed in PILOT_SEEDS]
+            summary = summarize_pilot(values, reference[key], critical)
+            rows.append({"fixture": label, "key": key,
+                         "expected": reference[key], "mean": summary["mean"],
+                         "sd": summary["sd"], "gate": summary["gate"]})
+            group = "sr" if key.startswith("sr:") else observable_class(key)
+            limit = OVERSIZE_LIMITS.get(group)
+            if limit is not None and summary["gate"] > limit:
+                oversize.append((label, key, summary["gate"], limit))
+    if len(rows) != comparisons:
+        raise AssertionError("pilot compared {} scalars, declared {}".format(
+            len(rows), comparisons))
+    binary = os.path.join(rootdir, "..", "..", "src", "mVMC", "vmc.out")
+    report = {
+        "schema_version": THRESHOLD_SCHEMA,
+        "source_commit": args.source_commit,
+        "binary_sha256": file_sha256(binary),
+        "image_id": args.image_id,
+        "toolchain": args.toolchain,
+        "thread_env": {"OMP_NUM_THREADS": os.environ.get("OMP_NUM_THREADS"),
+                       "OPENBLAS_NUM_THREADS":
+                       os.environ.get("OPENBLAS_NUM_THREADS")},
+        "seeds": list(PILOT_SEEDS),
+        "validation_seed": VALIDATION_SEED,
+        "samples": samples,
+        "warmup": PILOT_WARMUP,
+        "gauss": PILOT_GAUSS,
+        "comparison_count": comparisons,
+        "alpha_family": ALPHA_FAMILY,
+        "t_critical": critical,
+        "oversize_limits": OVERSIZE_LIMITS,
+        "oversize": oversize,
+        "rows": rows,
+    }
+    output = args.output or os.path.join(rootdir, "work", "pilot_report.json")
+    write(output, json.dumps(report, indent=1, sort_keys=True) + "\n")
+    write(output + ".raw.json", json.dumps(raw, sort_keys=True) + "\n")
+    print("GC SP pilot: {} comparisons, t_crit={:.6f}, oversize={}".format(
+        comparisons, critical, oversize))
+
+
+REQUIRED_METADATA = ("schema_version", "source_commit", "binary_sha256",
+                     "image_id", "seeds", "samples", "warmup", "gauss",
+                     "comparison_count", "alpha_family", "t_critical", "rows")
+
+
+def load_thresholds(path):
+    with open(path) as stream:
+        data = json.load(stream)
+    validate_thresholds(data)
+    return data
+
+
+def validate_thresholds(data):
+    for key in REQUIRED_METADATA:
+        if key not in data or data[key] in (None, ""):
+            raise ValueError("threshold metadata {} missing".format(key))
+    if data["schema_version"] != THRESHOLD_SCHEMA:
+        raise ValueError("unsupported threshold schema")
+    if list(data["seeds"]) != list(PILOT_SEEDS) or \
+            data["gauss"] != PILOT_GAUSS or \
+            data["comparison_count"] != expected_comparison_count():
+        raise ValueError("threshold provenance does not match the driver")
+    if not re.match(r"^[0-9a-f]{40}$", str(data["source_commit"])) or \
+            not re.match(r"^[0-9a-f]{64}$", str(data["binary_sha256"])):
+        raise ValueError("threshold source metadata malformed")
+    seen = set()
+    for row in data["rows"]:
+        for key in ("fixture", "key", "expected", "mean", "sd", "gate"):
+            if key not in row:
+                raise ValueError("threshold row lacks " + key)
+        for key in ("expected", "mean", "sd", "gate"):
+            if not isinstance(row[key], (int, float)) or \
+                    not math.isfinite(row[key]):
+                raise ValueError("threshold row {} is not finite".format(key))
+        if row["gate"] <= 0.0 or row["sd"] < 0.0:
+            raise ValueError("threshold gate must be positive")
+        name = (row["fixture"], row["key"])
+        if name in seen:
+            raise ValueError("duplicate threshold row {}".format(name))
+        seen.add(name)
+    if len(seen) != data["comparison_count"]:
+        raise ValueError("threshold rows do not cover the family")
+
+
+def threshold_path(rootdir):
+    return os.path.join(rootdir, THRESHOLD_FILE)
+
+
+def threshold_contract_case(rootdir, args):
+    data = load_thresholds(threshold_path(rootdir))
+    mutations = []
+    row = data["rows"][0]
+    for label, change in (
+            ("missing key", lambda d: d["rows"][0].pop("gate")),
+            ("negative gate", lambda d: d["rows"][0].update(gate=-1.0)),
+            ("NaN gate", lambda d: d["rows"][0].update(gate=float("nan"))),
+            ("missing source", lambda d: d.pop("source_commit")),
+            ("missing binary", lambda d: d.update(binary_sha256="")),
+            ("old schema", lambda d: d.update(schema_version=0)),
+            ("missing row", lambda d: d["rows"].pop())):
+        mutated = json.loads(json.dumps(data))
+        change(mutated)
+        try:
+            validate_thresholds(mutated)
+        except ValueError:
+            mutations.append(label)
+            continue
+        raise AssertionError("threshold contract accepted " + label)
+    print("GC SP threshold contract: {} rows, rejected {} (first row {})".format(
+        len(data["rows"]), mutations, row["key"]))
+
+
+def validation_case(rootdir, args, calmode):
+    data = load_thresholds(threshold_path(rootdir))
+    label = "{}_m{}".format(args.boundary, calmode)
+    rows = dict((row["key"], row) for row in data["rows"]
+                if row["fixture"] == label)
+    if not rows:
+        raise AssertionError("no pilot-fixed thresholds for " + label)
+    fixture, workdir, observed = statistical_run(
+        rootdir, args.boundary, calmode, VALIDATION_SEED,
+        data["samples"], "validation")
+    reference = fixture_reference(fixture, workdir, calmode)
+    if sorted(reference) != sorted(rows) or sorted(observed) != sorted(rows):
+        raise AssertionError("validation inventory differs from the gates")
+    for key in sorted(rows):
+        if abs(reference[key] - rows[key]["expected"]) > \
+                1.0e-9 * (1.0 + abs(reference[key])):
+            raise AssertionError("oracle expectation changed for " + key)
+        compare("{} {}".format(label, key), observed[key], reference[key],
+                rows[key]["gate"])
+    print("GC SP {} validation {}: {} scalars within pilot gates".format(
+        "physical" if calmode == 1 else "SR", label, len(rows)))
+
+
+def physical_case(rootdir, args):
+    validation_case(rootdir, args, 1)
+
+
+def sr_case(rootdir, args):
+    validation_case(rootdir, args, 0)
+
+
 def oracle_case(rootdir, args):
     spin.self_test()
 
@@ -1079,8 +1519,13 @@ CASES = {
     "mutation": mutation_case,
     "optimization": optimization_case,
     "oracle": oracle_case,
+    "physical": physical_case,
+    "pilot": pilot_case,
+    "pilotstats": pilotstats_case,
     "replay": replay_case,
+    "sr": sr_case,
     "store": store_case,
+    "threshold-contract": threshold_contract_case,
     "weights": weights_case,
 }
 
@@ -1099,6 +1544,12 @@ def main():
     parser.add_argument("--expect-threads", type=int, default=None)
     parser.add_argument("--fixture", choices=("dense", "pfonly"),
                         default="dense")
+    parser.add_argument("--samples", type=int, default=None)
+    parser.add_argument("--jobs", type=int, default=1)
+    parser.add_argument("--output", default=None)
+    parser.add_argument("--source-commit", default=None)
+    parser.add_argument("--image-id", default=None)
+    parser.add_argument("--toolchain", default=None)
     args = parser.parse_args()
     CASES[args.command](os.getcwd(), args)
 

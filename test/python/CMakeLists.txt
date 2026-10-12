@@ -61,6 +61,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINAR
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_mp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_spin_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_spin.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/gc_spin_thresholds.json DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_death.py
@@ -1760,6 +1761,12 @@ foreach(bc pbc apbc)
     add_gc_spin_test(GC_SP_Convergence_${bc} convergence --boundary ${bc})
 endforeach()
 add_gc_spin_test(GC_SP_Mutation mutation)
+add_gc_spin_test(GC_SP_PilotStats pilotstats)
+add_gc_spin_test(GC_SP_ThresholdContract threshold-contract)
+foreach(bc pbc apbc)
+    add_gc_spin_test(GC_SP_Physical_${bc} physical --boundary ${bc})
+    add_gc_spin_test(GC_SP_SR_${bc} sr --boundary ${bc})
+endforeach()
 add_gc_spin_test(GC_SP_Replay_OMP4_pbc_g8_m1
     replay --boundary pbc --gauss 8 --calmode 1 --store 0 --expect-threads 4)
 set_tests_properties(GC_SP_Replay_OMP4_pbc_g8_m1 PROPERTIES
