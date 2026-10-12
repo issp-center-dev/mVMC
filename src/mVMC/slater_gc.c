@@ -51,7 +51,19 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
     const int *xqp = QPTrans[mpidx];
     const int *xqpSgn = QPTransSgn[mpidx];
     double complex *qpBuffer = buffer + (size_t)qpidx * (size_t)NSlater;
+    /* Coefficient of the direct F_ij term in the rotated spin block
+     * (s_i, s_j) of UpdateSlaterElm_fcmp: up-up -cs, up-down cc,
+     * down-up -ss, down-down cs.  G=1 leaves only up-down (cc=1). */
+    double alpha[2][2] = {{0.0, 1.0}, {0.0, 0.0}};
     int msi;
+
+    if (iFlgOrbitalGeneral == 0) {
+      const int spidx = qpidx % NSPGaussLeg;
+      alpha[0][0] = -creal(SPGLCosSin[spidx]);
+      alpha[0][1] = creal(SPGLCosCos[spidx]);
+      alpha[1][0] = -creal(SPGLSinSin[spidx]);
+      alpha[1][1] = creal(SPGLCosSin[spidx]);
+    }
 
     /* The measurement path owns every projection component locally, so its
      * global and local qp indices coincide here. */
@@ -80,14 +92,17 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
         /* matrix_gc stores (-SlaterElm)^-1, while the legacy fixed-Sz
          * derivative receives the opposite inverse convention. */
         if (iFlgOrbitalGeneral == 0) {
-          /* Anti-parallel table F_ij (Nsite x Nsite) enters A_{i up,j down}
-           * once; the 1/2 of d ln Pf = Tr/2 cancels the (i,j)/(j,i) pair,
-           * so only the up-down ordering contributes. */
-          if (si == 0 && sj == 1) {
+          /* Anti-parallel table F_ij (Nsite x Nsite) enters the rotated
+           * block (s_i, s_j) directly with alpha and the transposed slot
+           * A_{j,i} = -A_{i,j}; the 1/2 of d Pf = (1/2) sum C dA cancels that
+           * pair, so every ordered electron pair contributes alpha once.
+           * Spins come from the fused orbital index, not electron order. */
+          const double coefficient = alpha[si][sj];
+          if (coefficient != 0.0) {
             const int orbitalIndex = OrbitalIdx[ti][tj];
             qpBuffer[orbitalIndex] +=
                 gradient[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
-                (double)(sgni * sgnj * OrbitalSgn[ti][tj]);
+                coefficient * (double)(sgni * sgnj * OrbitalSgn[ti][tj]);
           }
         } else {
           const int tri = ti + si * Nsite;
