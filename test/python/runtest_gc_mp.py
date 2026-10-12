@@ -57,8 +57,37 @@ VALIDATION_SAMPLES = 60000
 # rounded upward, for a 3-sigma family-wise error rate over 141 components.
 PILOT_SYSTEMATIC_T_CRITICAL = 10.2
 PILOT_MAX_STOCHASTIC_COMPONENTS = 141
-# Filled from the fixed Linux pilot before the Physical/SR tests are enabled.
-THRESHOLDS = {}
+# Fixed by the Linux Release pilot (8 seeds x 60,000 samples).  Complex
+# observables are compared componentwise against the scalar-component gates.
+THRESHOLDS = {
+    ("anti", "pbc", 2, False): {
+        "energy": 0.046,
+        "energy2": 0.35,
+        "number": 0.038,
+        "number2": 0.25,
+        "green": 0.017,
+        "anomalous": 0.016,
+        "sr": {0: 0.015, 2: 0.032, 14: 0.077, 28: 0.13, 29: 0.074},
+    },
+    ("general", "apbc", 1, False): {
+        "energy": 0.035,
+        "energy2": 0.68,
+        "number": 0.034,
+        "number2": 0.25,
+        "green": 0.016,
+        "anomalous": 0.014,
+        "sr": {0: 0.036, 52: 0.041, 56: 0.021, 57: 0.039, 61: 0.025},
+    },
+    ("general", "pbc", 0, True): {
+        "energy": 0.048,
+        "energy2": 0.20,
+        "number": 0.047,
+        "number2": 0.25,
+        "green": 0.019,
+        "anomalous": 0.015,
+        "sr": {0: 0.057, 4: 0.036, 14: 0.052, 28: 0.037, 55: 0.032},
+    },
+}
 
 
 def fused_fields(orbital):
@@ -934,6 +963,15 @@ def scalar_deviations(prefix, actual, expected):
             prefix + ":imag": difference.imag}
 
 
+def compare_complex_components(label, actual, expected, tolerance):
+    actual_value = complex(actual)
+    expected_value = complex(expected)
+    compare(label + " real", actual_value.real, expected_value.real,
+            tolerance)
+    compare(label + " imag", actual_value.imag, expected_value.imag,
+            tolerance)
+
+
 def pilot_observations(workdir, fixture, parameters, mode_cal,
                        exact_reference=None):
     if mode_cal == 1:
@@ -1049,7 +1087,9 @@ def pilot_case(rootdir, args):
                 warmup=20000)
             environment = ({"MVMC_GC_SR_DUMP": "sr.dat"}
                            if mode_cal == 0 else {})
-            run_binary(rootdir, workdir, 1, extra_env=environment)
+            stdout = run_binary(rootdir, workdir, 1, extra_env=environment)
+            write(os.path.join(workdir, "pilot_stdout.log"), stdout)
+            write(os.path.join(workdir, "pilot_exit_code.txt"), "0\n")
             if exact_reference is None:
                 exact_reference = (
                     exact_physical(fixture, parameters, workdir)
@@ -1069,6 +1109,9 @@ def pilot_case(rootdir, args):
         "fixture": fixture.label(),
         "samples": VALIDATION_SAMPLES,
         "seeds": seeds,
+        "warmup": 20000,
+        "systematic_t_critical": PILOT_SYSTEMATIC_T_CRITICAL,
+        "systematic_max_components": PILOT_MAX_STOCHASTIC_COMPONENTS,
         "raw": raw,
         "summary": all_summary,
     }
@@ -1099,7 +1142,10 @@ def physical_case(rootdir, args):
     run_binary(rootdir, workdir, 1)
     exact = exact_physical(fixture, parameters, workdir)
     actual = parse_physical(workdir, 1, 0)
-    for key in ("energy", "energy2", "number", "number2"):
+    compare_complex_components(
+        "physical {} energy".format(fixture.label()),
+        actual["energy"], exact["energy"], limits["energy"])
+    for key in ("energy2", "number", "number2"):
         compare("physical {} {}".format(fixture.label(), key),
                 actual[key], exact[key], limits[key])
     greens = parse_greens(workdir, 1)
@@ -1111,9 +1157,9 @@ def physical_case(rootdir, args):
             raise AssertionError("physical {} inventory differs".format(
                 group))
         for key in sorted(exact_rows):
-            compare("physical {} {} {}".format(
-                fixture.label(), group, key), actual_rows[key],
-                exact_rows[key], limits[limit_name])
+            compare_complex_components(
+                "physical {} {} {}".format(fixture.label(), group, key),
+                actual_rows[key], exact_rows[key], limits[limit_name])
     print("GC MP physical {} passed".format(fixture.label()))
 
 
@@ -1122,6 +1168,8 @@ def sr_case(rootdir, args):
     limits = THRESHOLDS.get(threshold_key(fixture))
     if limits is None:
         raise AssertionError("no pilot-fixed thresholds for " + fixture.label())
+    if len(limits["sr"]) != 5:
+        raise AssertionError("SR gate must select exactly five components")
     parameters = make_parameters(fixture)
     runs = {}
     exact = None
@@ -1138,6 +1186,11 @@ def sr_case(rootdir, args):
                               "MVMC_GC_SR_DUMP": "sr.dat"})
         if exact is None:
             exact = exact_sr(fixture, parameters, workdir)
+            for packed, tolerance in sorted(limits["sr"].items()):
+                if abs(exact[packed]) < 4.0 * tolerance:
+                    raise AssertionError(
+                        "SR P{} is vacuous: |{}| < 4 * {}".format(
+                            packed, exact[packed], tolerance))
         rows = parse_sr_dump(os.path.join(workdir, "sr.dat"))[0]["p"]
         masks = [record[3] for record in state_dump_records(
             os.path.join(workdir, "state.dat.rank0"))

@@ -1646,6 +1646,18 @@ add_gc_mp_test(GC_MP_Replay_general_pbc_k2_zero_m1
     replay --mode general --boundary pbc --k 2 --calmode 1 --zero)
 add_gc_mp_test(GC_MP_Replay_anti_apbc_k1_zero_m0
     replay --mode anti --boundary apbc --k 1 --calmode 0 --zero)
+add_gc_mp_test(GC_MP_Physical_anti_pbc_k2
+    physical --mode anti --boundary pbc --k 2)
+add_gc_mp_test(GC_MP_SR_anti_pbc_k2
+    sr --mode anti --boundary pbc --k 2)
+add_gc_mp_test(GC_MP_Physical_general_apbc_k1
+    physical --mode general --boundary apbc --k 1)
+add_gc_mp_test(GC_MP_SR_general_apbc_k1
+    sr --mode general --boundary apbc --k 1)
+add_gc_mp_test(GC_MP_Physical_general_pbc_k0_zero
+    physical --mode general --boundary pbc --k 0 --zero)
+add_gc_mp_test(GC_MP_SR_general_pbc_k0_zero
+    sr --mode general --boundary pbc --k 0 --zero)
 add_gc_mp_test(GC_MP_Vacuum_K vacuum)
 add_gc_mp_test(GC_MP_Mutation mutation)
 add_gc_mp_test(GC_MP_Sample sample
