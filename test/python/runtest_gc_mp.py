@@ -50,6 +50,13 @@ TWO_BODY_KEYS = (((0, 0), (5, 5)), ((0, 1), (1, 0)))
 PILOT_SEEDS = (1001, 2003, 3011, 4019, 5021, 6037, 7043, 8053)
 VALIDATION_SEED = 91807
 VALIDATION_SAMPLES = 60000
+# The pilot inspects at most 141 stochastic scalar components in one mode.
+# With only eight seed means, a per-component 3-sigma rule has a Student-t(7)
+# false-positive probability of about two percent and is therefore unsuitable
+# as an all-components gate.  10.2 is the two-sided Bonferroni critical value,
+# rounded upward, for a 3-sigma family-wise error rate over 141 components.
+PILOT_SYSTEMATIC_T_CRITICAL = 10.2
+PILOT_MAX_STOCHASTIC_COMPONENTS = 141
 # Filled from the fixed Linux pilot before the Physical/SR tests are enabled.
 THRESHOLDS = {}
 
@@ -968,6 +975,7 @@ def round_up_two_significant(value):
 
 def summarize_pilot(series):
     summary = {}
+    stochastic_components = 0
     for key in sorted(series):
         values = series[key]
         if len(values) != len(PILOT_SEEDS) or not all(
@@ -976,8 +984,11 @@ def summarize_pilot(series):
                 key))
         mean = statistics.mean(values)
         standard_deviation = statistics.stdev(values)
-        systematic_limit = 3.0 * standard_deviation / math.sqrt(len(values))
         rounding = 2.0e-15 * max(1.0, max(abs(value) for value in values))
+        if standard_deviation > rounding:
+            stochastic_components += 1
+        systematic_limit = (PILOT_SYSTEMATIC_T_CRITICAL *
+                            standard_deviation / math.sqrt(len(values)))
         if abs(mean) > systematic_limit + rounding:
             raise AssertionError(
                 "pilot {} has systematic offset {} > {}".format(
@@ -988,6 +999,11 @@ def summarize_pilot(series):
             "max_abs": max(abs(value) for value in values),
             "gate": round_up_two_significant(6.0 * standard_deviation),
         }
+    if stochastic_components > PILOT_MAX_STOCHASTIC_COMPONENTS:
+        raise AssertionError(
+            "pilot has {} stochastic components; the family-wise critical "
+            "value covers at most {}".format(
+                stochastic_components, PILOT_MAX_STOCHASTIC_COMPONENTS))
     return summary
 
 
