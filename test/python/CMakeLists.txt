@@ -59,6 +59,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_mp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_spin_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_death.py
@@ -1693,6 +1694,13 @@ add_gc_mp_test(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0
 set_tests_properties(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0 PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
     PROCESSORS 4)
+
+# Phase 3a: grand-canonical S=0 spin projection.
+add_test(NAME GC_SP_Oracle
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_spin_oracle.py --self-test)
+set_tests_properties(GC_SP_Oracle PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    TIMEOUT 600)
 
 add_test(NAME GC_HPhi_CrossCheck
     COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)
