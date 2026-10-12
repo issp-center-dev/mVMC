@@ -232,6 +232,11 @@ add_test(NAME GC_SP_SlaterDiff_Unit COMMAND gc_slater_diff_unit --spin)
 add_test(NAME GC_SP_SlaterDiff_PFONLY COMMAND gc_slater_diff_unit --spin-pfonly)
 set_tests_properties(GC_SP_SlaterDiff_Unit GC_SP_SlaterDiff_PFONLY PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)
+add_test(NAME GC_SP_SlaterDiff_OMP4 COMMAND gc_slater_diff_unit --spin-omp)
+set_tests_properties(GC_SP_SlaterDiff_OMP4 PROPERTIES
+    ENVIRONMENT
+      "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4;MVMC_GC_OMP_AUDIT=1"
+    PROCESSORS 4 TIMEOUT 120)
 
 add_executable(gc_green_unit gc_green_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)

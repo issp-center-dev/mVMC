@@ -1036,6 +1036,76 @@ static void run_spin_pfonly_checks(void) {
   free_antiparallel_fixture();
 }
 
+/* Rotated PFONLY cofactors under OpenMP.  F = diag(0,1,2,3) has no
+ * antisymmetric part and cc+ss=1, so every rotated component equals
+ * [[0,D],[-D,0]] with D = F: Pf = det D = 0 at full filling and the only
+ * nonzero cofactor is C[0,4] = 1*2*3 = 6.  The 28 pairs of each call are
+ * distributed over the team. */
+static void run_spin_cofactor_omp_audit(void) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
+  const double beta[2] = {0.37, 1.21};
+  const double weight[2] = {0.7, 0.3};
+  int eleIdx[8];
+  double complex gradient[64];
+  int iteration;
+  int i;
+  int q;
+  if (requiredText == NULL || *requiredText == '\0') {
+    CHECK(0, "--spin-omp requires MVMC_GC_REQUIRE_OMP_THREADS");
+    return;
+  }
+  initialize_antiparallel_fixture(4, 0, 0);
+  extend_antiparallel_spin(2, beta, weight);
+  for (i = 0; i < NSlater; i++) Slater[i] = 0.0;
+  for (i = 0; i < 4; i++) Slater[i * 4 + i] = (double)i;
+  UpdateSlaterElm_fcmp();
+  for (i = 0; i < 8; i++) eleIdx[i] = i;
+  for (q = 0; q < 2; q++) {
+    CHECK(GCComponentRebuild(q, q, 8, eleIdx, GCComponentThreadCache()) ==
+              GC_MALL_OK,
+          "spin cofactor audit rebuild q=%d", q);
+    CHECK(GCQpState[q] == GC_QP_PFONLY,
+          "rotated component %d is not PFONLY (%s)", q,
+          GCComponentStateName(GCQpState[q]));
+  }
+  for (iteration = 0; iteration < 64; iteration++) {
+    q = iteration % 2;
+    CHECK(GCComponentGradient(q, q, 8, eleIdx, gradient,
+                              GCComponentThreadCache()) == GC_MALL_OK,
+          "spin cofactor audit gradient iteration=%d", iteration);
+    for (i = 0; i < 8; i++) {
+      int j;
+      for (j = 0; j < 8; j++) {
+        const double complex expected =
+            i == 0 && j == 4 ? 6.0 : i == 4 && j == 0 ? -6.0 : 0.0;
+        CHECK(finite_close(gradient[(size_t)i * 8U + (size_t)j], expected,
+                           1.0e-12),
+              "spin cofactor audit gradient[%d,%d] q=%d", i, j, q);
+      }
+    }
+  }
+  {
+    const int required = atoi(requiredText);
+    GCComponentOmpAudit audit;
+    GCComponentOmpAuditTotal(GC_OMP_COFACTOR, &audit);
+    CHECK(audit.teamMin == required && audit.teamMax == required,
+          "spin cofactor audit team min/max=%d/%d expected=%d",
+          audit.teamMin, audit.teamMax, required);
+    CHECK(audit.workers >= 2, "spin cofactor audit workers=%d",
+          audit.workers);
+    CHECK(audit.workCount == 64LL * 28LL,
+          "spin cofactor audit work=%lld expected=%lld", audit.workCount,
+          64LL * 28LL);
+    printf("spin cofactor audit: team=%d/%d workers=%d work=%lld\n",
+           audit.teamMin, audit.teamMax, audit.workers, audit.workCount);
+  }
+  free_antiparallel_fixture();
+#else
+  CHECK(0, "--spin-omp requires MVMC_ENABLE_FAULT_INJECTION");
+#endif
+}
+
 static void free_fixture(void) {
   GCComponentRelease();
   FreeWorkSpaceAll();
@@ -1058,6 +1128,8 @@ int main(int argc, char **argv) {
     run_spin_checks();
   } else if (argc > 1 && strcmp(argv[1], "--spin-pfonly") == 0) {
     run_spin_pfonly_checks();
+  } else if (argc > 1 && strcmp(argv[1], "--spin-omp") == 0) {
+    run_spin_cofactor_omp_audit();
   } else if (argc > 1 && strcmp(argv[1], "--multiqp") == 0) {
     run_multiqp_checks();
     run_cofactor_omp_audit();

@@ -15,6 +15,7 @@ import re
 import subprocess
 from fractions import Fraction
 
+import grandcanonical_ap_oracle as ap
 import grandcanonical_spin_oracle as spin
 import runtest_gc_mp as mp
 from grandcanonical_exact_oracle import apply_ops, nbody, one_body
@@ -835,15 +836,251 @@ def dumpfail_case(rootdir, args):
     print("GC SP dump failure np={} passed".format(args.np))
 
 
+def sample_masks(workdir, rank=0):
+    records = state_dump_records(os.path.join(
+        workdir, "state.dat.rank{}".format(rank)))
+    return [record[3] for record in records if record[0] == "SAMPLE"]
+
+
+def mpi_case(rootdir, args):
+    """qp splitting (NSplitSize=np, every rank owns one chain) or sample
+    splitting (NSplitSize=1, chains per rank) against the oracle."""
+    fixture = SpinFixture(args.boundary, args.gauss)
+    workdir = prepare_work(rootdir, "{}_mpi_m{}_o{}_np{}_s{}".format(
+        fixture.label(), args.calmode, args.store, args.np, args.nsplit))
+    parameters = fixture.parameters()
+    write_fixture(workdir, fixture, calmode=args.calmode, store=args.store,
+                  nsplit=args.nsplit, samples=REPLAY_SAMPLES, seed=777,
+                  iterations=1, freeze=True)
+    environment = {"MVMC_GC_STATE_DUMP": "state.dat"}
+    if args.calmode == 0:
+        environment["MVMC_GC_SR_DUMP"] = "sr.dat"
+    run_with_dump(rootdir, workdir, args.np, environment)
+    nodes = read_dump(workdir, fixture.gauss)
+    ranks = [sample_masks(workdir, rank) for rank in range(args.np)]
+    if args.nsplit == args.np:
+        for rank in range(1, args.np):
+            if ranks[rank] != ranks[0]:
+                raise AssertionError(
+                    "rank {} chain differs under qp splitting".format(rank))
+        masks = ranks[0]
+    else:
+        if any(not rank_masks for rank_masks in ranks):
+            raise AssertionError("a sample-splitting rank drew no samples")
+        masks = [mask for rank_masks in ranks for mask in rank_masks]
+    if any(not spin.is_balanced(mask, NSITE) for mask in masks):
+        raise AssertionError("MPI run sampled M != 0")
+    F = read_pair_matrix(workdir)
+    check_readback(F, parameters)
+    expected = replay_expected(fixture, nodes, masks, F, args.calmode)
+    compare_replay("mpi", workdir, expected, args.calmode, 0, len(parameters))
+    print("GC SP mpi {} m{} o{} np={} nsplit={}: {} samples ({} per rank) "
+          "passed".format(fixture.label(), args.calmode, args.store, args.np,
+                          args.nsplit, len(masks),
+                          [len(rank_masks) for rank_masks in ranks]))
+
+
+def store_case(rootdir, args):
+    """NStoreO=0/1 sample the same chain and give the same SR rows."""
+    fixture = SpinFixture(args.boundary, 8)
+    runs = {}
+    for store in (0, 1):
+        workdir = prepare_work(rootdir, "{}_nstore_o{}".format(
+            fixture.label(), store))
+        write_fixture(workdir, fixture, calmode=0, store=store, nsplit=1,
+                      samples=1024, seed=REPLAY_SEED, iterations=1,
+                      freeze=True)
+        run_with_dump(rootdir, workdir, 1, {"MVMC_GC_STATE_DUMP": "state.dat",
+                                           "MVMC_GC_SR_DUMP": "sr.dat"})
+        rows = parse_sr_dump(os.path.join(workdir, "sr.dat"))[0]["p"]
+        runs[store] = (rows, sample_masks(workdir))
+    if runs[0][1] != runs[1][1]:
+        raise AssertionError("NStoreO changed the sampled configurations")
+    first, second = runs[0][0], runs[1][0]
+    if set(first) != set(second) or len(first) != 2 * (NPROJ + NSITE ** 2):
+        raise AssertionError("NStoreO changed the SR row inventory")
+    for index in sorted(first):
+        for column, (a, b) in enumerate(zip(first[index], second[index])):
+            compare("NStoreO {} P{} column {}".format(fixture.label(), index,
+                                                      column),
+                    a, b, 5.0e-10 * (1.0 + abs(a)))
+    print("GC SP NStoreO {}: {} samples, {} SR rows agree".format(
+        fixture.label(), len(runs[0][1]), len(first)))
+
+
+def read_parameters(path):
+    projection, orbitals = mp.read_initial_parameters(path, NSITE * NSITE)
+    for value in list(projection) + list(orbitals):
+        if not (math.isfinite(value.real) and math.isfinite(value.imag)):
+            raise AssertionError("nonfinite optimized parameter")
+    return projection, orbitals
+
+
+def optimization_case(rootdir, args):
+    """A real dense-SR step: 1-step and 2-step runs share the first
+    iteration, and iteration 2 replays against the updated parameters."""
+    fixture = SpinFixture(args.boundary, 8)
+    samples = 1024
+    workdirs = {}
+    for steps in (1, 2):
+        workdir = prepare_work(rootdir, "{}_optimize_{}step".format(
+            fixture.label(), steps))
+        write_fixture(workdir, fixture, calmode=0, store=1, nsplit=1,
+                      samples=samples, seed=REPLAY_SEED, iterations=steps,
+                      freeze=False, optimize=True)
+        run_with_dump(rootdir, workdir, 1, {"MVMC_GC_STATE_DUMP": "state.dat",
+                                           "MVMC_GC_SR_DUMP": "sr.dat"})
+        workdirs[steps] = workdir
+    one, two = workdirs[1], workdirs[2]
+    first = sample_masks(one)
+    groups = mp.replay_iterations(
+        state_dump_records(os.path.join(two, "state.dat.rank0")), samples)
+    if [record[3] for record in groups[0]] != first:
+        raise AssertionError("1-step and 2-step runs differ in iteration 1")
+    projection, orbitals = read_parameters(
+        os.path.join(one, "output", "zqp_opt.dat"))
+    initial = fixture.parameters()
+    if max(abs(a - b) for a, b in zip(orbitals, initial)) <= 0.0:
+        raise AssertionError("SR step did not change any orbital parameter")
+    # Iteration 2 of the 2-step run uses the parameters after one step.
+    nodes = read_dump(two, fixture.gauss)
+    F = [[orbitals[i * NSITE + j] for j in range(NSITE)]
+         for i in range(NSITE)]
+    model = fixture.mp.model(()).replace(
+        gutzwiller=projection[0].real,
+        jastrow=tuple(value.real for value in projection[1:NPROJ]))
+
+    def log_charge(mask):
+        return ap.log_projection(model, mask)
+
+    masks = [record[3] for record in groups[1]]
+    expected = replay_expected(fixture, nodes, masks, F, 0,
+                               log_charge=log_charge)
+    mp.compare_physical("optimize", two, expected, 0, 1)
+    mp.compare_sr("optimize", os.path.join(two, "sr.dat"), expected["sr"],
+                  NSITE * NSITE, 1)
+    print("GC SP optimization {}: step changed max |df|={:.3e}, iteration 2 "
+          "replay passed".format(fixture.label(), max(
+              abs(a - b) for a, b in zip(orbitals, initial))))
+
+
+def convergence_case(rootdir, args):
+    """Finite-G production quadrature converges to the exact S=0 state."""
+    report = []
+    for gauss in (2, 4, 8, 16, 32):
+        current = SpinFixture(args.boundary, gauss)
+        workdir = prepare_work(rootdir, "{}_convergence".format(
+            current.label()))
+        write_fixture(workdir, current, calmode=1, store=1, nsplit=1,
+                      samples=8, seed=5, iterations=1, freeze=True)
+        run_with_dump(rootdir, workdir)
+        nodes = read_dump(workdir, gauss)
+        F = read_pair_matrix(workdir)
+        finite = spin.project_finite(
+            F, nodes, current.log_charge,
+            reference_nodes=spin.independent_nodes(gauss))
+        exact = spin.project_exact(F, current.log_charge)
+        basis = spin.balanced_basis(NSITE)
+        error, alpha = spin.wave_error(finite, exact, basis)
+        s2 = spin.spin2_expectation(finite, NSITE)
+        finite_sectors = spin.sector_norms(finite)
+        exact_sectors = spin.sector_norms(exact)
+        finite_total = sum(finite_sectors.values())
+        exact_total = sum(exact_sectors.values())
+        sector_error = max(abs(finite_sectors[count] / finite_total -
+                               exact_sectors[count] / exact_total)
+                           for count in exact_sectors)
+        report.append((gauss, error, s2, sector_error, alpha))
+        print("GC SP convergence {} G={}: wave_error={:.3e} S2={:.3e} "
+              "sector_error={:.3e} alpha={:.15g}".format(
+                  args.boundary, gauss, error, s2, sector_error, alpha))
+        if gauss >= 16 and (error > 1.0e-11 or s2 > 1.0e-11 or
+                            sector_error > 1.0e-11):
+            raise AssertionError("G={} has not converged to S=0".format(gauss))
+    if report[0][1] < 1.0e-6:
+        raise AssertionError("G=2 already exact: the fixture is not a "
+                             "convergence test")
+
+
+def mutation_case(rootdir, args):
+    """The replay comparison rejects wrong oracles for the same samples."""
+    fixture = SpinFixture("pbc", 4)
+    workdir = prepare_work(rootdir, "gc_sp_mutation_src")
+    write_fixture(workdir, fixture, calmode=1, store=1, nsplit=1,
+                  samples=REPLAY_SAMPLES, seed=99, iterations=1, freeze=True)
+    run_with_dump(rootdir, workdir, 1, {"MVMC_GC_STATE_DUMP": "state.dat"})
+    nodes = read_dump(workdir, 4)
+    F = read_pair_matrix(workdir)
+    masks = sample_masks(workdir)
+
+    def check(label, wave):
+        expected = replay_expected(fixture, nodes, masks, F, 1, wave=wave)
+        compare_replay(label, workdir, expected, 1, 0, NSITE * NSITE)
+
+    check("control", None)
+    no_sine = []
+    for node in nodes:
+        beta = 2.0 * math.acos(math.sqrt(node["cc"]))
+        no_sine.append(dict(node, weight=node["weight"] / math.sin(beta)))
+    # cc<->ss (beta -> pi-beta) and cs -> -cs (beta -> -beta) leave the M=0
+    # amplitudes of a symmetric Gauss-Legendre rule unchanged, so only
+    # changes that break the rule or the rotation are meaningful mutants.
+    half = [dict(node, weight=2.0 * node["weight"])
+            for node in nodes[:len(nodes) // 2]]
+    shifted = []
+    for node in nodes:
+        beta = 2.0 * math.acos(math.sqrt(node["cc"])) + 0.05
+        c, s = math.cos(0.5 * beta), math.sin(0.5 * beta)
+        shifted.append(dict(node, cs=c * s, cc=c * c, ss=s * s))
+    flipped = [dict(node, ss=-node["ss"]) for node in nodes]
+    unrestricted = dict((mask, 0.0j) for mask in spin.even_masks(NSITE))
+    base = spin.pair_wave(F)
+    for node in nodes:
+        c, s = spin.node_cos_sin(node)
+        weight = spin.node_weight(node)
+        for mask, value in spin.rotate_fock(base, NSITE, c, s).items():
+            unrestricted[mask] += weight * value
+    unrestricted = dict((mask, value * math.exp(fixture.log_charge(mask)))
+                        for mask, value in unrestricted.items())
+    mutants = {
+        "sin(beta) dropped": spin.project_finite(F, no_sine,
+                                                 fixture.log_charge),
+        "half of the nodes": spin._finish(NSITE,
+                                          spin.rational_finite(F, half),
+                                          fixture.log_charge),
+        "beta shifted": spin._finish(NSITE, spin.rational_finite(F, shifted),
+                                     fixture.log_charge),
+        "ss sign flipped": spin._finish(NSITE,
+                                        spin.rational_finite(F, flipped),
+                                        fixture.log_charge),
+        "no M=0 restriction": unrestricted,
+        "unprojected (G=1)": spin.project_finite(
+            F, spin.independent_nodes(1), fixture.log_charge),
+    }
+    for label, wave in sorted(mutants.items()):
+        try:
+            check(label, wave)
+        except (AssertionError, ComparisonFailure):
+            continue
+        raise AssertionError("oracle mutation '{}' was not detected".format(
+            label))
+    print("GC SP oracle mutations detected: {}".format(sorted(mutants)))
+
+
 def oracle_case(rootdir, args):
     spin.self_test()
 
 
 CASES = {
+    "convergence": convergence_case,
     "dumpfail": dumpfail_case,
     "input": input_case,
+    "mpi": mpi_case,
+    "mutation": mutation_case,
+    "optimization": optimization_case,
     "oracle": oracle_case,
     "replay": replay_case,
+    "store": store_case,
     "weights": weights_case,
 }
 

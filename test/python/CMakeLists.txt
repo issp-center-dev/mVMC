@@ -1730,6 +1730,41 @@ if(MPI_FOUND)
     add_gc_spin_test(GC_SP_DumpFail_mpi dumpfail --np 2)
     set_tests_properties(GC_SP_DumpFail_mpi PROPERTIES PROCESSORS 2 TIMEOUT 120)
 endif()
+if(MPI_FOUND)
+    foreach(bc pbc apbc)
+        foreach(np 2 3)
+            add_gc_spin_test(GC_SP_MPI_${bc}_g2_m1_o0_np${np}_mpi
+                mpi --boundary ${bc} --gauss 2 --calmode 1 --store 0
+                --np ${np} --nsplit ${np})
+            set_tests_properties(GC_SP_MPI_${bc}_g2_m1_o0_np${np}_mpi
+                PROPERTIES PROCESSORS ${np} TIMEOUT 600)
+            foreach(store 0 1)
+                add_gc_spin_test(GC_SP_MPI_${bc}_g2_m0_o${store}_np${np}_mpi
+                    mpi --boundary ${bc} --gauss 2 --calmode 0
+                    --store ${store} --np ${np} --nsplit ${np})
+                set_tests_properties(
+                    GC_SP_MPI_${bc}_g2_m0_o${store}_np${np}_mpi
+                    PROPERTIES PROCESSORS ${np} TIMEOUT 600)
+            endforeach()
+        endforeach()
+        add_gc_spin_test(GC_SP_MPI_${bc}_g4_m1_o0_np2_split1_mpi
+            mpi --boundary ${bc} --gauss 4 --calmode 1 --store 0
+            --np 2 --nsplit 1)
+        set_tests_properties(GC_SP_MPI_${bc}_g4_m1_o0_np2_split1_mpi
+            PROPERTIES PROCESSORS 2 TIMEOUT 600)
+    endforeach()
+endif()
+foreach(bc pbc apbc)
+    add_gc_spin_test(GC_SP_SR_NStore_${bc} store --boundary ${bc})
+    add_gc_spin_test(GC_SP_Optimize_${bc} optimization --boundary ${bc})
+    add_gc_spin_test(GC_SP_Convergence_${bc} convergence --boundary ${bc})
+endforeach()
+add_gc_spin_test(GC_SP_Mutation mutation)
+add_gc_spin_test(GC_SP_Replay_OMP4_pbc_g8_m1
+    replay --boundary pbc --gauss 8 --calmode 1 --store 0 --expect-threads 4)
+set_tests_properties(GC_SP_Replay_OMP4_pbc_g8_m1 PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+    PROCESSORS 4)
 set(GC_SP_INPUT_CASES
     g_zero g_negative g_fraction g_decimal g_nan g_inf g_minus_inf
     g_int_over g_huge g_long g_extra g_workspace_over g_workspace_sum_over
