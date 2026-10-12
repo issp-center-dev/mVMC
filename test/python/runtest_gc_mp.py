@@ -532,7 +532,7 @@ def expected_outputs(masks, local, wave, fixture, parameters, workdir,
                 values = oracle.parameter_log_derivative(
                     builder, parameters, weights, mappings, NSITE,
                     fixture.log_projection, unique, parameter,
-                    bool(imaginary))
+                    bool(imaginary), base=wave)
                 mean_o = mean_over_masks(masks, values)
                 mean_oh = sum(local["energy"][mask] * values[mask]
                               for mask in masks) / float(len(masks))
@@ -853,7 +853,7 @@ def vacuum_case(rootdir, args):
 def expect_mutation_failure(label, function):
     try:
         function()
-    except (AssertionError, ComparisonFailure, ValueError):
+    except (AssertionError, ComparisonFailure):
         return
     raise AssertionError("mutation '{}' was not detected".format(label))
 
@@ -946,7 +946,8 @@ def exact_sr(fixture, parameters, workdir):
         for imaginary in (0, 1):
             values = oracle.parameter_log_derivative(
                 builder, parameters, weights, mappings, NSITE,
-                fixture.log_projection, support, parameter, bool(imaginary))
+                fixture.log_projection, support, parameter, bool(imaginary),
+                base=wave)
             mean_o = weighted(values)
             mean_oh = weighted(dict(
                 (state, local["energy"][state] * values[state])
@@ -1064,12 +1065,7 @@ def grouped_pilot_gates(summary):
 
 def pilot_case(rootdir, args):
     fixture = Fixture(args.mode, args.boundary, args.k, args.zero)
-    if args.seeds:
-        seeds = tuple(int(value) for value in args.seeds.split(","))
-    else:
-        seeds = PILOT_SEEDS
-    if seeds != PILOT_SEEDS:
-        raise AssertionError("the threshold pilot requires the fixed 8 seeds")
+    seeds = PILOT_SEEDS
     parameters = make_parameters(fixture)
     all_summary = {}
     raw = {}
@@ -1285,7 +1281,6 @@ def main():
     parser.add_argument("--np", type=int, default=1)
     parser.add_argument("--nsplit", type=int, default=1)
     parser.add_argument("--store", type=int, default=1)
-    parser.add_argument("--seeds", default=None)
     parser.add_argument("--sample-dir", default=None)
     parser.add_argument("--expect-threads", type=int, default=None)
     args = parser.parse_args()

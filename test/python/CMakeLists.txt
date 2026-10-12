@@ -1628,7 +1628,6 @@ function(add_gc_mp_test name)
         COMMAND ${PYTHON_EXECUTABLE} runtest_gc_mp.py ${ARGN})
     set_tests_properties(${name} PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
-        RESOURCE_LOCK "gc_mp_${name}"
         TIMEOUT 600)
 endfunction()
 foreach(mode anti general)

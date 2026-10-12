@@ -32,7 +32,6 @@ P = "P"
 UNIT_PHASES = (1, -1j, -1, 1j)
 # F_{T_R i,T_R j}=<x|T_R^{-1}|phi>; exp(-iKR) therefore gives
 # T_1 |Psi_K> = exp(-iK) |Psi_K>.
-TRANSLATION_EIGENVALUE_SIGN = -1
 
 
 class Lattice(object):
@@ -788,7 +787,7 @@ def node_energy2(wave, terms):
 
 def parameter_log_derivative(matrix_builder, parameters, weights, mappings,
                              nsite, log_projection_of, masks, index,
-                             imaginary, eps=1.0e-7):
+                             imaginary, eps=1.0e-7, base=None):
     step = 1j * eps if imaginary else eps
     plus, minus = list(parameters), list(parameters)
     plus[index] += step
@@ -797,8 +796,9 @@ def parameter_log_derivative(matrix_builder, parameters, weights, mappings,
                                        mappings, nsite, log_projection_of)
     wave_minus = projected_wavefunction(matrix_builder(minus), weights,
                                         mappings, nsite, log_projection_of)
-    base = projected_wavefunction(matrix_builder(parameters), weights,
-                                  mappings, nsite, log_projection_of)
+    if base is None:
+        base = projected_wavefunction(matrix_builder(parameters), weights,
+                                      mappings, nsite, log_projection_of)
     if any(base[mask] == 0 for mask in masks):
         raise ValueError("log derivative requested on an exact node")
     return dict((mask, (wave_plus[mask] - wave_minus[mask]) /
@@ -1066,7 +1066,7 @@ def self_test():
     for imaginary in (False, True):
         derivative = parameter_log_derivative(
             builder, parameters, fd_weights, fd_mappings, 4, fd_projection,
-            fd_support, 3, imaginary)
+            fd_support, 3, imaginary, base=fd_wave)
         selected = sorted(fd_support, key=lambda state: abs(derivative[state]),
                           reverse=True)[:5]
         if not selected or min(abs(derivative[state]) for state in selected) < \
