@@ -65,3 +65,9 @@ int GCCheckedSizeToInt(const size_t value, const char *name) {
   }
   return (int)value;
 }
+
+int GCSpinQuadratureFitsInt(const int gauss) {
+  const long long workspace =
+      (long long)gauss + (long long)gauss + 5LL * (long long)gauss;
+  return gauss > 0 && workspace <= (long long)INT_MAX;
+}

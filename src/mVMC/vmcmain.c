@@ -680,6 +680,9 @@ int main(int argc, char* argv[])
   /* initialize variables for quantum projection */
   if(rank0==0) fprintf(stdout,"Start: Initialize variables for quantum projection.\n");
   InitQPWeight();
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  GCTestDumpSpinQP(comm0);
+#endif
   if(rank0==0) fprintf(stdout,"End  : Initialize variables for quantum projection.\n");
   /* initialize output files */
   if(rank0==0) InitFile(fileDefList, rank0);

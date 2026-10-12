@@ -728,8 +728,10 @@ INPUT_MUTATIONS = {
     "all_real": _m(lambda workdir, ap: replace_line(
         workdir, ORBITAL, 2, "ComplexType 0\n"),
         ["requires complex variational parameters"]),
-    "gaussleg2": _m(lambda workdir, ap: update_modpara(
-        workdir, "NSPGaussLeg", 2), ["NSPGaussLeg=1"]),
+    # Anti-parallel GC admits NSPGaussLeg>1 only with NSPStot=0.
+    "gaussleg2_stot1": _m(lambda workdir, ap: (
+        update_modpara(workdir, "NSPGaussLeg", 2),
+        update_modpara(workdir, "NSPStot", 1)), ["NSPStot=0"]),
     "mptrans2": _m(lambda workdir, ap: update_modpara(
         workdir, "NMPTrans", 2),
         ["1 <= abs(NMPTrans) <= NQPTrans"]),
