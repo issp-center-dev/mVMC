@@ -918,9 +918,11 @@ def scalar_deviations(prefix, actual, expected):
             prefix + ":imag": difference.imag}
 
 
-def pilot_observations(workdir, fixture, parameters, mode_cal):
+def pilot_observations(workdir, fixture, parameters, mode_cal,
+                       exact_reference=None):
     if mode_cal == 1:
-        exact = exact_physical(fixture, parameters, workdir)
+        exact = exact_reference or exact_physical(
+            fixture, parameters, workdir)
         actual = parse_physical(workdir, 1, 0)
         observed = {}
         observed.update(scalar_deviations(
@@ -939,7 +941,7 @@ def pilot_observations(workdir, fixture, parameters, mode_cal):
                     "{}:{}".format(group, number),
                     actual_rows[key], exact_rows[key]))
         return observed
-    exact = exact_sr(fixture, parameters, workdir)
+    exact = exact_reference or exact_sr(fixture, parameters, workdir)
     rows = parse_sr_dump(os.path.join(workdir, "sr.dat"))[0]["p"]
     if set(rows) != set(exact):
         raise AssertionError("pilot SR inventory differs")
@@ -1010,6 +1012,7 @@ def pilot_case(rootdir, args):
     raw = {}
     for mode_cal in (1, 0):
         series = {}
+        exact_reference = None
         for seed in seeds:
             workdir = prepare_work(
                 rootdir, "{}_pilot_m{}_seed{}".format(
@@ -1021,8 +1024,13 @@ def pilot_case(rootdir, args):
             environment = ({"MVMC_GC_SR_DUMP": "sr.dat"}
                            if mode_cal == 0 else {})
             run_binary(rootdir, workdir, 1, extra_env=environment)
+            if exact_reference is None:
+                exact_reference = (
+                    exact_physical(fixture, parameters, workdir)
+                    if mode_cal == 1 else
+                    exact_sr(fixture, parameters, workdir))
             observations = pilot_observations(
-                workdir, fixture, parameters, mode_cal)
+                workdir, fixture, parameters, mode_cal, exact_reference)
             raw["m{}:seed{}".format(mode_cal, seed)] = observations
             for key, value in observations.items():
                 series.setdefault(key, []).append(value)
