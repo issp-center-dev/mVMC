@@ -24,8 +24,9 @@ script leaves those files unchanged and only
   `modpara.def` (`2Sz=-1`, `NMPTrans=-1` and `NExUpdatePath=0` are checked),
 - writes explicit complex initial parameters to `initial.def`.
 
-Grand-canonical sampling uses only the first `TransSym` pattern (the identity
-map); projection over several translations is not performed.
+This example uses the identity pattern only (`NMPTrans=-1`); see
+`samples/GrandCanonical/MomentumProjection` for projection over several
+translations.
 `NMPTrans=-1` enables the sign column of `orbitalidxgen.def` but does not
 change the Hamiltonian, so the boundary phase must be present in `trans.def`.
 The test `GC_AP_StdFaceExample` checks that this directory is reproduced by

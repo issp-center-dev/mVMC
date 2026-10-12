@@ -15,6 +15,7 @@ from __future__ import print_function
 import math
 import random
 import sys
+from fractions import Fraction
 
 from grandcanonical_exact_oracle import (
     adjoint,
@@ -28,6 +29,9 @@ from grandcanonical_exact_oracle import (
 
 AP = "AP"
 P = "P"
+UNIT_PHASES = (1, -1j, -1, 1j)
+# F_{T_R i,T_R j}=<x|T_R^{-1}|phi>; exp(-iKR) therefore gives
+# T_1 |Psi_K> = exp(-iK) |Psi_K>.
 
 
 class Lattice(object):
@@ -423,8 +427,10 @@ def hamiltonian_action(wave, terms):
     return result
 
 
-def exact_observables(model, parameters=None, table=None, terms=None):
-    wave = wavefunction(model, parameters, table)
+def exact_observables(model, parameters=None, table=None, terms=None,
+                      wave=None):
+    if wave is None:
+        wave = wavefunction(model, parameters, table)
     denominator = norm(wave)
     if terms is None:
         terms = model_terms(model)
@@ -573,6 +579,232 @@ def parse_trans_sym(path, nsite):
     return weights, mappings
 
 
+# ---------------------------------------------------------------------------
+# Momentum projection and exact-support helpers
+# ---------------------------------------------------------------------------
+
+def translation_set(lattice, count, k_index):
+    """Exact exp(-2*pi*i*k*R/count)/count weights and translations."""
+    if count not in (1, 2, 4):
+        raise ValueError("exact phases are tabulated for 1, 2 or 4 translations")
+    weights = [UNIT_PHASES[(4 * k_index * r // count) % 4] / count
+               for r in range(count)]
+    mappings = {}
+    for r in range(count):
+        for site in range(lattice.nsite):
+            target, phase = site, 1
+            for unused in range(r):
+                target, step = lattice.neighbor(target, 0)
+                phase *= step
+            mappings[(r, site)] = (target, phase)
+    return weights, mappings
+
+
+def translated_matrix(matrix, mappings, r, nsite):
+    norbital = 2 * nsite
+    result = [[0.0j] * norbital for unused in range(norbital)]
+    for first in range(norbital):
+        target_i, sign_i = mappings[(r, first % nsite)]
+        target_i += (first // nsite) * nsite
+        for second in range(norbital):
+            target_j, sign_j = mappings[(r, second % nsite)]
+            target_j += (second // nsite) * nsite
+            result[first][second] = sign_i * sign_j * matrix[target_i][target_j]
+    return result
+
+
+def gaussian_rational(value):
+    """Exact Q+iQ representation of a finite binary64-compatible value."""
+    value = complex(value)
+    if not (math.isfinite(value.real) and math.isfinite(value.imag)):
+        raise ValueError("nonfinite oracle input")
+    return Fraction(value.real), Fraction(value.imag)
+
+
+def qadd(first, second):
+    return first[0] + second[0], first[1] + second[1]
+
+
+def qmul(first, second):
+    return (first[0] * second[0] - first[1] * second[1],
+            first[0] * second[1] + first[1] * second[0])
+
+
+def exact_pfaffian(matrix):
+    """Recursive polynomial Pfaffian over Q+iQ (small oracle matrices)."""
+    dimension = len(matrix)
+    if dimension == 0:
+        return Fraction(1), Fraction(0)
+    if dimension % 2:
+        raise ValueError("Pfaffian dimension must be even")
+    total = (Fraction(0), Fraction(0))
+    for column in range(1, dimension):
+        keep = [index for index in range(1, dimension)
+                if index != column]
+        minor = [[matrix[row][col] for col in keep] for row in keep]
+        term = qmul(matrix[0][column], exact_pfaffian(minor))
+        sign = 1 if column % 2 else -1
+        total = qadd(total, (sign * term[0], sign * term[1]))
+    return total
+
+
+def projected_wavefunction(matrix, weights, mappings, nsite,
+                           log_projection_of):
+    """Build the projected wave and determine support without a cutoff."""
+    norbital = 2 * nsite
+    components = [
+        [[gaussian_rational(value) for value in row]
+         for row in translated_matrix(matrix, mappings, r, nsite)]
+        for r in range(len(weights))]
+    exact_weights = [gaussian_rational(weight) for weight in weights]
+    result = {}
+    for state in even_basis(norbital):
+        occupied = [orbital for orbital in range(norbital)
+                    if (state >> orbital) & 1]
+        amplitude = (Fraction(0), Fraction(0))
+        for weight, component in zip(exact_weights, components):
+            restricted = [[component[row][column] for column in occupied]
+                          for row in occupied]
+            amplitude = qadd(amplitude,
+                             qmul(weight, exact_pfaffian(restricted)))
+        log_value = log_projection_of(state)
+        if not math.isfinite(log_value):
+            raise ValueError("nonfinite log projection")
+        if amplitude == (0, 0):
+            result[state] = 0.0j
+            continue
+        value = complex(float(amplitude[0]), float(amplitude[1])) * \
+            math.exp(log_value)
+        if value == 0 or not (math.isfinite(value.real) and
+                              math.isfinite(value.imag)):
+            raise ValueError("nonzero oracle amplitude is not representable")
+        result[state] = value
+    return result
+
+
+def antiparallel_matrix(pair_values, nsite):
+    result = [[0.0j] * (2 * nsite) for unused in range(2 * nsite)]
+    for first in range(nsite):
+        for second in range(nsite):
+            result[first][second + nsite] = pair_values[first][second]
+            result[second + nsite][first] = -pair_values[first][second]
+    return result
+
+
+def translate_state(state, mappings, r, nsite):
+    """Return state and fermionic/boundary phase in T_R|state>."""
+    occupied = [orbital for orbital in range(2 * nsite)
+                if (state >> orbital) & 1]
+    images = []
+    phase = 1
+    for orbital in occupied:
+        target, sign = mappings[(r, orbital % nsite)]
+        images.append(target + (orbital // nsite) * nsite)
+        phase *= sign
+    order = sorted(range(len(images)), key=lambda index: images[index])
+    visited = [False] * len(order)
+    for start in range(len(order)):
+        if visited[start]:
+            continue
+        length, current = 0, start
+        while not visited[current]:
+            visited[current] = True
+            current = order[current]
+            length += 1
+        if length % 2 == 0:
+            phase = -phase
+    return sum(1 << orbital for orbital in images), phase
+
+
+def translation_expectation(wave, mappings, r, nsite):
+    numerator = 0.0j
+    for state, amplitude in wave.items():
+        target, phase = translate_state(state, mappings, r, nsite)
+        numerator += wave.get(target, 0.0j).conjugate() * phase * amplitude
+    return numerator / norm(wave)
+
+
+def symmetry_forbidden_states(mappings, nsite, eigenvalue):
+    """States forbidden by a nontrivial stabilizer of the four-step orbit."""
+    forbidden = set()
+    for state in even_basis(2 * nsite):
+        for r in range(1, 4):
+            target, phase = translate_state(state, mappings, r, nsite)
+            if target == state and phase != eigenvalue ** r:
+                forbidden.add(state)
+                break
+    return forbidden
+
+
+def projected_observables(model, wave):
+    return exact_observables(model, wave=wave)
+
+
+def local_values(wave, terms, masks, onebody_keys, twobody_keys,
+                 anomalous_rows):
+    """Outgoing estimator <Psi|O|x>/<Psi|x> used by production."""
+    for mask in masks:
+        if wave[mask] == 0:
+            raise ValueError("local value requested on a zero amplitude")
+
+    def local_of(operators):
+        values = {}
+        for mask in masks:
+            moved = apply_ops(mask, operators)
+            values[mask] = (0.0j if moved is None else
+                            moved[1] *
+                            (wave[moved[0]] / wave[mask]).conjugate())
+        return values
+
+    energy_values = dict((mask, 0.0j) for mask in masks)
+    for unused_label, coefficient, operators in terms:
+        term_values = local_of(operators)
+        for mask in masks:
+            energy_values[mask] += coefficient * term_values[mask]
+    return {
+        "energy": energy_values,
+        "onebody": dict((key, local_of(one_body(*key)))
+                        for key in onebody_keys),
+        "twobody": dict((key, local_of(nbody(key)))
+                        for key in twobody_keys),
+        "anomalous": dict(((kind, first, second), local_of(operators))
+                           for kind, first, second, operators
+                           in anomalous_rows),
+    }
+
+
+def support_energy2(wave, terms):
+    action = hamiltonian_action(wave, terms)
+    return sum(abs(action[state]) ** 2 for state in wave
+               if wave[state] != 0) / norm(wave)
+
+
+def node_energy2(wave, terms):
+    action = hamiltonian_action(wave, terms)
+    return sum(abs(action[state]) ** 2 for state in wave
+               if wave[state] == 0) / norm(wave)
+
+
+def parameter_log_derivative(matrix_builder, parameters, weights, mappings,
+                             nsite, log_projection_of, masks, index,
+                             imaginary, eps=1.0e-7, base=None):
+    step = 1j * eps if imaginary else eps
+    plus, minus = list(parameters), list(parameters)
+    plus[index] += step
+    minus[index] -= step
+    wave_plus = projected_wavefunction(matrix_builder(plus), weights,
+                                       mappings, nsite, log_projection_of)
+    wave_minus = projected_wavefunction(matrix_builder(minus), weights,
+                                        mappings, nsite, log_projection_of)
+    if base is None:
+        base = projected_wavefunction(matrix_builder(parameters), weights,
+                                      mappings, nsite, log_projection_of)
+    if any(base[mask] == 0 for mask in masks):
+        raise ValueError("log derivative requested on an exact node")
+    return dict((mask, (wave_plus[mask] - wave_minus[mask]) /
+                 (2.0 * eps * base[mask])) for mask in masks)
+
+
 def parse_trans(path):
     """{((i,s),(j,t)): summed coefficient} from a Trans file."""
     coefficients = {}
@@ -625,7 +857,7 @@ def parse_audit(path):
 RING = Lattice((4,), (AP,))
 
 
-def ring_parameters(keys):
+def ring_parameters_for(keys):
     values = {
         # Every even sector N=0..8 carries >= 5% weight, and the seam bond
         # carries enough coherence that dropping its sign moves the energy by
@@ -639,7 +871,11 @@ def ring_parameters(keys):
         ("ss", 1, (1,)): 0.434 + 0.119j,
         ("ss", 1, (2,)): -0.395 - 0.044j,
     }
-    return tuple(values[key] for key in keys)
+    return tuple(values.get(key, 0.0j) for key in keys)
+
+
+def ring_parameters(keys):
+    return ring_parameters_for(keys)
 
 
 def ring_model(delta=None):
@@ -721,6 +957,181 @@ def self_test():
         tolerance = 1.0e-7 + 1.0e-5 * abs(exact)
         if abs(fd1 - exact) > tolerance or abs(fd2 - exact) > tolerance:
             raise AssertionError("finite-difference gradient mismatch")
+
+    # Momentum projection: exact phases, support, translations and local data.
+    ring = Lattice((4,), (P,))
+    pbc_table, pbc_keys = orbital_geometry(ring)
+    pbc_parameters = ring_parameters_for(pbc_keys)
+    pbc_model = Model(
+        ring, pbc_table, pbc_parameters, gutzwiller=0.0,
+        jastrow=(0.0, 0.0), hopping=1.11 - 0.13j, mu=0.35,
+        coulomb_intra=0.35, coulomb_inter=0.27,
+        anomalous_green_pairs=((3, 4), (0, 5)))
+    expanded, pairs = expanded_table(pbc_table)
+    rng2 = random.Random(2026)
+    parameters = [complex(rng2.uniform(-1, 1), rng2.uniform(-1, 1))
+                  for unused in pairs]
+    matrix = pair_matrix(expanded, parameters, ring.norbital)
+    for boundary in (P, AP):
+        lattice = Lattice((4,), (boundary,))
+        for k_index in range(4):
+            weights, mappings = translation_set(lattice, 4, k_index)
+            if k_index != 0 and sum(weights) != 0:
+                raise AssertionError("nonzero momentum weights do not sum to zero")
+            projected = projected_wavefunction(
+                matrix, weights, mappings, lattice.nsite, lambda state: 0.0)
+            eigenvalue = translation_expectation(projected, mappings, 1,
+                                                 lattice.nsite)
+            if abs(eigenvalue - UNIT_PHASES[k_index]) > 1.0e-12:
+                raise AssertionError("translation eigenvalue mismatch: {}"
+                                     .format(eigenvalue))
+            if k_index != 0 and projected[0] != 0:
+                raise AssertionError("projected vacuum is not an exact node")
+
+    weights, mappings = translation_set(ring, 1, 0)
+    projected = projected_wavefunction(matrix, weights, mappings, 4,
+                                       lambda state: 0.0)
+    reference = wavefunction(pbc_model.replace(
+        table=expanded, parameters=tuple(parameters)))
+    if max(abs(projected[state] - reference[state]) for state in projected) > \
+            1.0e-13:
+        raise AssertionError("identity projection differs from wavefunction")
+
+    invariant_matrix = pair_matrix(pbc_table, pbc_parameters, 8)
+    weights, mappings = translation_set(ring, 4, 0)
+    projected = projected_wavefunction(invariant_matrix, weights, mappings,
+                                       4, lambda state: 0.0)
+    reference = wavefunction(pbc_model)
+    if max(abs(projected[state] - reference[state]) for state in projected) > \
+            1.0e-12:
+        raise AssertionError("K=0 projection of invariant state changed")
+
+    pair_values = [[complex(rng2.uniform(-1, 1), rng2.uniform(-1, 1))
+                    for second in range(4)] for first in range(4)]
+    import grandcanonical_antiparallel_oracle as anti
+    import numpy as np
+    if np.max(np.abs(np.array(antiparallel_matrix(pair_values, 4)) -
+                     anti.antisymmetric_matrix(np.array(pair_values)))) > \
+            1.0e-15:
+        raise AssertionError("antiparallel matrix convention mismatch")
+
+    weights, mappings = translation_set(ring, 4, 1)
+    local_model = pbc_model.replace(gutzwiller=-0.31,
+                                    jastrow=(0.23, -0.12))
+    projected = projected_wavefunction(
+        matrix, weights, mappings, 4,
+        lambda state: log_projection(local_model, state))
+    terms = model_terms(local_model)
+    support = [state for state, amplitude in projected.items()
+               if amplitude != 0]
+    local = local_values(
+        projected, terms, support, [(0, 1), (2, 7)],
+        [((0, 0), (5, 5)), ((0, 1), (1, 0))],
+        anomalous_green_operators(local_model))
+    action = hamiltonian_action(projected, terms)
+    for state in support:
+        expected = (action[state] / projected[state]).conjugate()
+        if abs(local["energy"][state] - expected) > \
+                1.0e-12 * (1 + abs(expected)):
+            raise AssertionError("outgoing local-energy convention mismatch")
+    denominator = norm(projected)
+    energy_from_local = sum(
+        abs(projected[state]) ** 2 / denominator *
+        local["energy"][state].conjugate() for state in support)
+    if abs(energy_from_local -
+           projected_observables(local_model, projected)["energy"]) > 1.0e-12:
+        raise AssertionError("local energies do not reproduce exact energy")
+
+    nodal_model = local_model.replace(delta=0.33 - 0.21j,
+                                      anomalous_pair=(3, 4))
+    weights, mappings = translation_set(ring, 4, 2)
+    nodal_wave = projected_wavefunction(
+        matrix, weights, mappings, 4,
+        lambda state: log_projection(nodal_model, state))
+    nodal_terms = model_terms(nodal_model)
+    support_h2 = support_energy2(nodal_wave, nodal_terms)
+    node_h2 = node_energy2(nodal_wave, nodal_terms)
+    full_h2 = projected_observables(nodal_model, nodal_wave)["energy2"].real
+    if abs(support_h2 + node_h2 - full_h2) > 1.0e-10 or node_h2 <= 0:
+        raise AssertionError("support/node energy2 split is inconsistent")
+
+    fd_weights, fd_mappings = translation_set(ring, 4, 1)
+    fd_projection = lambda state: log_projection(local_model, state)
+    fd_wave = projected_wavefunction(matrix, fd_weights, fd_mappings, 4,
+                                     fd_projection)
+    fd_support = [state for state, amplitude in fd_wave.items()
+                  if amplitude != 0]
+    builder = lambda values: pair_matrix(expanded, values, 8)
+    derivatives = []
+    for imaginary in (False, True):
+        derivative = parameter_log_derivative(
+            builder, parameters, fd_weights, fd_mappings, 4, fd_projection,
+            fd_support, 3, imaginary, base=fd_wave)
+        selected = sorted(fd_support, key=lambda state: abs(derivative[state]),
+                          reverse=True)[:5]
+        if not selected or min(abs(derivative[state]) for state in selected) < \
+                1.0e-6:
+            raise AssertionError("finite-difference fixture is vacuous")
+        finite_step = 1.0e-5 * (1j if imaginary else 1)
+        plus, minus = list(parameters), list(parameters)
+        plus[3] += finite_step
+        minus[3] -= finite_step
+        wave_plus = projected_wavefunction(builder(plus), fd_weights,
+                                           fd_mappings, 4, fd_projection)
+        wave_minus = projected_wavefunction(builder(minus), fd_weights,
+                                            fd_mappings, 4, fd_projection)
+        for state in selected:
+            finite_difference_value = (wave_plus[state] - wave_minus[state]) / \
+                (2.0e-5 * fd_wave[state])
+            if abs(derivative[state] - finite_difference_value) > \
+                    1.0e-6 * (1 + abs(finite_difference_value)):
+                raise AssertionError("projected log derivative mismatch")
+        derivatives.append(derivative)
+    for state in fd_support:
+        if abs(derivatives[1][state] - 1j * derivatives[0][state]) > \
+                1.0e-6 * (1 + abs(derivatives[0][state])):
+            raise AssertionError("real/imaginary derivative directions differ")
+
+    for candidate_source in (matrix, antiparallel_matrix(pair_values, 4)):
+        for structural_zero in (False, True):
+            candidate = [list(row) for row in candidate_source]
+            if structural_zero:
+                for column in range(8):
+                    candidate[0][column] = 0.0j
+                    candidate[column][0] = 0.0j
+            for boundary in (P, AP):
+                lattice = Lattice((4,), (boundary,))
+                energy_model = nodal_model.replace(lattice=lattice)
+                energy_terms = model_terms(energy_model)
+                for k_index in range(4):
+                    weights, mappings = translation_set(lattice, 4, k_index)
+                    exact_wave = projected_wavefunction(
+                        candidate, weights, mappings, 4, lambda state: 0.0)
+                    forbidden = symmetry_forbidden_states(
+                        mappings, 4, UNIT_PHASES[k_index])
+                    if any(exact_wave[state] != 0 for state in forbidden):
+                        raise AssertionError("symmetry node has a residual")
+                    if k_index != 0 and (exact_wave[0] != 0 or
+                                         exact_wave[255] != 0):
+                        raise AssertionError("vacuum/full state is not a node")
+                    if abs(translation_expectation(exact_wave, mappings, 1, 4)
+                           - UNIT_PHASES[k_index]) > 1.0e-12:
+                        raise AssertionError("translation eigenvalue changed")
+                    split = support_energy2(exact_wave, energy_terms) + \
+                        node_energy2(exact_wave, energy_terms)
+                    exact = projected_observables(
+                        energy_model, exact_wave)["energy2"].real
+                    if abs(split - exact) > 1.0e-10:
+                        raise AssertionError("exact energy2 split changed")
+
+    tiny = [[0.0j] * 8 for unused in range(8)]
+    tiny[0][1], tiny[1][0] = 1.0e-30, -1.0e-30
+    identity_weights, identity_mappings = translation_set(ring, 1, 0)
+    tiny_wave = projected_wavefunction(tiny, identity_weights,
+                                       identity_mappings, 4,
+                                       lambda state: 0.0)
+    if tiny_wave[3] != 1.0e-30 or tiny_wave[5] != 0:
+        raise AssertionError("exact support discarded a small amplitude")
     return observable
 
 

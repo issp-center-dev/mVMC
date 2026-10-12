@@ -252,6 +252,31 @@ def apply_orbital_general_mutation(action):
 def apply_gc_fixture_mutation(action):
     if action.startswith("gc_orb_"):
         apply_orbital_general_mutation(action)
+    elif action == "gc_qptrans1":
+        with open("qptransidx.def", "w") as stream:
+            stream.write(
+                "=============================================\n"
+                "NQPTrans          1\n"
+                "=============================================\n"
+                "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n"
+                "=============================================\n"
+                "0 1.0 0.0\n"
+                "0 0 0 1\n"
+                "0 1 1 1\n")
+    elif action == "gc_qptrans2":
+        with open("qptransidx.def", "w") as stream:
+            stream.write(
+                "=============================================\n"
+                "NQPTrans          2\n"
+                "=============================================\n"
+                "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n"
+                "=============================================\n"
+                "0 0.5 0.0\n"
+                "1 0.5 0.0\n"
+                "0 0 0 1\n"
+                "0 1 1 1\n"
+                "1 0 1 1\n"
+                "1 1 0 1\n")
     elif action == "gc_locspin":
         with open("locspn.def") as source:
             text = source.read()
