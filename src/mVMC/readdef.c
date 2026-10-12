@@ -1181,15 +1181,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "NSPGaussLeg=1, NQPOptTrans<=1.\n");
         info = 1;
       }
-      /* A single translation projection only; -1 selects the anti-periodic
-       * sign columns.  Compare the raw value directly (no abs on INT_MIN). */
-      if (bufInt[IdxMPTrans] != 1 && bufInt[IdxMPTrans] != -1) {
-        fprintf(stderr,
-                "Error: NGrandCanonical=1 requires NMPTrans=+1 or -1 "
-                "(got %d).\n",
-                bufInt[IdxMPTrans]);
-        info = 1;
-      }
       if (FlagOptTrans > 0) {
         fprintf(stderr,
                 "Error: NGrandCanonical=1 does not support OptTrans.\n");

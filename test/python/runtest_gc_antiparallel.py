@@ -731,7 +731,8 @@ INPUT_MUTATIONS = {
     "gaussleg2": _m(lambda workdir, ap: update_modpara(
         workdir, "NSPGaussLeg", 2), ["NSPGaussLeg=1"]),
     "mptrans2": _m(lambda workdir, ap: update_modpara(
-        workdir, "NMPTrans", 2), ["requires NMPTrans=+1 or -1"]),
+        workdir, "NMPTrans", 2),
+        ["1 <= abs(NMPTrans) <= NQPTrans"]),
     "opttrans": _m(lambda workdir, ap: add_namelist(
         workdir, "OptTrans", "opttrans.def",
         BAR + "NQPOptTrans 1\n" + BAR + BAR + BAR + "0 1.0\n" +

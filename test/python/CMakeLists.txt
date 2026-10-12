@@ -58,6 +58,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/gc_component_stats.py DESTINATION ${CMAKE_
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_mp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_death.py
@@ -1307,12 +1308,14 @@ add_gc_invalid_test(GC_Invalid_HintNegative "NGCInitNelec must satisfy" NGCInitN
 add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires 2Sz=0" gc_noorbgen)
 add_gc_invalid_test(GC_Invalid_RealParameter "requires complex variational parameters" gc_realparam)
 add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires NSPGaussLeg=1, NQPOptTrans<=1" NSPGaussLeg=2)
-add_gc_invalid_test(GC_Invalid_MPTrans "requires NMPTrans=+1 or -1 (got 2)" NMPTrans=2)
-add_gc_invalid_test(GC_Invalid_MPTransMinus2 "requires NMPTrans=+1 or -1 (got -2)" NMPTrans=-2)
-add_gc_invalid_test(GC_Invalid_MPTransZero "requires NMPTrans=+1 or -1 (got 0)" NMPTrans=0)
-add_gc_invalid_test(GC_Invalid_MPTransIntMin "requires NMPTrans=+1 or -1 (got -2147483648)"
+add_gc_invalid_test(GC_Invalid_MPTrans "1 <= abs(NMPTrans) <= NQPTrans"
+    gc_qptrans1 NMPTrans=2)
+add_gc_invalid_test(GC_Invalid_MPTransMinus2 "1 <= abs(NMPTrans) <= NQPTrans"
+    gc_qptrans1 NMPTrans=-2)
+add_gc_invalid_test(GC_Invalid_MPTransZero "must be a nonzero integer" NMPTrans=0)
+add_gc_invalid_test(GC_Invalid_MPTransIntMin "must be a nonzero integer"
     NMPTrans=-2147483648)
-add_gc_invalid_test(GC_Invalid_MPTransTooLarge "requires NMPTrans=+1 or -1 (got 3)" NMPTrans=3)
+add_gc_invalid_test(GC_Invalid_MPTransTooLarge "1 <= abs(NMPTrans) <= NQPTrans" NMPTrans=3)
 add_gc_invalid_test(GC_Invalid_MPTransOverflow "must be an exact integer in int range"
     NMPTrans=2147483648)
 add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires NSPGaussLeg=1, NQPOptTrans<=1"
@@ -1386,6 +1389,10 @@ add_gc_positive_test(FSZ_AP_OptFlagPermuted_Positive NGrandCanonical=0 NMPTrans=
 add_gc_positive_test(GC_PBC_FiveColumnOrbital_Positive NMPTrans=1 gc_orb_sign_missing)
 add_gc_positive_test(FSZ_PBC_FiveColumnOrbital_Positive NGrandCanonical=0 NMPTrans=1
     gc_orb_sign_missing)
+add_gc_positive_test(GC_MP_TwoTranslations_Positive NMPTrans=2 gc_qptrans2)
+add_gc_positive_test(GC_MP_TwoTranslations_AP_Positive NMPTrans=-2 gc_qptrans2)
+add_gc_positive_test(GC_MP_TwoTranslations_Anti_Positive NMPTrans=2 gc_qptrans2
+    gc_noorbgen 2Sz=0)
 
 # Phase 2: anomalous input negatives.
 add_gc_invalid_test(GC_Invalid_AnomalousCanonical
@@ -1615,6 +1622,53 @@ add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
 add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
 add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
 add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
+
+function(add_gc_mp_test name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_mp.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        RESOURCE_LOCK "gc_mp_${name}"
+        TIMEOUT 600)
+endfunction()
+foreach(mode anti general)
+    foreach(boundary pbc apbc)
+        foreach(k 0 1 2)
+            foreach(calmode 0 1)
+                add_gc_mp_test(GC_MP_Replay_${mode}_${boundary}_k${k}_m${calmode}
+                    replay --mode ${mode} --boundary ${boundary} --k ${k}
+                    --calmode ${calmode})
+            endforeach()
+        endforeach()
+    endforeach()
+endforeach()
+add_gc_mp_test(GC_MP_Replay_general_pbc_k2_zero_m1
+    replay --mode general --boundary pbc --k 2 --calmode 1 --zero)
+add_gc_mp_test(GC_MP_Replay_anti_apbc_k1_zero_m0
+    replay --mode anti --boundary apbc --k 1 --calmode 0 --zero)
+add_gc_mp_test(GC_MP_Vacuum_K vacuum)
+add_gc_mp_test(GC_MP_Mutation mutation)
+if(MPI_FOUND)
+    foreach(gc_mp_mode general anti)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_NSplit2_m1_np2_mpi
+            mpi --mode ${gc_mp_mode} --np 2 --nsplit 2 --calmode 1 --store 1)
+        set_tests_properties(GC_MP_${gc_mp_mode}_NSplit2_m1_np2_mpi
+            PROPERTIES PROCESSORS 2)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_NSplit2_m0_o0_np2_mpi
+            mpi --mode ${gc_mp_mode} --np 2 --nsplit 2 --calmode 0 --store 0)
+        set_tests_properties(GC_MP_${gc_mp_mode}_NSplit2_m0_o0_np2_mpi
+            PROPERTIES PROCESSORS 2)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_NSplit2_m0_o1_np2_mpi
+            mpi --mode ${gc_mp_mode} --np 2 --nsplit 2 --calmode 0 --store 1)
+        set_tests_properties(GC_MP_${gc_mp_mode}_NSplit2_m0_o1_np2_mpi
+            PROPERTIES PROCESSORS 2)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_EmptyRank_np3_mpi
+            mpi --mode ${gc_mp_mode} --np 3 --nsplit 3 --calmode 1 --store 1)
+        set_tests_properties(GC_MP_${gc_mp_mode}_EmptyRank_np3_mpi
+            PROPERTIES PROCESSORS 3)
+    endforeach()
+endif()
+
 add_test(NAME GC_HPhi_CrossCheck
     COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)
 set_tests_properties(GC_HPhi_CrossCheck PROPERTIES
