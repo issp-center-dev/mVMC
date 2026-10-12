@@ -1767,6 +1767,10 @@ foreach(bc pbc apbc)
     add_gc_spin_test(GC_SP_Physical_${bc} physical --boundary ${bc})
     add_gc_spin_test(GC_SP_SR_${bc} sr --boundary ${bc})
 endforeach()
+foreach(calmode 0 1)
+    add_gc_spin_test(GC_SP_Sample_m${calmode} sample --calmode ${calmode}
+        --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/SpinProjection)
+endforeach()
 add_gc_spin_test(GC_SP_Replay_OMP4_pbc_g8_m1
     replay --boundary pbc --gauss 8 --calmode 1 --store 0 --expect-threads 4)
 set_tests_properties(GC_SP_Replay_OMP4_pbc_g8_m1 PROPERTIES

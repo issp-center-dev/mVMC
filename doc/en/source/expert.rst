@@ -583,7 +583,8 @@ Keywords and parameters
      pair twice; equal numbers in the two formats are different states.
      The sampler keeps :math:`N_\uparrow=N_\downarrow` by adding or removing
      one up-down pair and by hopping electrons without changing their spin.
-     Anti-parallel pairing alone is not a spin (:math:`S=0`) projection.
+     Anti-parallel pairing alone is not a spin (:math:`S=0`) projection;
+     ``NSPGaussLeg>=2`` with ``NSPStot=0`` adds one (see below).
      Every Hamiltonian term must conserve :math:`S^z` as a whole: ``Trans``
      must not flip a spin, an ``InterAll`` or ``NBodyInterAll`` term may
      contain spin-flip factors only when
@@ -603,9 +604,11 @@ Keywords and parameters
    In both forms the uniform rescaling of the pair parameters used in
    canonical runs is not applied, because it would change the relative
    weights of particle-number sectors. Both forms require complex
-   variational parameters, ``NExUpdatePath=0``, ``NSPGaussLeg=1``,
+   variational parameters, ``NExUpdatePath=0``,
    a nonzero ``NMPTrans`` with ``abs(NMPTrans) <= NQPTrans``, and
-   ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
+   ``NQPOptTrans<=1``. General pairing requires ``NSPGaussLeg=1``;
+   anti-parallel pairing also accepts the spin projection described below.
+   RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
    spins, and SR-CG are not supported.
 
    Each quantum-projection component is kept either with its inverse matrix or,
@@ -645,6 +648,53 @@ Keywords and parameters
    amplitude. Thus, with pair-creation terms and an exact node such as the
    :math:`K\ne0` vacuum, it is smaller than
    :math:`\|H\Psi\|^2/\|\Psi\|^2` by the nodal contribution.
+
+   With anti-parallel pairing, ``NSPGaussLeg=G>=2`` and ``NSPStot=0``
+   project the trial state onto total spin :math:`S=0` with the
+   Gauss-Legendre quadrature in :math:`\beta\in[0,\pi]` used in canonical
+   runs:
+
+   .. math::
+
+      \Psi(x)=P_{\rm ch}(x)\sum_{g=1}^{G}a_g\,
+      {\rm Pf}\big[A(\beta_g)\big|_x\big],\qquad
+      a_g=\tfrac12\sin\beta_g\,w_g,
+
+   where :math:`A(\beta)` is the pair matrix rotated by
+   :math:`e^{-i\beta S^y}`, :math:`x` runs over the
+   :math:`N_\uparrow=N_\downarrow` configurations of every even particle
+   number, and :math:`P_{\rm ch}` collects the spin-scalar correlation
+   factors such as Gutzwiller and Jastrow. ``NSPGaussLeg=1`` keeps the
+   unprojected state (:math:`\beta=0`, weight 1). The same weights are used
+   in all particle-number sectors: the vacuum amplitude is
+   :math:`\sum_g a_g`, which tends to 1 only for large :math:`G`, and the
+   sectors are not renormalized separately. A finite :math:`G` approximates
+   the exact projection; no minimum number of points is imposed, so check
+   convergence by increasing ``NSPGaussLeg``. In GC mode ``NSPGaussLeg`` and
+   ``NSPStot`` must be single base-10 integers in the C ``int`` range, as
+   for ``2Sz``. The spin projection currently requires ``abs(NMPTrans)=1``
+   (it is not yet combined with momentum projection), and ``SpinJastrow`` is
+   rejected for ``NSPGaussLeg>=2`` because
+   :math:`\exp(\sum_{ij}v_{ij}m_im_j)` is not a spin scalar and would break
+   :math:`S=0`. General pairing and nonzero ``NSPStot`` are not supported
+   with the spin projection.
+
+   The Hamiltonian needs to conserve only :math:`S^z`; it does not have to be
+   :math:`SU(2)` symmetric. Each measured operator whose total :math:`S^z`
+   change is nonzero has zero expectation value, while a product whose
+   factors flip spins but conserve :math:`S^z` as a whole, such as
+   :math:`S^+_iS^-_j`, is evaluated. :math:`\langle\mathbf S^2\rangle` is
+   obtained from the outputs as
+   :math:`\langle S_z^2\rangle+\tfrac12\sum_{ij}\langle
+   S^+_iS^-_j+S^-_iS^+_j\rangle` with the ``TwoBodyG`` rows
+   ``i 0 i 1 j 1 j 0`` and ``i 1 i 0 j 0 j 1`` and the
+   :math:`\langle S_z^2\rangle` column of ``zvo_out``. Without
+   :math:`SU(2)` symmetry :math:`H\Psi` can leave the support of
+   :math:`\Psi`, and :math:`\langle H^2\rangle` is the support average
+   described above. The finite-:math:`G` wave function is checked against
+   an independent Fock-space oracle, and its convergence to the exact
+   :math:`S=0` projection is checked on a four-site ring. An example with a
+   generator script is in ``samples/GrandCanonical/SpinProjection``.
 
    A negative ``NMPTrans`` selects the boundary-sign columns in the orbital
    input, while its absolute value selects the number of ``TransSym``
@@ -688,9 +738,11 @@ Keywords and parameters
    per row) referenced by the ``Orbital`` entry. Keep ``Orbital`` (or rename
    it to ``OrbitalAntiParallel``) as the only orbital entry of
    ``namelist.def`` with no ``OrbitalGeneral`` or ``OrbitalParallel`` line,
-   and set ``NGrandCanonical=1``, ``2Sz=0``, ``NExUpdatePath=0``,
-   ``NSPGaussLeg=1`` (StdFace writes 8 for ``2Sz=0``), and ``NMPTrans=-1``
-   in ``modpara.def`` without an ``OptTrans`` file. Keep the boundary
+   and set ``NGrandCanonical=1``, ``2Sz=0``, ``NExUpdatePath=0``, and
+   ``NMPTrans=-1`` in ``modpara.def`` without an ``OptTrans`` file. Keep the
+   ``NSPGaussLeg=8`` and ``NSPStot=0`` that StdFace writes for ``2Sz=0`` to
+   apply the :math:`S=0` projection, or set ``NSPGaussLeg=1`` for the
+   unprojected state. Keep the boundary
    phases in ``Trans`` and the identity first ``TransSym`` pattern, check
    that the orbital header has ``ComplexType 1``, and give ``NGCInitNelec``
    and complex initial parameters. Do not apply the ``OrbitalGeneral``
@@ -760,9 +812,9 @@ Keywords and parameters
    ED oracle. A nontrivial :math:`k=\pi` momentum projection is checked
    against independent real and complex projected-ED value oracles.
    The real oracle covers serial, MPI, and OpenMP paths; the complex
-   oracle currently covers the serial path. Nontrivial spin projection
-   has runtime and structural smoke coverage, but not an independent
-   projected-ED value oracle.
+   oracle currently covers the serial path. For the second-step Lanczos
+   path, nontrivial spin projection has runtime and structural smoke
+   coverage, but not an independent projected-ED value oracle.
 
    In the electronic class with ``NQPFull=1``, the :math:`H^3` local
    power is evaluated by nested

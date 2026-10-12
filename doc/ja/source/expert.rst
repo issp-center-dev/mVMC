@@ -579,7 +579,8 @@ ModParaファイル (modpara.def)
      なります。両形式に同じ数値を入れたものは別の状態です。
      samplerは上下pair 1組の追加・削除と、スピンを変えない電子のhopで
      :math:`N_\uparrow=N_\downarrow` を保ちます。反平行pairのみであることは
-     スピン（:math:`S=0`）射影を意味しません。
+     スピン（:math:`S=0`）射影を意味しません。``NSPGaussLeg>=2`` と
+     ``NSPStot=0`` でスピン射影を加えられます（後述）。
      Hamiltonianは各項全体で :math:`S^z` を保存する必要があります。
      ``Trans`` はスピンを反転できず、``InterAll`` と ``NBodyInterAll`` の項は
      項全体で :math:`\sum(\sigma_{\rm out}-\sigma_{\rm in})=0` の場合に限り
@@ -595,10 +596,11 @@ ModParaファイル (modpara.def)
 
    どちらの形式でも、canonical計算で行うpairパラメータの一様な再スケールは
    粒子数sector間の重みを変えるため行いません。両形式とも複素変分パラメータ、
-   ``NExUpdatePath=0``、``NSPGaussLeg=1``、0でなく
+   ``NExUpdatePath=0``、0でなく
    ``abs(NMPTrans) <= NQPTrans`` を満たす ``NMPTrans``、
-   ``NQPOptTrans<=1`` が必要です。RBM、BackFlow、Lanczos、OptTrans、
-   UpdateWeight、局在spin、SR-CGは未対応です。
+   ``NQPOptTrans<=1`` が必要です。一般pairは ``NSPGaussLeg=1`` が必要で、
+   反平行pairでは後述のスピン射影も使用できます。RBM、BackFlow、Lanczos、
+   OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
 
    各量子数射影成分は、逆行列を持つ成分か、Pfaffian が 0 または absolute
    Pfaffian backend の scale-aware な判定で特異・準特異と分類された
@@ -626,6 +628,46 @@ ModParaファイル (modpara.def)
    配置上の :math:`|E_{\rm loc}|^2` のsample平均です。そのためpair生成項と
    :math:`K\ne0` の真空のような節がある場合、節の寄与だけ
    :math:`\|H\Psi\|^2/\|\Psi\|^2` より小さくなります。
+
+   反平行pairでは ``NSPGaussLeg=G>=2`` と ``NSPStot=0`` を指定すると、
+   canonical計算と同じ :math:`\beta\in[0,\pi]` のGauss-Legendre求積で
+   試行状態を全スピン :math:`S=0` へ射影します。
+
+   .. math::
+
+      \Psi(x)=P_{\rm ch}(x)\sum_{g=1}^{G}a_g\,
+      {\rm Pf}\big[A(\beta_g)\big|_x\big],\qquad
+      a_g=\tfrac12\sin\beta_g\,w_g
+
+   ここで :math:`A(\beta)` は :math:`e^{-i\beta S^y}` で回転したpair行列、
+   :math:`x` は全偶数粒子数の :math:`N_\uparrow=N_\downarrow` 配置、
+   :math:`P_{\rm ch}` はGutzwiller、Jastrow等のスピンscalarな相関因子です。
+   ``NSPGaussLeg=1`` は射影しない状態（:math:`\beta=0`、重み1）です。
+   全粒子数sectorで同じ重みを使います。真空の振幅は :math:`\sum_g a_g` で、
+   :math:`G` が大きい極限でのみ1に近づき、sectorごとの再規格化は行いません。
+   有限の :math:`G` は厳密な射影の近似で、最小点数は課していないため、
+   ``NSPGaussLeg`` を増やして収束を確認してください。GC modeでは
+   ``NSPGaussLeg`` と ``NSPStot`` も ``2Sz`` と同様にCの ``int`` 範囲の
+   10進整数1個に限ります。スピン射影は現時点で ``abs(NMPTrans)=1`` を
+   必要とし（運動量射影との併用は未対応）、:math:`\exp(\sum_{ij}v_{ij}m_im_j)`
+   はスピンscalarでなく :math:`S=0` を壊すため、``NSPGaussLeg>=2`` では
+   ``SpinJastrow`` をエラーにします。一般pairと0でない ``NSPStot`` は
+   スピン射影と併用できません。
+
+   Hamiltonianは :math:`S^z` を保存すればよく、:math:`SU(2)` 対称である
+   必要はありません。測定演算子は演算子全体の :math:`S^z` 変化が0でなければ
+   期待値0になり、:math:`S^+_iS^-_j` のように因子はスピンを反転しても全体で
+   :math:`S^z` を保存する積は評価します。
+   :math:`\langle\mathbf S^2\rangle` は出力から
+   :math:`\langle S_z^2\rangle+\tfrac12\sum_{ij}\langle
+   S^+_iS^-_j+S^-_iS^+_j\rangle` として求められます（``TwoBodyG`` の行
+   ``i 0 i 1 j 1 j 0`` と ``i 1 i 0 j 0 j 1``、および ``zvo_out`` の
+   :math:`\langle S_z^2\rangle` 列）。:math:`SU(2)` 対称性がない場合は
+   :math:`H\Psi` が :math:`\Psi` の支持の外に出ることがあり、
+   :math:`\langle H^2\rangle` は前述の支持内平均です。有限 :math:`G` の
+   波動関数は独立なFock空間oracleで、厳密な :math:`S=0` 射影への収束は
+   4サイト環で検証しています。generator script付きの例は
+   ``samples/GrandCanonical/SpinProjection`` にあります。
 
    負の ``NMPTrans`` は軌道入力の境界符号列を選び、その絶対値が使用する
    ``TransSym`` pattern数です。``NMPTrans`` 自体は Hamiltonian を変更しない
@@ -665,8 +707,10 @@ ModParaファイル (modpara.def)
    生成されます。``namelist.def`` の軌道指定は ``Orbital`` （または
    ``OrbitalAntiParallel`` へ改名したもの）だけにして ``OrbitalGeneral`` /
    ``OrbitalParallel`` の行を置かず、``modpara.def`` を ``NGrandCanonical=1``、
-   ``2Sz=0``、``NExUpdatePath=0``、``NSPGaussLeg=1`` （StdFaceは ``2Sz=0`` で
-   8を出力）、``NMPTrans=-1`` とし、``OptTrans`` は使いません。``Trans`` の
+   ``2Sz=0``、``NExUpdatePath=0``、``NMPTrans=-1`` とし、``OptTrans`` は
+   使いません。StdFaceが ``2Sz=0`` で出力する ``NSPGaussLeg=8`` と
+   ``NSPStot=0`` を残すと :math:`S=0` 射影になり、``NSPGaussLeg=1`` では
+   射影しない状態になります。``Trans`` の
    境界位相と恒等写像の先頭 ``TransSym`` patternはそのまま使い、軌道header
    が ``ComplexType 1`` であることを確認し、``NGCInitNelec`` と複素の初期
    パラメータを明示してください。一般pair用の :math:`F/2` 変換を反平行の表へ
@@ -731,8 +775,8 @@ ModParaファイル (modpara.def)
    非自明な :math:`k=\pi` 運動量射影は、real/complexの独立projected ED
    value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
    対象とし、complex oracleは現時点でserial経路を対象とします。
-   非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
-   projected EDによる独立な値oracleは現時点ではありません。
+   2nd step Lanczos経路の非自明なスピン射影はruntimeおよび構造のsmoke test
+   までで、projected EDによる独立な値oracleは現時点ではありません。
 
    electronic classで ``NQPFull=1`` の場合、:math:`H^3` のlocal powerは
    ``Transfer`` 項に対する

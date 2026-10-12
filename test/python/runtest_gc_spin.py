@@ -17,6 +17,7 @@ import os
 import re
 import statistics
 import subprocess
+import sys
 from fractions import Fraction
 
 import grandcanonical_ap_oracle as ap
@@ -1507,6 +1508,56 @@ def sr_case(rootdir, args):
     validation_case(rootdir, args, 0)
 
 
+def sample_case(rootdir, args):
+    """The sample generator writes the replay fixture; a short run replays."""
+    if not args.sample_dir:
+        raise AssertionError("sample case requires --sample-dir")
+    generator = os.path.join(args.sample_dir, "generate.py")
+    fixture = SpinFixture("pbc", 8)
+    generated = prepare_work(rootdir, "gc_sp_sample_m{}".format(args.calmode))
+    expected = prepare_work(rootdir, "gc_sp_sample_expected_m{}".format(
+        args.calmode))
+    command = [sys.executable, generator, "--gauss", "8", "--calmode",
+               str(args.calmode), "--samples", str(REPLAY_SAMPLES), "--seed",
+               str(REPLAY_SEED), "--boundary", "pbc", "--warmup", "20",
+               "--outdir", generated]
+    process = subprocess.run(command, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+    if process.returncode != 0:
+        raise AssertionError("sample generator failed:\n" + process.stdout)
+    write_fixture(expected, fixture, calmode=args.calmode, store=1, nsplit=1,
+                  samples=REPLAY_SAMPLES, seed=REPLAY_SEED, iterations=1,
+                  freeze=False, optimize=(args.calmode == 0), warmup=20)
+    names = sorted(name for name in os.listdir(expected)
+                   if name.endswith(".def"))
+    if sorted(name for name in os.listdir(generated)
+              if name.endswith(".def")) != names:
+        raise AssertionError("sample file inventory differs from the fixture")
+    for name in names:
+        with open(os.path.join(expected, name), "rb") as stream:
+            reference = stream.read()
+        with open(os.path.join(generated, name), "rb") as stream:
+            if stream.read() != reference:
+                raise AssertionError("sample {} differs from the fixture".format(
+                    name))
+    F = read_pair_matrix(generated)
+    check_readback(F, fixture.parameters())
+    environment = {"MVMC_GC_STATE_DUMP": "state.dat"}
+    if args.calmode == 0:
+        environment["MVMC_GC_SR_DUMP"] = "sr.dat"
+    run_with_dump(rootdir, generated, 1, environment)
+    nodes = read_dump(generated, 8)
+    masks = sample_masks(generated)
+    if len(masks) != REPLAY_SAMPLES:
+        raise AssertionError("sample run drew {} samples".format(len(masks)))
+    replay = replay_expected(fixture, nodes, masks, F, args.calmode)
+    compare_replay("sample", generated, replay, args.calmode, 0,
+                   NSITE * NSITE)
+    print("GC SP sample m{}: generator matches the fixture; {} samples "
+          "replayed".format(args.calmode, len(masks)))
+
+
 def oracle_case(rootdir, args):
     spin.self_test()
 
@@ -1523,6 +1574,7 @@ CASES = {
     "pilot": pilot_case,
     "pilotstats": pilotstats_case,
     "replay": replay_case,
+    "sample": sample_case,
     "sr": sr_case,
     "store": store_case,
     "threshold-contract": threshold_contract_case,
@@ -1545,6 +1597,7 @@ def main():
     parser.add_argument("--fixture", choices=("dense", "pfonly"),
                         default="dense")
     parser.add_argument("--samples", type=int, default=None)
+    parser.add_argument("--sample-dir", default=None)
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument("--output", default=None)
     parser.add_argument("--source-commit", default=None)
