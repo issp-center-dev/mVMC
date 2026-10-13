@@ -106,10 +106,18 @@ grand-canonical Hamiltonianのpair生成・消滅項を指定します。</p>
 <code class="docutils literal notranslate"><span class="pre">CoulombInter</span></code>、 <code class="docutils literal notranslate"><span class="pre">Hund</span></code>、 <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> の組み合わせで指定します。
 上記ハミルトニアンの符号規約では、正の物理的な結合 <span class="math notranslate nohighlight">\(J_{ij}\)</span> に対して</p>
 <div class="math notranslate nohighlight">
-\[V_{ij}=-\frac{J_{ij}}{4}, \qquad
+\[V_{ij}=-\frac{J_{ij}}{2}, \qquad
 J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
 J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}\]</div>
-<p>を指定します。また、t-J用の更新経路は <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> の
+<p>を指定します。
+<span class="math notranslate nohighlight">\(S_i^z S_j^z = \frac{1}{2}(n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})-\frac{1}{4}n_i n_j\)</span> なので、
+<code class="docutils literal notranslate"><span class="pre">Hund</span></code> と <code class="docutils literal notranslate"><span class="pre">Exchange</span></code> に <span class="math notranslate nohighlight">\(V_{ij}=-J_{ij}/4\)</span> を合わせたものが
+<span class="math notranslate nohighlight">\(J_{ij}{\boldsymbol S}_i\cdot{\boldsymbol S}_j\)</span> を与え、
+<span class="math notranslate nohighlight">\(V_{ij}\)</span> の残りの <span class="math notranslate nohighlight">\(-J_{ij}/4\)</span> が
+<span class="math notranslate nohighlight">\(-\frac{1}{4}J_{ij}n_i n_j\)</span> を与えます。
+<span class="math notranslate nohighlight">\(-\frac{1}{4}n_i n_j\)</span> の項を含めないt-J模型では
+<span class="math notranslate nohighlight">\(V_{ij}=-J_{ij}/4\)</span> を指定します。
+また、t-J用の更新経路は <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> の
 <code class="docutils literal notranslate"><span class="pre">NExUpdatePath</span></code> で指定します。現状のt-J更新経路では
 <code class="docutils literal notranslate"><span class="pre">BackFlow</span></code> と <code class="docutils literal notranslate"><span class="pre">LocSpin</span></code> は非対応です。また、二重占有を許さないため、
 電子数がサイト数を超える入力は使用できません。 <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=4</span></code> では
@@ -858,7 +866,9 @@ sampling重みを
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NCond</span></code></p>
 <p><strong>形式 :</strong> int型 (0以上)</p>
-<p><strong>説明 :</strong> 伝導電子の数。</p>
+<p><strong>説明 :</strong> 伝導電子の数。局在スピンの電子は数えないため、
+純粋なスピン系では0を指定します。2 (<code class="docutils literal notranslate"><span class="pre">Nsite</span></code> - <code class="docutils literal notranslate"><span class="pre">NlocalSpin</span></code>)
+を超える値は指定できません。</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">2Sz</span></code></p>
 <p><strong>形式 :</strong> int型</p>
