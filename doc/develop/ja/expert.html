@@ -565,7 +565,8 @@ c_{i\uparrow}^{\dagger} c_{j\downarrow}^{\dagger}\Big]|0\rangle\]</div>
 なります。両形式に同じ数値を入れたものは別の状態です。
 samplerは上下pair 1組の追加・削除と、スピンを変えない電子のhopで
 <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> を保ちます。反平行pairのみであることは
-スピン（<span class="math notranslate nohighlight">\(S=0\)</span>）射影を意味しません。
+スピン（<span class="math notranslate nohighlight">\(S=0\)</span>）射影を意味しません。<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> と
+<code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code> でスピン射影を加えられます（後述）。
 Hamiltonianは各項全体で <span class="math notranslate nohighlight">\(S^z\)</span> を保存する必要があります。
 <code class="docutils literal notranslate"><span class="pre">Trans</span></code> はスピンを反転できず、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> と <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> の項は
 項全体で <span class="math notranslate nohighlight">\(\sum(\sigma_{\rm out}-\sigma_{\rm in})=0\)</span> の場合に限り
@@ -582,10 +583,11 @@ Hamiltonianは各項全体で <span class="math notranslate nohighlight">\(S^z\)
 </ul>
 <p>どちらの形式でも、canonical計算で行うpairパラメータの一様な再スケールは
 粒子数sector間の重みを変えるため行いません。両形式とも複素変分パラメータ、
-<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>、0でなく
+<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、0でなく
 <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span> <span class="pre">&lt;=</span> <span class="pre">NQPTrans</span></code> を満たす <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code>、
-<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code> が必要です。RBM、BackFlow、Lanczos、OptTrans、
-UpdateWeight、局在spin、SR-CGは未対応です。</p>
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code> が必要です。一般pairは <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> が必要で、
+反平行pairでは後述のスピン射影も使用できます。RBM、BackFlow、Lanczos、
+OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。</p>
 <p>各量子数射影成分は、逆行列を持つ成分か、Pfaffian が 0 または absolute
 Pfaffian backend の scale-aware な判定で特異・準特異と分類された
 「Pfaffian のみ」の成分かのどちらかとして保持されます。後者では候補振幅と
@@ -611,6 +613,41 @@ toolchain では同等の strict floating-point option が必要です。計算�
 配置上の <span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span> のsample平均です。そのためpair生成項と
 <span class="math notranslate nohighlight">\(K\ne0\)</span> の真空のような節がある場合、節の寄与だけ
 <span class="math notranslate nohighlight">\(\|H\Psi\|^2/\|\Psi\|^2\)</span> より小さくなります。</p>
+<p>反平行pairでは <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=G&gt;=2</span></code> と <code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code> を指定すると、
+canonical計算と同じ <span class="math notranslate nohighlight">\(\beta\in[0,\pi]\)</span> のGauss-Legendre求積で
+試行状態を全スピン <span class="math notranslate nohighlight">\(S=0\)</span> へ射影します。</p>
+<div class="math notranslate nohighlight">
+\[\Psi(x)=P_{\rm ch}(x)\sum_{g=1}^{G}a_g\,
+{\rm Pf}\big[A(\beta_g)\big|_x\big],\qquad
+a_g=\tfrac12\sin\beta_g\,w_g\]</div>
+<p>ここで <span class="math notranslate nohighlight">\(A(\beta)\)</span> は <span class="math notranslate nohighlight">\(e^{-i\beta S^y}\)</span> で回転したpair行列、
+<span class="math notranslate nohighlight">\(x\)</span> は全偶数粒子数の <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> 配置、
+<span class="math notranslate nohighlight">\(P_{\rm ch}\)</span> はGutzwiller、Jastrow等のスピンscalarな相関因子です。
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> は射影しない状態（<span class="math notranslate nohighlight">\(\beta=0\)</span>、重み1）です。
+全粒子数sectorで同じ重みを使います。真空の振幅は <span class="math notranslate nohighlight">\(\sum_g a_g\)</span> で、
+<span class="math notranslate nohighlight">\(G\)</span> が大きい極限でのみ1に近づき、sectorごとの再規格化は行いません。
+有限の <span class="math notranslate nohighlight">\(G\)</span> は厳密な射影の近似で、最小点数は課していないため、
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> を増やして収束を確認してください。GC modeでは
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> と <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> も <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> と同様にCの <code class="docutils literal notranslate"><span class="pre">int</span></code> 範囲の
+10進整数1個に限ります。スピン射影は現時点で <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)=1</span></code> を
+必要とし（運動量射影との併用は未対応）、<span class="math notranslate nohighlight">\(\exp(\sum_{ij}v_{ij}m_im_j)\)</span>
+はスピンscalarでなく <span class="math notranslate nohighlight">\(S=0\)</span> を壊すため、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> では
+<code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> をエラーにします。一般pairと0でない <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> は
+スピン射影と併用できません。</p>
+<p>Hamiltonianは <span class="math notranslate nohighlight">\(S^z\)</span> を保存すればよく、<span class="math notranslate nohighlight">\(SU(2)\)</span> 対称である
+必要はありません。測定演算子は演算子全体の <span class="math notranslate nohighlight">\(S^z\)</span> 変化が0でなければ
+期待値0になり、<span class="math notranslate nohighlight">\(S^+_iS^-_j\)</span> のように因子はスピンを反転しても全体で
+<span class="math notranslate nohighlight">\(S^z\)</span> を保存する積は評価します。
+<span class="math notranslate nohighlight">\(\langle\mathbf S^2\rangle\)</span> は出力から
+<span class="math notranslate nohighlight">\(\langle S_z^2\rangle+\tfrac12\sum_{ij}\langle
+S^+_iS^-_j+S^-_iS^+_j\rangle\)</span> として求められます（<code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> の行
+<code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">0</span> <span class="pre">i</span> <span class="pre">1</span> <span class="pre">j</span> <span class="pre">1</span> <span class="pre">j</span> <span class="pre">0</span></code> と <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">1</span> <span class="pre">i</span> <span class="pre">0</span> <span class="pre">j</span> <span class="pre">0</span> <span class="pre">j</span> <span class="pre">1</span></code>、および <code class="docutils literal notranslate"><span class="pre">zvo_out</span></code> の
+<span class="math notranslate nohighlight">\(\langle S_z^2\rangle\)</span> 列）。<span class="math notranslate nohighlight">\(SU(2)\)</span> 対称性がない場合は
+<span class="math notranslate nohighlight">\(H\Psi\)</span> が <span class="math notranslate nohighlight">\(\Psi\)</span> の支持の外に出ることがあり、
+<span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> は前述の支持内平均です。有限 <span class="math notranslate nohighlight">\(G\)</span> の
+波動関数は独立なFock空間oracleで、厳密な <span class="math notranslate nohighlight">\(S=0\)</span> 射影への収束は
+4サイト環で検証しています。generator script付きの例は
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/SpinProjection</span></code> にあります。</p>
 <p>負の <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> は軌道入力の境界符号列を選び、その絶対値が使用する
 <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> pattern数です。<code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> 自体は Hamiltonian を変更しない
 ため、反周期境界条件（APBC）では次の入力を整合させてください。</p>
@@ -648,8 +685,10 @@ APBCのために恒等写像へ負符号を付ける必要はありません。<
 生成されます。<code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> の軌道指定は <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> （または
 <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> へ改名したもの）だけにして <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> /
 <code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code> の行を置かず、<code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> を <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>、
-<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> （StdFaceは <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> で
-8を出力）、<code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> とし、<code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> は使いません。<code class="docutils literal notranslate"><span class="pre">Trans</span></code> の
+<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> とし、<code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> は
+使いません。StdFaceが <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> で出力する <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=8</span></code> と
+<code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code> を残すと <span class="math notranslate nohighlight">\(S=0\)</span> 射影になり、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> では
+射影しない状態になります。<code class="docutils literal notranslate"><span class="pre">Trans</span></code> の
 境界位相と恒等写像の先頭 <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> patternはそのまま使い、軌道header
 が <code class="docutils literal notranslate"><span class="pre">ComplexType</span> <span class="pre">1</span></code> であることを確認し、<code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> と複素の初期
 パラメータを明示してください。一般pair用の <span class="math notranslate nohighlight">\(F/2\)</span> 変換を反平行の表へ
@@ -706,8 +745,8 @@ Gutzwillerの <code class="docutils literal notranslate"><span class="pre">ProjR
 非自明な <span class="math notranslate nohighlight">\(k=\pi\)</span> 運動量射影は、real/complexの独立projected ED
 value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
 対象とし、complex oracleは現時点でserial経路を対象とします。
-非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
-projected EDによる独立な値oracleは現時点ではありません。</p>
+2nd step Lanczos経路の非自明なスピン射影はruntimeおよび構造のsmoke test
+までで、projected EDによる独立な値oracleは現時点ではありません。</p>
 <p>electronic classで <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code> の場合、<span class="math notranslate nohighlight">\(H^3\)</span> のlocal powerは
 <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> 項に対する
 outer/inner二重loopで評価するため、支配的なoperator数は

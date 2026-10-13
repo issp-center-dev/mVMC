@@ -575,7 +575,8 @@ the same-spin pairs, because <span class="math notranslate nohighlight">\(F_{IJ}
 pair twice; equal numbers in the two formats are different states.
 The sampler keeps <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> by adding or removing
 one up-down pair and by hopping electrons without changing their spin.
-Anti-parallel pairing alone is not a spin (<span class="math notranslate nohighlight">\(S=0\)</span>) projection.
+Anti-parallel pairing alone is not a spin (<span class="math notranslate nohighlight">\(S=0\)</span>) projection;
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> with <code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code> adds one (see below).
 Every Hamiltonian term must conserve <span class="math notranslate nohighlight">\(S^z\)</span> as a whole: <code class="docutils literal notranslate"><span class="pre">Trans</span></code>
 must not flip a spin, an <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> or <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> term may
 contain spin-flip factors only when
@@ -596,9 +597,11 @@ the part of <span class="math notranslate nohighlight">\(H|\phi\rangle\)</span> 
 <p>In both forms the uniform rescaling of the pair parameters used in
 canonical runs is not applied, because it would change the relative
 weights of particle-number sectors. Both forms require complex
-variational parameters, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>,
+variational parameters, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>,
 a nonzero <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> with <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span> <span class="pre">&lt;=</span> <span class="pre">NQPTrans</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
+<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&lt;=1</span></code>. General pairing requires <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>;
+anti-parallel pairing also accepts the spin projection described below.
+RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
 spins, and SR-CG are not supported.</p>
 <p>Each quantum-projection component is kept either with its inverse matrix or,
 when its Pfaffian is zero or the factorization is classified singular or
@@ -636,6 +639,48 @@ average of <span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span>
 amplitude. Thus, with pair-creation terms and an exact node such as the
 <span class="math notranslate nohighlight">\(K\ne0\)</span> vacuum, it is smaller than
 <span class="math notranslate nohighlight">\(\|H\Psi\|^2/\|\Psi\|^2\)</span> by the nodal contribution.</p>
+<p>With anti-parallel pairing, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=G&gt;=2</span></code> and <code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code>
+project the trial state onto total spin <span class="math notranslate nohighlight">\(S=0\)</span> with the
+Gauss-Legendre quadrature in <span class="math notranslate nohighlight">\(\beta\in[0,\pi]\)</span> used in canonical
+runs:</p>
+<div class="math notranslate nohighlight">
+\[\Psi(x)=P_{\rm ch}(x)\sum_{g=1}^{G}a_g\,
+{\rm Pf}\big[A(\beta_g)\big|_x\big],\qquad
+a_g=\tfrac12\sin\beta_g\,w_g,\]</div>
+<p>where <span class="math notranslate nohighlight">\(A(\beta)\)</span> is the pair matrix rotated by
+<span class="math notranslate nohighlight">\(e^{-i\beta S^y}\)</span>, <span class="math notranslate nohighlight">\(x\)</span> runs over the
+<span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> configurations of every even particle
+number, and <span class="math notranslate nohighlight">\(P_{\rm ch}\)</span> collects the spin-scalar correlation
+factors such as Gutzwiller and Jastrow. <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> keeps the
+unprojected state (<span class="math notranslate nohighlight">\(\beta=0\)</span>, weight 1). The same weights are used
+in all particle-number sectors: the vacuum amplitude is
+<span class="math notranslate nohighlight">\(\sum_g a_g\)</span>, which tends to 1 only for large <span class="math notranslate nohighlight">\(G\)</span>, and the
+sectors are not renormalized separately. A finite <span class="math notranslate nohighlight">\(G\)</span> approximates
+the exact projection; no minimum number of points is imposed, so check
+convergence by increasing <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code>. In GC mode <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> and
+<code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> must be single base-10 integers in the C <code class="docutils literal notranslate"><span class="pre">int</span></code> range, as
+for <code class="docutils literal notranslate"><span class="pre">2Sz</span></code>. The spin projection currently requires <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)=1</span></code>
+(it is not yet combined with momentum projection), and <code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> is
+rejected for <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> because
+<span class="math notranslate nohighlight">\(\exp(\sum_{ij}v_{ij}m_im_j)\)</span> is not a spin scalar and would break
+<span class="math notranslate nohighlight">\(S=0\)</span>. General pairing and nonzero <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> are not supported
+with the spin projection.</p>
+<p>The Hamiltonian needs to conserve only <span class="math notranslate nohighlight">\(S^z\)</span>; it does not have to be
+<span class="math notranslate nohighlight">\(SU(2)\)</span> symmetric. Each measured operator whose total <span class="math notranslate nohighlight">\(S^z\)</span>
+change is nonzero has zero expectation value, while a product whose
+factors flip spins but conserve <span class="math notranslate nohighlight">\(S^z\)</span> as a whole, such as
+<span class="math notranslate nohighlight">\(S^+_iS^-_j\)</span>, is evaluated. <span class="math notranslate nohighlight">\(\langle\mathbf S^2\rangle\)</span> is
+obtained from the outputs as
+<span class="math notranslate nohighlight">\(\langle S_z^2\rangle+\tfrac12\sum_{ij}\langle
+S^+_iS^-_j+S^-_iS^+_j\rangle\)</span> with the <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> rows
+<code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">0</span> <span class="pre">i</span> <span class="pre">1</span> <span class="pre">j</span> <span class="pre">1</span> <span class="pre">j</span> <span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">1</span> <span class="pre">i</span> <span class="pre">0</span> <span class="pre">j</span> <span class="pre">0</span> <span class="pre">j</span> <span class="pre">1</span></code> and the
+<span class="math notranslate nohighlight">\(\langle S_z^2\rangle\)</span> column of <code class="docutils literal notranslate"><span class="pre">zvo_out</span></code>. Without
+<span class="math notranslate nohighlight">\(SU(2)\)</span> symmetry <span class="math notranslate nohighlight">\(H\Psi\)</span> can leave the support of
+<span class="math notranslate nohighlight">\(\Psi\)</span>, and <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> is the support average
+described above. The finite-<span class="math notranslate nohighlight">\(G\)</span> wave function is checked against
+an independent Fock-space oracle, and its convergence to the exact
+<span class="math notranslate nohighlight">\(S=0\)</span> projection is checked on a four-site ring. An example with a
+generator script is in <code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/SpinProjection</span></code>.</p>
 <p>A negative <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> selects the boundary-sign columns in the orbital
 input, while its absolute value selects the number of <code class="docutils literal notranslate"><span class="pre">TransSym</span></code>
 patterns. It does not modify the Hamiltonian, so keep the following
@@ -677,9 +722,11 @@ similar), and <code class="docutils literal notranslate"><span class="pre">Compl
 per row) referenced by the <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> entry. Keep <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> (or rename
 it to <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code>) as the only orbital entry of
 <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> with no <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> or <code class="docutils literal notranslate"><span class="pre">OrbitalParallel</span></code> line,
-and set <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>,
-<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> (StdFace writes 8 for <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>), and <code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code>
-in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> without an <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> file. Keep the boundary
+and set <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">NMPTrans=-1</span></code> in <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> without an <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> file. Keep the
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=8</span></code> and <code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code> that StdFace writes for <code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code> to
+apply the <span class="math notranslate nohighlight">\(S=0\)</span> projection, or set <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> for the
+unprojected state. Keep the boundary
 phases in <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and the identity first <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> pattern, check
 that the orbital header has <code class="docutils literal notranslate"><span class="pre">ComplexType</span> <span class="pre">1</span></code>, and give <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code>
 and complex initial parameters. Do not apply the <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>
@@ -741,9 +788,9 @@ The Gutzwiller <code class="docutils literal notranslate"><span class="pre">Proj
 ED oracle. A nontrivial <span class="math notranslate nohighlight">\(k=\pi\)</span> momentum projection is checked
 against independent real and complex projected-ED value oracles.
 The real oracle covers serial, MPI, and OpenMP paths; the complex
-oracle currently covers the serial path. Nontrivial spin projection
-has runtime and structural smoke coverage, but not an independent
-projected-ED value oracle.</p>
+oracle currently covers the serial path. For the second-step Lanczos
+path, nontrivial spin projection has runtime and structural smoke
+coverage, but not an independent projected-ED value oracle.</p>
 <p>In the electronic class with <code class="docutils literal notranslate"><span class="pre">NQPFull=1</span></code>, the <span class="math notranslate nohighlight">\(H^3\)</span> local
 power is evaluated by nested
 outer and inner loops over <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> terms, so its dominant operator
