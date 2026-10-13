@@ -300,12 +300,16 @@ MPIは使用しません。</p>
 </div>
 <section id="id5">
 <h3>バージョン番号の確認<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
-<p>次のように <code class="docutils literal notranslate"><span class="pre">-v</span></code> オプションをつけて <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code>,
+<p>次のように <code class="docutils literal notranslate"><span class="pre">-v</span></code> (または <code class="docutils literal notranslate"><span class="pre">--version</span></code>) オプションをつけて <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code>,
 <code class="docutils literal notranslate"><span class="pre">vmcdry.out</span></code> を実行すると, バージョン番号を標準出力した後終了します。</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>パス/vmcdry.out<span class="w"> </span>-v
 $<span class="w"> </span>パス/vmc.out<span class="w"> </span>-v
+mVMC<span class="w"> </span>version<span class="w"> </span><span class="m">1</span>.4.0<span class="w"> </span><span class="o">(</span>7d453176<span class="o">)</span>
 </pre></div>
 </div>
+<p>バージョン番号の後ろには, ビルドに使ったソースのコミットのハッシュの先頭8桁を表示します。
+コミットされていない変更がある場合は <code class="docutils literal notranslate"><span class="pre">7d453176-dirty</span></code> のように <code class="docutils literal notranslate"><span class="pre">-dirty</span></code> が付きます。
+コミットが分からない場合 (CMakeを使わずにビルドした場合など) は, ハッシュを表示しません。</p>
 </section>
 </section>
 </section>

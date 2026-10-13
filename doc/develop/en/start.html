@@ -309,12 +309,18 @@ as follows (in case of 16 threads) before the running:</p>
 </section>
 <section id="printing-version-id">
 <h2>Printing version ID<a class="headerlink" href="#printing-version-id" title="Permalink to this heading">¶</a></h2>
-<p>By using <code class="docutils literal notranslate"><span class="pre">-v</span></code> option as follows, you can check which version of mVMC
-you are using.</p>
+<p>By using <code class="docutils literal notranslate"><span class="pre">-v</span></code> (or <code class="docutils literal notranslate"><span class="pre">--version</span></code>) option as follows, you can check
+which version of mVMC you are using.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>PATH/vmcdry.out<span class="w"> </span>-v
 $<span class="w"> </span>PATH/vmc.out<span class="w"> </span>-v
+mVMC<span class="w"> </span>version<span class="w"> </span><span class="m">1</span>.4.0<span class="w"> </span><span class="o">(</span>7d453176<span class="o">)</span>
 </pre></div>
 </div>
+<p>The version number is followed by the first 8 digits of the hash of the
+commit which mVMC was built from. <code class="docutils literal notranslate"><span class="pre">-dirty</span></code> follows the hash, as
+<code class="docutils literal notranslate"><span class="pre">7d453176-dirty</span></code>, if the source had changes which were not committed.
+The hash is not printed if it is not known (for example, when mVMC is
+built without CMake).</p>
 </section>
 </section>
 
