@@ -43,6 +43,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 void outputData();
 void printUsageError();
 void printOption();
+void printVersionRank0();
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1);
 
 static void DumpGCSROpt(const int step, const int rank) {
@@ -444,6 +445,9 @@ int main(int argc, char* argv[])
   int nMultiDef = 1;
   /* for Standard mode (-s option)*/
   int flagStandard = 0;
+  /* for --version */
+  int flagVersion = 0;
+  int iarg;
   /* for getopt() */
   int option;
   extern char *optarg;
@@ -465,6 +469,20 @@ int main(int argc, char* argv[])
   StartTimer(0);
   StartTimer(1);
   StartTimer(10);
+
+  /* --version is the same as -v (getopt() reads short options only) */
+  for(iarg=1;iarg<argc;iarg++) {
+    if(strcmp(argv[iarg],"--")==0) break;
+    if(strcmp(argv[iarg],"--version")==0) {
+      flagVersion = 1;
+      break;
+    }
+  }
+  if(flagVersion) {
+    printVersionRank0();
+    MPI_Finalize();
+    return 0;
+  }
 
   /* read options */
   while((option=getopt(argc,argv,"bhm:oF:esv"))!=-1) {
@@ -545,7 +563,7 @@ int main(int argc, char* argv[])
       break;
 
     case 'v': /* Print version */
-      printVersion();
+      printVersionRank0();
       MPI_Finalize();
       return 0;
 
@@ -1258,6 +1276,15 @@ void printOption() {
   fprintf(stderr,"  -s     Standard mode\n");
   fprintf(stderr,"  -e     Expert mode\n");
   fprintf(stderr,"  -h     show this message\n");
+  fprintf(stderr,"  -v, --version  print version\n");
+  return;
+}
+
+/* Print the version once, also in a run with MPI */
+void printVersionRank0() {
+  int rank=0;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+  if(rank==0) MVMC_PrintVersion();
   return;
 }
 

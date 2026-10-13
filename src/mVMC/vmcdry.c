@@ -33,8 +33,8 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  if (strcmp(argv[1], "-v") == 0) {
-    printVersion();
+  if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
+    MVMC_PrintVersion();
     exit(0);
   }
   else {
