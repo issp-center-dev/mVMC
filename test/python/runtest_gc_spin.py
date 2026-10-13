@@ -89,6 +89,10 @@ def fixture_pair_amplitudes():
           for j in range(NSITE)] for i in range(NSITE)]
     F[0][1] += 0.7
     F[2][0] -= 0.3j
+    # Avoid the accidental N=6 node at mask 238 in the original probe.
+    # A full-support fixture lets the SR rows be checked independently
+    # against derivatives of the full Rayleigh quotient.
+    F[3][3] += 1.0 / 64.0
     return F
 
 
@@ -1300,6 +1304,86 @@ def exact_reference(fixture, nodes, F, calmode):
     return reference
 
 
+def rayleigh_energy(fixture, wave):
+    """Full-space Rayleigh energy, including Hamiltonian images of nodes."""
+    norm = sum(abs(value) ** 2 for value in wave.values())
+    if not norm > 0.0:
+        raise AssertionError("zero-norm fixture")
+    numerator = 0.0j
+    for mask, amplitude in wave.items():
+        if amplitude == 0.0:
+            continue
+        for unused, coefficient, operators in fixture.terms():
+            moved = apply_ops(mask, operators)
+            if moved is not None:
+                target, sign = moved
+                numerator += (coefficient * sign * amplitude *
+                              wave[target].conjugate())
+    if abs(numerator.imag) > 2.0e-11 * (1.0 + abs(numerator.real)):
+        raise AssertionError("Rayleigh numerator is not real: {}".format(
+            numerator))
+    return numerator.real / norm
+
+
+def fixture_contract_case(rootdir, args):
+    """The statistical fixture has full support and a non-vacuous SR check."""
+    del rootdir, args
+    F = fixture_pair_amplitudes()
+    nodes = spin.independent_nodes(PILOT_GAUSS)
+    basis = spin.balanced_basis(NSITE)
+    zeros = [mask for mask, value in spin.rational_finite(F, nodes).items()
+             if value == spin.ZERO]
+    if zeros or len(basis) != 70:
+        raise AssertionError("fixture support is incomplete: {}".format(zeros))
+
+    reports = []
+    for boundary in ("pbc", "apbc"):
+        fixture = SpinFixture(boundary, PILOT_GAUSS)
+        finite = spin.project_finite(F, nodes, fixture.log_charge)
+        exact = spin.project_exact(F, fixture.log_charge)
+        g2 = spin.project_finite(
+            F, spin.independent_nodes(2), fixture.log_charge)
+        g2_error = spin.wave_error(g2, exact, basis)[0]
+        if g2_error <= 1.0e-6:
+            raise AssertionError("{} fixture has no finite-G dependence".format(
+                boundary))
+
+        sr = exact_reference(fixture, nodes, F, 0)
+        physical = exact_reference(fixture, nodes, F, 1)
+        full_energy = rayleigh_energy(fixture, finite)
+        if abs(full_energy - physical["energy:re"]) > 2.0e-12 or \
+                abs(physical["energy:im"]) > 2.0e-12:
+            raise AssertionError("{} full-space energy differs".format(
+                boundary))
+        worst = 0.0
+        for parameter in range(NSITE * NSITE):
+            i, j = divmod(parameter, NSITE)
+            for imaginary in (0, 1):
+                epsilon = 1.0e-5
+                delta = (1.0j if imaginary else 1.0) * epsilon
+                plus = [list(row) for row in F]
+                minus = [list(row) for row in F]
+                plus[i][j] += delta
+                minus[i][j] -= delta
+                plus_wave = spin.project_finite(
+                    plus, nodes, fixture.log_charge)
+                minus_wave = spin.project_finite(
+                    minus, nodes, fixture.log_charge)
+                derivative = (rayleigh_energy(fixture, plus_wave) -
+                              rayleigh_energy(fixture, minus_wave)) / \
+                    (2.0 * epsilon)
+                row = 2 * (NPROJ + parameter) + imaginary
+                expected = sr["sr:{}:4".format(row)]
+                error = abs(derivative - expected)
+                worst = max(worst, error)
+                if error > 2.0e-8 * (1.0 + abs(expected)):
+                    raise AssertionError(
+                        "{} full-energy FD row {} differs: {} vs {}".format(
+                            boundary, row, derivative, expected))
+        reports.append((boundary, g2_error, worst))
+    print("GC SP fixture contract: support=70, {}".format(reports))
+
+
 def expected_comparison_count():
     physical = (9 + 2 * NORBITAL * NORBITAL + 2 * len(TWO_BODY_KEYS) +
                 2 * len(NBODY_KEYS) + 2 * len(ANOMALOUS_KEYS))
@@ -1405,9 +1489,14 @@ def pilot_case(rootdir, args):
         comparisons, critical, oversize))
 
 
-REQUIRED_METADATA = ("schema_version", "source_commit", "binary_sha256",
-                     "image_id", "seeds", "samples", "warmup", "gauss",
-                     "comparison_count", "alpha_family", "t_critical", "rows")
+THRESHOLD_KEYS = frozenset((
+    "alpha_family", "binary_sha256", "comparison_count", "gauss",
+    "image_id", "oversize", "oversize_limits", "rows", "samples",
+    "schema_version", "seeds", "source_commit", "t_critical", "thread_env",
+    "toolchain", "validation_seed", "warmup"))
+THRESHOLD_ROW_KEYS = frozenset(
+    ("fixture", "key", "expected", "mean", "sd", "gate"))
+THREAD_ENV_KEYS = frozenset(("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS"))
 
 
 def load_thresholds(path):
@@ -1417,27 +1506,107 @@ def load_thresholds(path):
     return data
 
 
+def finite_number(value):
+    return (isinstance(value, (int, float)) and
+            not isinstance(value, bool) and math.isfinite(value))
+
+
+def same_float(actual, expected):
+    return math.isclose(actual, expected, rel_tol=1.0e-12, abs_tol=1.0e-15)
+
+
+def expected_threshold_keys():
+    nodes = spin.independent_nodes(PILOT_GAUSS)
+    keys = set()
+    for boundary, calmode in PILOT_FIXTURES:
+        fixture = SpinFixture(boundary, PILOT_GAUSS)
+        reference = exact_reference(
+            fixture, nodes, fixture_pair_amplitudes(), calmode)
+        label = "{}_m{}".format(boundary, calmode)
+        keys.update((label, key) for key in reference)
+    return keys
+
+
+def gate_from_summary(expected, mean, sd, critical):
+    deterministic = 2.0e-9 * (1.0 + abs(expected))
+    if sd == 0.0:
+        if abs(mean - expected) > deterministic:
+            raise ValueError("zero-scatter threshold row is biased")
+        return deterministic
+    if abs(mean - expected) > critical * sd / math.sqrt(len(PILOT_SEEDS)):
+        raise ValueError("threshold row violates the pilot bias gate")
+    raw = max(6.0 * sd, deterministic)
+    unit = 10.0 ** (math.floor(math.log10(raw)) - 1)
+    return math.ceil(raw / unit) * unit
+
+
 def validate_thresholds(data):
-    for key in REQUIRED_METADATA:
-        if key not in data or data[key] in (None, ""):
-            raise ValueError("threshold metadata {} missing".format(key))
-    if data["schema_version"] != THRESHOLD_SCHEMA:
+    if not isinstance(data, dict) or set(data) != THRESHOLD_KEYS:
+        raise ValueError("threshold metadata keys differ")
+    if not isinstance(data["schema_version"], int) or \
+            isinstance(data["schema_version"], bool) or \
+            data["schema_version"] != THRESHOLD_SCHEMA:
         raise ValueError("unsupported threshold schema")
-    if list(data["seeds"]) != list(PILOT_SEEDS) or \
-            data["gauss"] != PILOT_GAUSS or \
-            data["comparison_count"] != expected_comparison_count():
-        raise ValueError("threshold provenance does not match the driver")
-    if not re.match(r"^[0-9a-f]{40}$", str(data["source_commit"])) or \
-            not re.match(r"^[0-9a-f]{64}$", str(data["binary_sha256"])):
+    for key in ("source_commit", "binary_sha256", "image_id", "toolchain"):
+        if not isinstance(data[key], str) or not data[key]:
+            raise ValueError("threshold metadata {} missing".format(key))
+    if not isinstance(data["seeds"], list) or \
+            any(not isinstance(seed, int) or isinstance(seed, bool) or seed <= 0
+                for seed in data["seeds"]) or \
+            len(set(data["seeds"])) != len(data["seeds"]) or \
+            data["seeds"] != list(PILOT_SEEDS):
+        raise ValueError("threshold pilot seeds differ")
+    if not isinstance(data["validation_seed"], int) or \
+            isinstance(data["validation_seed"], bool) or \
+            data["validation_seed"] != VALIDATION_SEED or \
+            data["validation_seed"] in data["seeds"]:
+        raise ValueError("threshold validation seed is invalid")
+    for key, expected in (("samples", PILOT_SAMPLES),
+                          ("warmup", PILOT_WARMUP),
+                          ("gauss", PILOT_GAUSS),
+                          ("comparison_count", expected_comparison_count())):
+        if not isinstance(data[key], int) or isinstance(data[key], bool) or \
+                data[key] != expected:
+            raise ValueError("threshold {} does not match the driver".format(
+                key))
+    if not finite_number(data["alpha_family"]) or \
+            not 0.0 < data["alpha_family"] < 1.0 or \
+            data["alpha_family"] != ALPHA_FAMILY:
+        raise ValueError("threshold alpha does not match the driver")
+    critical = family_critical(
+        len(PILOT_SEEDS), data["comparison_count"], data["alpha_family"])
+    if not finite_number(data["t_critical"]) or \
+            not same_float(data["t_critical"], critical):
+        raise ValueError("threshold critical value is inconsistent")
+    if not isinstance(data["thread_env"], dict) or \
+            set(data["thread_env"]) != THREAD_ENV_KEYS or \
+            any(not isinstance(value, str) or not value
+                for value in data["thread_env"].values()):
+        raise ValueError("threshold thread environment is incomplete")
+    if not isinstance(data["oversize_limits"], dict) or \
+            set(data["oversize_limits"]) != set(OVERSIZE_LIMITS):
+        raise ValueError("threshold oversize limits differ")
+    for key, expected in OVERSIZE_LIMITS.items():
+        value = data["oversize_limits"][key]
+        if not finite_number(value) or value <= 0.0 or \
+                not same_float(value, expected):
+            raise ValueError("threshold oversize limit differs for " + key)
+    if not isinstance(data["rows"], list) or not isinstance(data["oversize"],
+                                                             list):
+        raise ValueError("threshold rows/oversize must be lists")
+    if not re.fullmatch(r"[0-9a-f]{40}", data["source_commit"]) or \
+            not re.fullmatch(r"[0-9a-f]{64}", data["binary_sha256"]):
         raise ValueError("threshold source metadata malformed")
     seen = set()
+    computed_oversize = []
     for row in data["rows"]:
-        for key in ("fixture", "key", "expected", "mean", "sd", "gate"):
-            if key not in row:
-                raise ValueError("threshold row lacks " + key)
+        if not isinstance(row, dict) or set(row) != THRESHOLD_ROW_KEYS:
+            raise ValueError("threshold row keys differ")
+        if not isinstance(row["fixture"], str) or \
+                not isinstance(row["key"], str):
+            raise ValueError("threshold row name is malformed")
         for key in ("expected", "mean", "sd", "gate"):
-            if not isinstance(row[key], (int, float)) or \
-                    not math.isfinite(row[key]):
+            if not finite_number(row[key]):
                 raise ValueError("threshold row {} is not finite".format(key))
         if row["gate"] <= 0.0 or row["sd"] < 0.0:
             raise ValueError("threshold gate must be positive")
@@ -1445,8 +1614,22 @@ def validate_thresholds(data):
         if name in seen:
             raise ValueError("duplicate threshold row {}".format(name))
         seen.add(name)
-    if len(seen) != data["comparison_count"]:
-        raise ValueError("threshold rows do not cover the family")
+        expected_gate = gate_from_summary(
+            row["expected"], row["mean"], row["sd"], critical)
+        if not same_float(row["gate"], expected_gate):
+            raise ValueError("threshold gate is inconsistent for {}".format(
+                name))
+        group = ("sr" if row["key"].startswith("sr:") else
+                 observable_class(row["key"]))
+        limit = OVERSIZE_LIMITS.get(group)
+        if limit is not None and row["gate"] > limit:
+            computed_oversize.append(
+                [row["fixture"], row["key"], row["gate"], limit])
+    expected_keys = expected_threshold_keys()
+    if seen != expected_keys or len(seen) != data["comparison_count"]:
+        raise ValueError("threshold rows do not cover the exact family")
+    if data["oversize"] != computed_oversize:
+        raise ValueError("threshold oversize inventory is inconsistent")
 
 
 def threshold_path(rootdir):
@@ -1459,11 +1642,32 @@ def threshold_contract_case(rootdir, args):
     row = data["rows"][0]
     for label, change in (
             ("missing key", lambda d: d["rows"][0].pop("gate")),
+            ("extra row key", lambda d: d["rows"][0].update(extra=1)),
+            ("extra metadata", lambda d: d.update(extra=1)),
             ("negative gate", lambda d: d["rows"][0].update(gate=-1.0)),
+            ("inflated gate", lambda d: d["rows"][0].update(
+                gate=2.0 * d["rows"][0]["gate"])),
             ("NaN gate", lambda d: d["rows"][0].update(gate=float("nan"))),
+            ("biased mean", lambda d: d["rows"][0].update(
+                mean=d["rows"][0]["expected"] + 100.0)),
+            ("unknown comparison", lambda d: d["rows"][0].update(
+                key="unknown:observable")),
             ("missing source", lambda d: d.pop("source_commit")),
             ("missing binary", lambda d: d.update(binary_sha256="")),
             ("old schema", lambda d: d.update(schema_version=0)),
+            ("boolean schema", lambda d: d.update(schema_version=True)),
+            ("source suffix", lambda d: d.update(
+                source_commit=d["source_commit"] + "\n")),
+            ("zero alpha", lambda d: d.update(alpha_family=0.0)),
+            ("wrong critical", lambda d: d.update(
+                t_critical=d["t_critical"] + 0.1)),
+            ("negative samples", lambda d: d.update(samples=-1)),
+            ("reused validation seed", lambda d: d.update(
+                validation_seed=d["seeds"][0])),
+            ("wrong oversize limit", lambda d: d["oversize_limits"].update(
+                sr=2.0 * d["oversize_limits"]["sr"])),
+            ("false oversize", lambda d: d["oversize"].append(
+                ["pbc_m0", "energy:re", 1.0, 0.096])),
             ("missing row", lambda d: d["rows"].pop())):
         mutated = json.loads(json.dumps(data))
         change(mutated)
@@ -1565,6 +1769,7 @@ def oracle_case(rootdir, args):
 CASES = {
     "convergence": convergence_case,
     "dumpfail": dumpfail_case,
+    "fixture-contract": fixture_contract_case,
     "input": input_case,
     "mpi": mpi_case,
     "mutation": mutation_case,

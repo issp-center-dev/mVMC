@@ -682,6 +682,7 @@ def _probe_F(nsite):
                       for j in range(nsite)] for i in range(nsite)])
     F[0, 1] += 0.7
     F[2, 0] -= 0.3j
+    F[3, 3] += 1.0 / 64.0
     return F
 
 

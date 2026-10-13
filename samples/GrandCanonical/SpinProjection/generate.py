@@ -49,6 +49,7 @@ def pair_amplitudes():
           for j in range(NSITE)] for i in range(NSITE)]
     F[0][1] += 0.7
     F[2][0] -= 0.3j
+    F[3][3] += 1.0 / 64.0
     return F
 
 

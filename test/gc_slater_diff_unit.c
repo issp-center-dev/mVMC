@@ -99,14 +99,23 @@ static double complex finite_difference(const int ncur, const int *eleIdx,
                                         const int imaginary,
                                         const double epsilon,
                                         const double complex baseOverlap) {
+  const double complex original = Slater[parameter];
   const double complex delta = imaginary ? I * epsilon : epsilon;
   double complex plus;
   double complex minus;
-  Slater[parameter] += delta;
+  double complex restored;
+  Slater[parameter] = original + delta;
   plus = rebuild_overlap(ncur, eleIdx);
-  Slater[parameter] -= 2.0 * delta;
+  Slater[parameter] = original - delta;
   minus = rebuild_overlap(ncur, eleIdx);
-  Slater[parameter] += delta;
+  Slater[parameter] = original;
+  restored = rebuild_overlap(ncur, eleIdx);
+  CHECK(finite_close(restored, baseOverlap,
+                     2.0e-13 * (1.0 + cabs(baseOverlap))),
+        "FD baseline restore ncur=%d parameter=%d got=(%.17g,%.17g) "
+        "expected=(%.17g,%.17g)",
+        ncur, parameter, creal(restored), cimag(restored), creal(baseOverlap),
+        cimag(baseOverlap));
   return (plus - minus) / (2.0 * epsilon * baseOverlap);
 }
 
@@ -1033,6 +1042,14 @@ static void run_spin_pfonly_checks(void) {
         "spin zero component dPf/dF01=(%.17g,%.17g)", creal(gradient[1]),
         cimag(gradient[1]));
   check_all_derivatives(2, occupied03);
+  CHECK(GCQpState[0] == GC_QP_PFONLY,
+        "spin restored zero component state %s",
+        GCComponentStateName(GCQpState[0]));
+  CHECK(GCQpState[1] == GC_QP_INVERSE,
+        "spin restored regular component state %s",
+        GCComponentStateName(GCQpState[1]));
+  CHECK(PfM[0] == 0.0, "spin restored zero component Pf=(%.17g,%.17g)",
+        creal(PfM[0]), cimag(PfM[0]));
   free_antiparallel_fixture();
 }
 
