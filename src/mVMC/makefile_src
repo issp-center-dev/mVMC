@@ -55,6 +55,7 @@ gc_component.c \
 gc_size.c \
 gauleg.c \
 initfile.c \
+initial_sample.c \
 legendrepoly.c \
 locgrn.c \
 locgrn_real.c \
@@ -122,6 +123,7 @@ HEADERS = \
 ./include/gauleg.h \
 ./include/global.h \
 ./include/initfile.h \
+./include/initial_sample.h \
 ./include/legendrepoly.h \
 ./include/locgrn.h \
 ./include/locgrn_fsz.h \
