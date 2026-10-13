@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import sys
 
+from gc_component_stats import parse_component_stats
+
 from grandcanonical_exact_oracle import (
     ANOMALOUS_G_OPERATORS,
     EVEN_BASIS,
@@ -51,7 +53,7 @@ def operators_to_factors(operators):
 
 def write_modpara(workdir, mode, sample_count, seed, nstore=1,
                   nsplit=1, reweight=0, iterations=2, init_nelec=2,
-                  data_qty=1):
+                  data_qty=1, nmptrans=1):
     write(
         os.path.join(workdir, "modpara.def"),
         """--------------------
@@ -74,7 +76,7 @@ Ncond          3
 2Sz            -1
 NSPGaussLeg    1
 NSPStot        0
-NMPTrans       1
+NMPTrans       {nmptrans}
 NSROptItrStep  {iterations}
 NSROptItrSmp   1
 DSROptRedCut   0.000000000001
@@ -101,6 +103,7 @@ NGCInitNelec   {init_nelec}
             reweight=reweight,
             init_nelec=init_nelec,
             data_qty=data_qty,
+            nmptrans=nmptrans,
         ),
     )
 
@@ -343,12 +346,12 @@ def write_anomalous(workdir, delta):
 def write_fixture(workdir, mode=1, samples=60000, seed=93617, nstore=1,
                   nsplit=1, reweight=0, iterations=2, jastrow=0.23,
                   mu=0.4, vacuum=False, delta=None, init_nelec=None,
-                  data_qty=1):
+                  data_qty=1, nmptrans=1):
     parameters = tuple(0.0j for unused in range(6)) if vacuum else default_parameters()
     if init_nelec is None:
         init_nelec = 0 if vacuum else 2
     write_modpara(workdir, mode, samples, seed, nstore, nsplit, reweight,
-                  iterations, init_nelec, data_qty)
+                  iterations, init_nelec, data_qty, nmptrans)
     write_identity_projection(workdir)
     write_orbital(workdir, parameters, optimize=not vacuum)
     namelist = [
@@ -437,6 +440,11 @@ def state_dump_records(path):
             records.append((left[0], int(left[1]), int(left[2]), mask,
                             tuple(piece.strip() for piece in pieces)))
     return records
+
+
+# NStoreO=0 and NStoreO=1 must agree on the SR dump up to BLAS rounding;
+# the largest difference seen so far is 7.6e-13 (OpenBLAS, Linux/arm64).
+NSTOREO_DUMP_TOLERANCE = 5.0e-12
 
 
 def assert_close(label, actual, expected, tolerance):
@@ -689,9 +697,11 @@ def physical_case(rootdir):
     samples = int(os.environ.get("MVMC_GC_SAMPLES", "60000"))
     workdir = prepare_work(rootdir, "GC_Exact_Physical")
     write_fixture(workdir, mode=1, samples=samples, iterations=2)
-    run_binary(rootdir, workdir,
-               extra_env={"MVMC_GC_STATE_DUMP": "gc_state.dat",
-                          "MVMC_GC_DEBUG_REBUILD_INTERVAL": "97"})
+    output = run_binary(
+        rootdir, workdir,
+        extra_env={"MVMC_GC_STATE_DUMP": "gc_state.dat",
+                   "MVMC_GC_DEBUG_REBUILD_INTERVAL": "97"})
+    parse_component_stats(output)
     records = state_dump_records(os.path.join(workdir, "gc_state.dat.rank0"))
     sample_count, chi_square = validate_distribution(records)
     validate_physical(workdir, sample_count)
@@ -891,15 +901,6 @@ def anomalous_energy_case(rootdir):
         result["output"][0] for result in results]))
 
 
-def sr_parameter_line(path, packed):
-    prefix = "P {} ".format(packed)
-    with open(path, "rb") as stream:
-        for line in stream:
-            if line.decode("ascii").startswith(prefix):
-                return line
-    raise AssertionError("SR parameter {} is absent".format(packed))
-
-
 def anomalous_sr_case(rootdir):
     delta = 0.35 - 0.20j
     samples = int(os.environ.get("MVMC_GC_ANOMALOUS_SR_SAMPLES", "50000"))
@@ -950,13 +951,20 @@ def anomalous_sr_case(rootdir):
             sampled = runs[nstore][0]["p"][packed][4]
             assert_close("anomalous sampled SR gradient P={}".format(packed),
                          sampled, exact, tolerance)
-        first_line = sr_parameter_line(
-            os.path.join(paths[0], "gc_sr.dat"), packed)
-        second_line = sr_parameter_line(
-            os.path.join(paths[1], "gc_sr.dat"), packed)
-        if first_line != second_line:
+        # NStoreO=0/1 accumulate <O>, <OH> and the gradient through different
+        # BLAS reductions, so the dump rows agree only to rounding (about
+        # 1e-13 with OpenBLAS on Linux/arm64), not bitwise.  Compare every
+        # column of the selected step-0 P row with a small absolute tolerance.
+        first_row = runs[0][0]["p"][packed]
+        second_row = runs[1][0]["p"][packed]
+        if len(first_row) != len(second_row):
             raise AssertionError(
-                "NStoreO changed selected anomalous SR gradient P={}".format(packed))
+                "NStoreO changed selected anomalous SR dump shape P={}".format(
+                    packed))
+        for column, (first, second) in enumerate(zip(first_row, second_row)):
+            assert_close(
+                "NStoreO anomalous SR dump P={} column={}".format(packed, column),
+                first, second, NSTOREO_DUMP_TOLERANCE)
         print("anomalous SR selected P={} |g|={:.8g} SE_budget={:.4g} "
               "tolerance={:.4g}".format(
                   packed, abs(exact), se_budget, tolerance))

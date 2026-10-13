@@ -18,6 +18,7 @@ extern int omp_get_max_threads(void);
  * global.h, so exercise the exact translation-unit chain used by vmc.out. */
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
+#include "../src/mVMC/gc_component.c"
 #include "../src/mVMC/matrix_gc.c"
 #include "../src/mVMC/gc_config.c"
 #include "../src/mVMC/pfupdate_gc.c"
@@ -28,6 +29,7 @@ extern int omp_get_max_threads(void);
 typedef struct {
   double complex inv[MAX_QP * MAX_DIMENSION * MAX_DIMENSION];
   double complex pf[MAX_QP];
+  int state[MAX_QP];
 } PfState;
 
 static int failures = 0;
@@ -77,6 +79,15 @@ static void fill_slater_block(double complex *slater, const int dimension,
   }
 }
 
+static void isolate_orbital_zero(double complex *slater,
+                                 const int dimension) {
+  int k;
+  for (k = 0; k < dimension; k++) {
+    slater[k] = 0.0;
+    slater[(size_t)k * (size_t)dimension] = 0.0;
+  }
+}
+
 static void setup_dimension(const int dimension) {
   const size_t block = (size_t)dimension * (size_t)dimension;
   Nsite = dimension / 2;
@@ -93,6 +104,7 @@ static void setup_dimension(const int dimension) {
   if (SlaterElm == NULL || InvM == NULL || PfM == NULL) exit(EXIT_FAILURE);
   fill_slater_block(SlaterElm, dimension, 1.0, 0.031);
   fill_slater_block(SlaterElm + block, dimension, 1.43, -0.047);
+  CHECK(GCComponentInit() == GC_MALL_OK, "component init");
 }
 
 static void save_state(PfState *state) {
@@ -100,6 +112,7 @@ static void save_state(PfState *state) {
       (size_t)MAX_QP * (size_t)NsizeMax * (size_t)NsizeMax;
   memcpy(state->inv, InvM, matrixCount * sizeof(*InvM));
   memcpy(state->pf, PfM, MAX_QP * sizeof(*PfM));
+  memcpy(state->state, GCQpState, MAX_QP * sizeof(*GCQpState));
 }
 
 static void restore_state(const PfState *state) {
@@ -107,6 +120,7 @@ static void restore_state(const PfState *state) {
       (size_t)MAX_QP * (size_t)NsizeMax * (size_t)NsizeMax;
   memcpy(InvM, state->inv, matrixCount * sizeof(*InvM));
   memcpy(PfM, state->pf, MAX_QP * sizeof(*PfM));
+  memcpy(GCQpState, state->state, MAX_QP * sizeof(*GCQpState));
 }
 
 static void initialize_old_state(const int ncur, const int *eleIdx,
@@ -120,7 +134,7 @@ static void initialize_old_state(const int ncur, const int *eleIdx,
   PfM[1] = -102.0 + 4.0 * I;
   CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, MAX_QP) == GC_MALL_OK,
         "%s old rebuild failed", label);
-  save_state(oldState);
+  if (oldState != NULL) save_state(oldState);
 }
 
 static void rebuild_candidate(const int ncur, const int *eleIdx,
@@ -146,6 +160,8 @@ static void check_updated_state(const int ncur, const PfState *expected,
   int qp;
   for (qp = 0; qp < MAX_QP; qp++) {
     int row;
+    CHECK(GCQpState[qp] == expected->state[qp],
+          "%s qp=%d updated state mismatch", label, qp);
     CHECK(close_complex(PfM[qp], expected->pf[qp]),
           "%s qp=%d updated Pf mismatch", label, qp);
     for (row = 0; row < NsizeMax; row++) {
@@ -176,6 +192,9 @@ static void check_candidate_noncommit(const PfState *oldState,
         "%s candidate changed InvM", label);
   CHECK(memcmp(PfM, oldState->pf, MAX_QP * sizeof(*PfM)) == 0,
         "%s candidate changed PfM", label);
+  CHECK(memcmp(GCQpState, oldState->state,
+               MAX_QP * sizeof(*GCQpState)) == 0,
+        "%s candidate changed GCQpState", label);
 }
 
 static void check_nrow_candidate(const int n, const int *msa,
@@ -464,6 +483,232 @@ static void test_add_conjugate_transpose_mutation(void) {
         "complex fixture does not kill conjugate-transpose mutation");
 }
 
+static void test_pfonly_candidates(void) {
+  const int dimension = 6;
+  unsigned int mask;
+  setup_dimension(dimension);
+  isolate_orbital_zero(
+      SlaterElm + (size_t)dimension * (size_t)dimension, dimension);
+  for (mask = 1U; mask < (1U << dimension); mask += 2U) {
+    int eleIdx[8] = {0};
+    int count = 0, rs, ma;
+    PfState oldState, candidate;
+    double complex pfMNew[MAX_QP];
+    if (popcount(mask) % 2 != 0 || popcount(mask) < 2) continue;
+    for (rs = 0; rs < dimension; rs++)
+      if (mask & (1U << rs)) eleIdx[count++] = rs;
+    initialize_old_state(count, eleIdx, &oldState, "pfonly old");
+    CHECK(GCQpState[1] == GC_QP_PFONLY &&
+              GCQpState[0] == GC_QP_INVERSE,
+          "mask=%u states %s/%s", mask,
+          GCComponentStateName(GCQpState[0]),
+          GCComponentStateName(GCQpState[1]));
+    for (rs = 1; rs < dimension; rs++)
+      if (!(mask & (1U << rs))) break;
+    if (rs < dimension) {
+      ma = 0;
+      eleIdx[ma] = rs;
+      CalculateNewPfMHopGC(ma, pfMNew, eleIdx, count, 0, MAX_QP);
+      rebuild_candidate(count, eleIdx, &candidate, "pfonly hop");
+      check_pf_values(pfMNew, &candidate, "pfonly hop");
+      restore_state(&oldState);
+      eleIdx[ma] = 0;
+    }
+    {
+      int empties[2], found = 0;
+      for (rs = 0; rs < dimension && found < 2; rs++)
+        if (!(mask & (1U << rs))) empties[found++] = rs;
+      if (found == 2 && count + 2 <= dimension) {
+        eleIdx[count] = empties[0];
+        eleIdx[count + 1] = empties[1];
+        CalculateNewPfMAddGC(empties[0], empties[1], pfMNew, eleIdx,
+                             count, 0, MAX_QP);
+        rebuild_candidate(count + 2, eleIdx, &candidate, "pfonly add");
+        check_pf_values(pfMNew, &candidate, "pfonly add");
+        restore_state(&oldState);
+      }
+    }
+    if (count >= 4) {
+      int idxCopy[8] = {0};
+      int cfg[8], num[8], ncur = count, i;
+      memcpy(idxCopy, eleIdx, (size_t)count * sizeof(*idxCopy));
+      for (i = 0; i < dimension; i++) {
+        cfg[i] = -1;
+        num[i] = 0;
+      }
+      for (i = 0; i < count; i++) {
+        cfg[idxCopy[i]] = i;
+        num[idxCopy[i]] = 1;
+      }
+      (void)GCRemovePair(0, 1, idxCopy, cfg, num, &ncur);
+      CalculateNewPfMRemoveGC(0, 1, pfMNew, idxCopy, count, 0, MAX_QP);
+      rebuild_candidate(ncur, idxCopy, &candidate, "pfonly remove");
+      check_pf_values(pfMNew, &candidate, "pfonly remove");
+      restore_state(&oldState);
+    }
+  }
+}
+
+static void test_commit_transitions(void) {
+  int eleIdx[4] = {1, 2, -1, -1};
+  double complex pfMNew[MAX_QP];
+  PfState oldState, target;
+  GCComponentCounters total;
+  size_t k;
+  setup_dimension(4);
+  isolate_orbital_zero(SlaterElm + 16, 4);
+
+  initialize_old_state(2, eleIdx, &oldState, "commit a old");
+  eleIdx[0] = 0;
+  rebuild_candidate(2, eleIdx, &target, "commit a target");
+  CHECK(target.state[1] == GC_QP_PFONLY, "commit a target state");
+  restore_state(&oldState);
+  CalculateNewPfMHopGC(0, pfMNew, eleIdx, 2, 0, MAX_QP);
+  CHECK(pfMNew[1] == 0.0, "candidate into zero row is exactly 0");
+  CHECK(GCCommitAccepted(GC_COMMIT_HOP, 0, 0, pfMNew, eleIdx, 2, 2,
+                         0, MAX_QP) == GC_MALL_OK,
+        "commit a status");
+  check_updated_state(2, &target, &oldState, "commit a");
+  GCComponentCountersTotal(&total);
+  CHECK(total.toPfonly >= 1, "toPfonly counter");
+
+  eleIdx[0] = 0;
+  eleIdx[1] = 2;
+  initialize_old_state(2, eleIdx, &oldState, "commit b old");
+  CHECK(oldState.state[1] == GC_QP_PFONLY, "commit b precondition");
+  eleIdx[0] = 3;
+  rebuild_candidate(2, eleIdx, &target, "commit b target");
+  restore_state(&oldState);
+  CalculateNewPfMHopGC(0, pfMNew, eleIdx, 2, 0, MAX_QP);
+  CHECK(pfMNew[1] != 0.0, "candidate out of zero row is nonzero");
+  CHECK(GCCommitAccepted(GC_COMMIT_HOP, 0, 3, pfMNew, eleIdx, 2, 2,
+                         0, MAX_QP) == GC_MALL_OK,
+        "commit b status");
+  check_updated_state(2, &target, &oldState, "commit b");
+  GCComponentCountersTotal(&total);
+  CHECK(total.recover >= 1, "recover counter");
+
+  {
+    GCComponentCounters before;
+    GCComponentCountersTotal(&before);
+    eleIdx[0] = 1;
+    eleIdx[1] = 2;
+    initialize_old_state(2, eleIdx, &oldState, "commit c old");
+    eleIdx[0] = 3;
+    rebuild_candidate(2, eleIdx, &target, "commit c target");
+    restore_state(&oldState);
+    for (k = 0; k < MAX_QP; k++) {
+      int row, column;
+      for (row = 0; row < 2; row++)
+        for (column = 0; column < 2; column++)
+          InvM[k * (size_t)NsizeMax * (size_t)NsizeMax +
+               (size_t)row * (size_t)NsizeMax + (size_t)column] =
+              1.0e6 + 1.0e6 * I;
+    }
+    pfMNew[0] = target.pf[0];
+    pfMNew[1] = target.pf[1];
+    CHECK(GCCommitAccepted(GC_COMMIT_HOP, 0, 3, pfMNew, eleIdx, 2, 2,
+                           0, MAX_QP) == GC_MALL_OK,
+          "commit c status");
+    GCComponentCountersTotal(&total);
+    CHECK(total.probeRebuild > before.probeRebuild,
+          "probe triggered a rebuild");
+    check_updated_state(2, &target, &oldState, "commit c");
+  }
+
+  {
+    int idx2[4] = {1, 2, -1, -1};
+    int cfg[4] = {-1, 0, 1, -1};
+    int num[4] = {0, 1, 1, 0};
+    int ncur = 2;
+    initialize_old_state(2, idx2, &oldState, "commit d old");
+    (void)GCRemovePair(0, 1, idx2, cfg, num, &ncur);
+    CalculateNewPfMRemoveGC(0, 1, pfMNew, idx2, 2, 0, MAX_QP);
+    CHECK(GCCommitAccepted(GC_COMMIT_REMOVE, 0, 1, pfMNew, idx2, 2, 0,
+                           0, MAX_QP) == GC_MALL_OK,
+          "commit d status");
+    CHECK(PfM[0] == 1.0 && PfM[1] == 1.0,
+          "vacuum PfM exactly 1");
+    CHECK(GCQpState[0] == GC_QP_INVERSE &&
+              GCQpState[1] == GC_QP_INVERSE,
+          "vacuum states");
+  }
+}
+
+static void test_probe_rejects_nonfinite(void) {
+  const int eleIdx[2] = {1, 2};
+  size_t block, k;
+  GCComponentCache *cache;
+  setup_dimension(4);
+  block = (size_t)NsizeMax * (size_t)NsizeMax;
+  cache = GCComponentThreadCache();
+  initialize_old_state(2, eleIdx, NULL, "probe old");
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 1,
+        "valid inverse must pass");
+  InvM[0] = NAN;
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 0,
+        "single NaN passed");
+  for (k = 0; k < block; k++) InvM[k] = NAN;
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 0,
+        "all-NaN inverse passed");
+  initialize_old_state(2, eleIdx, NULL, "probe reset");
+  InvM[1] = INFINITY;
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 0, "Inf passed");
+  InvM[1] = -INFINITY;
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 0,
+        "negative Inf passed");
+  SlaterElm[(size_t)1 * (size_t)Nsite2 + 2] = 1e200;
+  SlaterElm[(size_t)2 * (size_t)Nsite2 + 1] = -1e200;
+  for (k = 0; k < block; k++) InvM[k] = 0;
+  InvM[1] = 1e200;
+  InvM[NsizeMax] = -1e200;
+  CHECK(isinf(cabs(InvM[1]) *
+              cabs(SlaterElm[(size_t)1 * (size_t)Nsite2 + 2])),
+        "denominator overflow precondition");
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 0,
+        "overflowing norm product passed");
+  SlaterElm[(size_t)1 * (size_t)Nsite2 + 2] = 1e-200;
+  SlaterElm[(size_t)2 * (size_t)Nsite2 + 1] = -1e-200;
+  InvM[0] = InvM[1] = 1e308;
+  InvM[NsizeMax] = InvM[NsizeMax + 1] = 0;
+  CHECK(isinf(creal(InvM[0]) + creal(InvM[1])),
+        "probe vector sum overflow precondition");
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 0,
+        "overflowing vector sum passed");
+  setup_dimension(4);
+  cache = GCComponentThreadCache();
+  block = (size_t)NsizeMax * (size_t)NsizeMax;
+  initialize_old_state(2, eleIdx, NULL, "probe reset 3");
+  for (k = 0; k < block; k++) InvM[k] += 0.5;
+  CHECK(GCComponentProbe(0, 0, 2, eleIdx, cache) == 0,
+        "corrupted finite inverse passed");
+}
+
+static void test_add_candidate_tail_independence(void) {
+  int eleIdx[8] = {0, 2, -1, -1, -1, -1, -1, -1};
+  double complex reference[MAX_QP], probe[MAX_QP];
+  PfState oldState;
+  const int tails[3][2] = {{-1, -1}, {999, -999}, {1, 3}};
+  int t, qp;
+  setup_dimension(6);
+  isolate_orbital_zero(SlaterElm + 36, 6);
+  initialize_old_state(2, eleIdx, &oldState, "tail old");
+  CHECK(GCQpState[1] == GC_QP_PFONLY, "tail precondition");
+  eleIdx[2] = 4;
+  eleIdx[3] = 5;
+  CalculateNewPfMAddGC(4, 5, reference, eleIdx, 2, 0, MAX_QP);
+  for (t = 0; t < 3; t++) {
+    restore_state(&oldState);
+    eleIdx[2] = tails[t][0];
+    eleIdx[3] = tails[t][1];
+    CalculateNewPfMAddGC(4, 5, probe, eleIdx, 2, 0, MAX_QP);
+    for (qp = 0; qp < MAX_QP; qp++)
+      CHECK(probe[qp] == reference[qp],
+            "add candidate tail=%d,%d qp%d differs", tails[t][0],
+            tails[t][1], qp);
+  }
+}
+
 int main(int argc, char **argv) {
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
@@ -477,6 +722,11 @@ int main(int argc, char **argv) {
   test_m8_noncontracted_n3();
   test_add_remove_exhaustive();
   test_add_conjugate_transpose_mutation();
+  test_pfonly_candidates();
+  test_commit_transitions();
+  test_probe_rejects_nonfinite();
+  test_add_candidate_tail_independence();
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(SlaterElm);
   free(InvM);

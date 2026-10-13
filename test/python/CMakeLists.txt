@@ -1,10 +1,73 @@
+foreach(seam_script bf_seam_phase_tool.py bf_seam_oracle.py test_bf_seam_oracle.py runtest_bf_seam_kernel.py)
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${seam_script} DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+endforeach()
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/BackFlow_Seam_L4 DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+add_test(NAME BackFlow_Seam_Physics_Oracle COMMAND ${PYTHON_EXECUTABLE} test_bf_seam_oracle.py)
+foreach(seam_mode canonical legacy projected canonical_real legacy_real)
+    add_test(NAME BackFlow_Seam_Kernel_${seam_mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_seam_kernel.py ${seam_mode})
+endforeach()
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_seam_input.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_failure.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_replay.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+foreach(bf_mode real complex)
+    add_test(NAME BackFlow_Replay_${bf_mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_replay.py ${bf_mode})
+    if(MPI_FOUND)
+        add_test(NAME BackFlow_Replay_${bf_mode}_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_replay.py ${bf_mode})
+        set_tests_properties(BackFlow_Replay_${bf_mode}_mpi
+            PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+    endif()
+    add_test(NAME BackFlow_Failure_${bf_mode}_ap_canonical
+        COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-canonical)
+    if(MPI_FOUND)
+        add_test(NAME BackFlow_Failure_${bf_mode}_ap_canonical_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ap --force-canonical)
+        set_tests_properties(BackFlow_Failure_${bf_mode}_ap_canonical_mpi
+            PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+    endif()
+    foreach(bf_boundary pbc ap)
+        add_test(NAME BackFlow_Failure_${bf_mode}_${bf_boundary}
+            COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ${bf_boundary})
+        if(MPI_FOUND)
+            add_test(NAME BackFlow_Failure_${bf_mode}_${bf_boundary}_mpi
+                COMMAND ${PYTHON_EXECUTABLE} runtest_bf_failure.py ${bf_mode} ${bf_boundary})
+            set_tests_properties(BackFlow_Failure_${bf_mode}_${bf_boundary}_mpi
+                PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+        endif()
+    endforeach()
+endforeach()
+add_test(NAME BackFlow_Seam_Input_Reader COMMAND ${PYTHON_EXECUTABLE} runtest_bf_seam_input.py)
+if(MPI_FOUND)
+    add_test(NAME BackFlow_Seam_Input_Reader_mpi COMMAND ${PYTHON_EXECUTABLE} runtest_bf_seam_input.py)
+    set_tests_properties(BackFlow_Seam_Input_Reader_mpi PROPERTIES ENVIRONMENT "MVMC_MPI_PROCS=2")
+endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mode1.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_mpi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_invalid_expert.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_gc_failure_validation.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+add_test(NAME GC_FailureValidator
+    COMMAND ${PYTHON_EXECUTABLE} test_gc_failure_validation.py)
+set_tests_properties(GC_FailureValidator PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/gc_component_stats.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_mp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_spin_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_spin.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/gc_spin_thresholds.json DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_death.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_failure_guard.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/gc_antiparallel_failure.py
+    DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_hphi_anomalous.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -21,6 +84,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/backflow_def_helper.py DESTINATION ${CMAKE
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/bf_canonical_model.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_fsz.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_fsz_green_omp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+add_test(NAME FSZ_Green_SpinIndices_omp COMMAND ${PYTHON_EXECUTABLE} runtest_fsz_green_omp.py)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_bf_sampler_dump_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_projection_variants.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_bf_hphi.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -35,6 +100,26 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_complex_ed.py DESTINATION
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_heisenberg_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projected_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos2_projection_smoke.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_guide.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/HubbardChainLanczos_Guide DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+foreach(mode invalid_negative invalid_estimator)
+    add_test(NAME Lanczos_NearZeroGuide_${mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py ${mode})
+    set_tests_properties(Lanczos_NearZeroGuide_${mode} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endforeach()
+foreach(mode eps1e-6 eps1)
+    add_test(NAME Lanczos_NearZeroGuide_${mode}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py ${mode})
+    set_tests_properties(Lanczos_NearZeroGuide_${mode} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+endforeach()
+if(MPI_FOUND)
+    add_test(NAME Lanczos_NearZeroGuide_eps1e-6_mpi
+        COMMAND ${PYTHON_EXECUTABLE} runtest_lanczos_guide.py eps1e-6)
+    set_tests_properties(Lanczos_NearZeroGuide_eps1e-6_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+endif()
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_classic_ed.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_production_anchor.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_absolute_krylov_profile.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -1224,12 +1309,95 @@ add_gc_invalid_test(GC_Invalid_BackFlow "does not support BackFlow" gc_backflow)
 add_gc_invalid_test(GC_Invalid_FlagRange "must be 0 or 1" NGrandCanonical=2)
 add_gc_invalid_test(GC_Invalid_HintOver "NGCInitNelec must satisfy" NGCInitNelec=999)
 add_gc_invalid_test(GC_Invalid_HintNegative "NGCInitNelec must satisfy" NGCInitNelec=-2)
-add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires OrbitalGeneral" gc_noorbgen)
+# OrbitalAntiParallel alone selects anti-parallel GC; 2Sz=-1 is rejected.
+add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires 2Sz=0" gc_noorbgen)
 add_gc_invalid_test(GC_Invalid_RealParameter "requires complex variational parameters" gc_realparam)
-add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires" NSPGaussLeg=2)
-add_gc_invalid_test(GC_Invalid_MPTrans "initially requires" NMPTrans=2)
-add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires" gc_opttrans2 opttrans_mode)
+add_gc_invalid_test(GC_Invalid_GaussLeg "spin projection requires anti-parallel pairing" NSPGaussLeg=2)
+add_gc_invalid_test(GC_Invalid_MPTrans "1 <= abs(NMPTrans) <= NQPTrans"
+    gc_qptrans1 NMPTrans=2)
+add_gc_invalid_test(GC_Invalid_MPTransMinus2 "1 <= abs(NMPTrans) <= NQPTrans"
+    gc_qptrans1 NMPTrans=-2)
+add_gc_invalid_test(GC_Invalid_MPTransZero "must be a nonzero integer" NMPTrans=0)
+add_gc_invalid_test(GC_Invalid_MPTransIntMin "must be a nonzero integer"
+    NMPTrans=-2147483648)
+add_gc_invalid_test(GC_Invalid_MPTransTooLarge "1 <= abs(NMPTrans) <= NQPTrans" NMPTrans=3)
+add_gc_invalid_test(GC_Invalid_MPTransOverflow "must be an exact integer in int range"
+    NMPTrans=2147483648)
+add_gc_invalid_test(GC_Invalid_QPOptTrans "GC requires NQPOptTrans<=1"
+    gc_opttrans2 opttrans_mode)
 add_gc_invalid_test(GC_Invalid_OptTrans "does not support OptTrans" gc_opttrans1 opttrans_mode)
+
+# Anti-periodic OrbitalGeneral rows (APFlag=1).  The reader is shared by GC,
+# canonical FSZ, and BF-FSZ, so every rejection is pinned in GC and in the
+# canonical FSZ form of the same fixture, serial and MPI.
+function(add_ap_orbital_test test_name expected_error)
+    add_gc_invalid_test(GC_AP_${test_name} "${expected_error}" NMPTrans=-1 ${ARGN})
+    add_gc_invalid_test(FSZ_AP_${test_name} "${expected_error}"
+        NGrandCanonical=0 NMPTrans=-1 ${ARGN})
+endfunction(add_ap_orbital_test)
+add_ap_orbital_test(Orbital_SignZero "anti-periodic mode requires +1 or -1" gc_orb_sign_zero)
+add_ap_orbital_test(Orbital_SignTwo "has sign 2; anti-periodic mode requires +1 or -1"
+    gc_orb_sign_two)
+add_ap_orbital_test(Orbital_SignMissing "has 5 columns" gc_orb_sign_missing)
+add_ap_orbital_test(Orbital_ExtraColumn "has 7 columns" gc_orb_extra_column)
+add_ap_orbital_test(Orbital_NonInteger "column 6 is malformed" gc_orb_nonint)
+add_ap_orbital_test(Orbital_IntOverflow "column 5 is malformed or out of range"
+    gc_orb_int_overflow)
+add_ap_orbital_test(Orbital_IndexIntWrap "parameter index out of range"
+    gc_orb_index_int_wrap)
+add_ap_orbital_test(Orbital_SiteRange "site index out of range" gc_orb_site_range)
+add_ap_orbital_test(Orbital_SpinRange "spin index other than 0 or 1" gc_orb_spin_range)
+add_ap_orbital_test(Orbital_IndexRange "parameter index out of range" gc_orb_index_range)
+add_ap_orbital_test(Orbital_NegativeIndex "parameter index out of range"
+    gc_orb_negative_index)
+add_ap_orbital_test(Orbital_LowerTriangle "must satisfy I<J" gc_orb_lower)
+add_ap_orbital_test(Orbital_Diagonal "must satisfy I<J" gc_orb_diagonal)
+add_ap_orbital_test(Orbital_DuplicatePair "duplicate OrbitalGeneral pair" gc_orb_duplicate)
+add_ap_orbital_test(Orbital_MissingRow "has 2 columns" gc_orb_missing_row)
+add_ap_orbital_test(Orbital_Truncated "ended after 5 of 6 pair rows" gc_orb_truncated)
+add_ap_orbital_test(Orbital_BlankRow "has 0 columns" gc_orb_blank_row)
+add_ap_orbital_test(Orbital_ExtraPairRow "OptFlag row 1 in orbitalidxgen.def has 6 columns"
+    gc_orb_extra_pair)
+add_ap_orbital_test(Orbital_ExtraPairMissingFlags
+    "OptFlag row 1 in orbitalidxgen.def has 6 columns" gc_orb_extra_pair_missing_flags)
+add_ap_orbital_test(OptFlag_ExtraRow "rows after the 6 OptFlag rows" gc_orb_flag_extra)
+add_ap_orbital_test(OptFlag_MissingRow "ended after 5 of 6 OptFlag rows" gc_orb_flag_missing)
+add_ap_orbital_test(OptFlag_BadToken "column 2 is malformed" gc_orb_flag_bad_token)
+add_ap_orbital_test(OptFlag_IndexRange "OptFlag row 6 in orbitalidxgen.def has a parameter index out of range"
+    gc_orb_flag_index_range)
+add_ap_orbital_test(OptFlag_DuplicateIndex "duplicate OrbitalGeneral OptFlag index 0"
+    gc_orb_flag_duplicate)
+add_ap_orbital_test(OptFlag_Value "the flag must be 0 or 1" gc_orb_flag_value)
+
+# Positive controls: NMPTrans=-1 with valid +1/-1 signs runs to completion,
+# and the periodic reader keeps accepting five-column rows.
+function(add_gc_positive_test test_name)
+    foreach(gc_positive_suffix "" "_mpi")
+        add_test(NAME ${test_name}${gc_positive_suffix}
+            COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+            "Finish calculation." allow_success ${ARGN})
+    endforeach()
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+    set_tests_properties(${test_name}_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+endfunction(add_gc_positive_test)
+add_gc_positive_test(GC_AP_Accept NMPTrans=-1)
+add_gc_positive_test(GC_AP_NegativeSign_Positive NMPTrans=-1 gc_orb_negative_sign)
+add_gc_positive_test(FSZ_AP_NegativeSign_Positive NGrandCanonical=0 NMPTrans=-1
+    gc_orb_negative_sign)
+add_gc_positive_test(GC_AP_OptFlagTrailingBlank_Positive NMPTrans=-1
+    gc_orb_flag_trailing_blank)
+add_gc_positive_test(GC_AP_OptFlagPermuted_Positive NMPTrans=-1 gc_orb_flag_permuted)
+add_gc_positive_test(FSZ_AP_OptFlagPermuted_Positive NGrandCanonical=0 NMPTrans=-1
+    gc_orb_flag_permuted)
+add_gc_positive_test(GC_PBC_FiveColumnOrbital_Positive NMPTrans=1 gc_orb_sign_missing)
+add_gc_positive_test(FSZ_PBC_FiveColumnOrbital_Positive NGrandCanonical=0 NMPTrans=1
+    gc_orb_sign_missing)
+add_gc_positive_test(GC_MP_TwoTranslations_Positive NMPTrans=2 gc_qptrans2)
+add_gc_positive_test(GC_MP_TwoTranslations_AP_Positive NMPTrans=-2 gc_qptrans2)
+add_gc_positive_test(GC_MP_TwoTranslations_Anti_Positive NMPTrans=2 gc_qptrans2
+    gc_noorbgen 2Sz=0)
 
 # Phase 2: anomalous input negatives.
 add_gc_invalid_test(GC_Invalid_AnomalousCanonical
@@ -1312,6 +1480,327 @@ add_gc_oracle_test(GC_Anomalous_Energy_Response anomalous_energy)
 add_gc_oracle_test(GC_Anomalous_SR anomalous_sr)
 add_gc_oracle_test(GC_Anomalous_MPI_NSplit2 anomalous_mpi)
 add_gc_oracle_test(GC_Anomalous_Vacuum_Smoke anomalous_vacuum)
+
+# Grand-canonical anti-periodic boundary (NMPTrans=-1).
+add_test(NAME GC_AP_Oracle_SelfTest
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_ap_oracle.py)
+set_tests_properties(GC_AP_Oracle_SelfTest PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+
+# Grand-canonical anti-parallel pairing (OrbitalAntiParallel only, 2Sz=0).
+add_test(NAME GC_AntiPair_Oracle
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_antiparallel_oracle.py)
+set_tests_properties(GC_AntiPair_Oracle PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1")
+function(add_gc_antiparallel_test name)
+    add_test(NAME ${name} COMMAND ${PYTHON_EXECUTABLE}
+        runtest_gc_antiparallel.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1"
+        TIMEOUT 600)
+endfunction()
+set(GC_ANTIPAIR_INPUT_MUTATIONS header_missing header_norb_zero
+    header_norb_negative header_norb_int_overflow header_norb_llong_overflow
+    header_norb_decimal header_complex_type pair_missing pair_surplus
+    pair_duplicate pair_site_range pair_negative_site pair_param_range
+    pair_two_columns pair_five_columns pair_long_line pair_blank_middle
+    pair_comment sign_missing sign_zero sign_two sign_decimal
+    sign_int_overflow opt_missing opt_surplus opt_duplicate opt_negative_index
+    opt_upper_index opt_flag_minus1 opt_flag_two opt_decimal opt_three_columns
+    opt_blank_middle orbital_file_missing sz_transfer_flip sz_interall_net2
+    sz_nbody_net1 sz_anomalous_same_spin zero_nonconserving_rows alias_orbital
+    start_vacuum start_full start_default start_odd ncond_ignored
+    twosz_missing twosz_minus1 twosz_two alias_duplicate all_real gaussleg2_stot1
+    mptrans2 opttrans backflow rbm locspin lanczos srcg exupdate updateweight)
+list(APPEND GC_ANTIPAIR_INPUT_MUTATIONS
+    twosz_fractional twosz_negative_fractional twosz_garbage twosz_suffix
+    twosz_decimal twosz_nan twosz_inf twosz_minus_inf
+    twosz_int_overflow twosz_int_underflow twosz_llong_overflow twosz_extra_column
+    twosz_before_gc twosz_alias_fractional twosz_invalid_then_zero
+    twosz_plus_zero_before_gc twosz_long_token twosz_long_token_before_gc
+    twosz_long_tail twosz_long_tail_before_gc twosz_long_mode_override
+    twosz_final_no_newline
+    header_width_254 header_width_255 header_width_256 header_width_300
+    header_width_4094 header_too_long)
+string(REPLACE ";" "," GC_ANTIPAIR_INPUT_MUTATION_CSV
+    "${GC_ANTIPAIR_INPUT_MUTATIONS}")
+add_gc_antiparallel_test(GC_AntiPair_Input_Inventory inventory
+    --mutation ${GC_ANTIPAIR_INPUT_MUTATION_CSV})
+add_gc_antiparallel_test(GC_AntiPair_ComparatorGuard comparator_guard)
+foreach(guard death audit)
+    add_test(NAME GC_AntiPair_FailureGuard_${guard}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_antiparallel_failure_guard.py ${guard})
+    set_tests_properties(GC_AntiPair_FailureGuard_${guard} PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1"
+        TIMEOUT 180)
+endforeach()
+add_gc_antiparallel_test(GC_AntiPair_Sample sample
+    --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/AntiParallel)
+add_gc_antiparallel_test(GC_AntiPair_Mutation_ap_sign_flip_apbc
+    mutation --boundary apbc --mutation ap_sign_flip)
+foreach(boundary pbc apbc)
+    add_gc_antiparallel_test(GC_AntiPair_Hamiltonian_${boundary}
+        hamiltonian --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_Audit_${boundary}
+        audit --boundary ${boundary} --np 1)
+    set_tests_properties(GC_AntiPair_Audit_${boundary} PROPERTIES TIMEOUT 60)
+    if(MPI_FOUND)
+        add_gc_antiparallel_test(GC_AntiPair_Audit_${boundary}_mpi
+            audit --boundary ${boundary} --np 2)
+        set_tests_properties(GC_AntiPair_Audit_${boundary}_mpi PROPERTIES
+            TIMEOUT 60 PROCESSORS 2)
+    endif()
+    add_gc_antiparallel_test(GC_AntiPair_Physical_${boundary}
+        physical --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_SR_${boundary}
+        sr --boundary ${boundary})
+    add_gc_antiparallel_test(GC_AntiPair_Optimization_${boundary}
+        optimization --boundary ${boundary})
+    foreach(mode 0 1)
+        add_gc_antiparallel_test(GC_AntiPair_Replay_${boundary}_m${mode}
+            replay --boundary ${boundary} --mode ${mode})
+        set_tests_properties(GC_AntiPair_Replay_${boundary}_m${mode}
+            PROPERTIES TIMEOUT 180)
+        foreach(store 0 1)
+            add_gc_antiparallel_test(
+                GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}
+                smoke --boundary ${boundary} --np 1 --nsplit 1
+                --mode ${mode} --store ${store})
+            set_tests_properties(GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}
+                PROPERTIES TIMEOUT 180)
+            if(MPI_FOUND)
+                foreach(split 1 2)
+                    set(name
+                        GC_AntiPair_Smoke_${boundary}_m${mode}_o${store}_s${split}_mpi)
+                    add_gc_antiparallel_test(${name} smoke
+                        --boundary ${boundary} --np 2 --nsplit ${split}
+                        --mode ${mode} --store ${store})
+                    set_tests_properties(${name} PROPERTIES
+                        TIMEOUT 180 PROCESSORS 2)
+                endforeach()
+            endif()
+        endforeach()
+    endforeach()
+    foreach(mutation general general_full_f anomalous_sign
+            pairhop_duplicate_reverse transfer_missing_hc exchange_double_hc)
+        add_gc_antiparallel_test(GC_AntiPair_Mutation_${mutation}_${boundary}
+            mutation --boundary ${boundary} --mutation ${mutation})
+    endforeach()
+    foreach(mutation ${GC_ANTIPAIR_INPUT_MUTATIONS})
+        add_gc_antiparallel_test(GC_AntiPair_Input_${mutation}_${boundary}
+            input --boundary ${boundary} --np 1 --mutation ${mutation})
+        set_tests_properties(GC_AntiPair_Input_${mutation}_${boundary}
+            PROPERTIES TIMEOUT 60)
+        if(MPI_FOUND)
+            add_gc_antiparallel_test(
+                GC_AntiPair_Input_${mutation}_${boundary}_mpi
+                input --boundary ${boundary} --np 2 --mutation ${mutation})
+            set_tests_properties(GC_AntiPair_Input_${mutation}_${boundary}_mpi
+                PROPERTIES TIMEOUT 60 PROCESSORS 2)
+        endif()
+    endforeach()
+endforeach()
+
+function(add_gc_ap_test test_name case_name)
+    add_test(NAME ${test_name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_ap.py ${case_name})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        RESOURCE_LOCK "gc_ap_${case_name}")
+endfunction(add_gc_ap_test)
+add_gc_ap_test(GC_AP_LegacyParser legacy_parser)
+add_gc_ap_test(GC_AP_IdentityWiring identity_wiring)
+add_gc_ap_test(GC_AP_InputAudit audit)
+add_gc_ap_test(GC_AP_ExpandedReference expanded_reference)
+add_gc_ap_test(GC_AP_Exact_Physical physical)
+add_gc_ap_test(GC_AP_Anomalous_Exact anomalous)
+add_gc_ap_test(GC_AP_SR_Oracle sr)
+add_gc_ap_test(GC_AP_MutationDetect mutation)
+add_gc_ap_test(GC_AP_Lattice_4x2_AP_P lattice_4x2)
+add_gc_ap_test(GC_AP_Lattice_4x4_AP_AP lattice_4x4)
+add_gc_ap_test(GC_AP_StdFaceExample stdface_example)
+add_gc_ap_test(GC_AP_ComparatorGuard comparator_guard)
+add_gc_ap_test(GC_AP_AuditWriteFailure audit_write_failure)
+set_property(TEST GC_AP_StdFaceExample APPEND PROPERTY ENVIRONMENT
+    "MVMC_GC_APBC_SAMPLE=${CMAKE_SOURCE_DIR}/samples/GrandCanonical/APBC_chain")
+add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
+add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
+add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
+add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
+
+function(add_gc_mp_test name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_mp.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        TIMEOUT 600)
+endfunction()
+foreach(mode anti general)
+    foreach(boundary pbc apbc)
+        foreach(k 0 1 2)
+            foreach(calmode 0 1)
+                add_gc_mp_test(GC_MP_Replay_${mode}_${boundary}_k${k}_m${calmode}
+                    replay --mode ${mode} --boundary ${boundary} --k ${k}
+                    --calmode ${calmode})
+            endforeach()
+        endforeach()
+    endforeach()
+endforeach()
+add_gc_mp_test(GC_MP_Replay_general_pbc_k2_zero_m1
+    replay --mode general --boundary pbc --k 2 --calmode 1 --zero)
+add_gc_mp_test(GC_MP_Replay_anti_apbc_k1_zero_m0
+    replay --mode anti --boundary apbc --k 1 --calmode 0 --zero)
+add_gc_mp_test(GC_MP_Physical_anti_pbc_k2
+    physical --mode anti --boundary pbc --k 2)
+add_gc_mp_test(GC_MP_SR_anti_pbc_k2
+    sr --mode anti --boundary pbc --k 2)
+add_gc_mp_test(GC_MP_Physical_general_apbc_k1
+    physical --mode general --boundary apbc --k 1)
+add_gc_mp_test(GC_MP_SR_general_apbc_k1
+    sr --mode general --boundary apbc --k 1)
+add_gc_mp_test(GC_MP_Physical_general_pbc_k0_zero
+    physical --mode general --boundary pbc --k 0 --zero)
+add_gc_mp_test(GC_MP_SR_general_pbc_k0_zero
+    sr --mode general --boundary pbc --k 0 --zero)
+add_gc_mp_test(GC_MP_Vacuum_K vacuum)
+add_gc_mp_test(GC_MP_Mutation mutation)
+add_gc_mp_test(GC_MP_Sample sample
+    --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/MomentumProjection)
+if(MPI_FOUND)
+    foreach(gc_mp_mode general anti)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_NSplit2_m1_np2_mpi
+            mpi --mode ${gc_mp_mode} --np 2 --nsplit 2 --calmode 1 --store 1)
+        set_tests_properties(GC_MP_${gc_mp_mode}_NSplit2_m1_np2_mpi
+            PROPERTIES PROCESSORS 2)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_NSplit2_m0_o0_np2_mpi
+            mpi --mode ${gc_mp_mode} --np 2 --nsplit 2 --calmode 0 --store 0)
+        set_tests_properties(GC_MP_${gc_mp_mode}_NSplit2_m0_o0_np2_mpi
+            PROPERTIES PROCESSORS 2)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_NSplit2_m0_o1_np2_mpi
+            mpi --mode ${gc_mp_mode} --np 2 --nsplit 2 --calmode 0 --store 1)
+        set_tests_properties(GC_MP_${gc_mp_mode}_NSplit2_m0_o1_np2_mpi
+            PROPERTIES PROCESSORS 2)
+        add_gc_mp_test(GC_MP_${gc_mp_mode}_EmptyRank_np3_mpi
+            mpi --mode ${gc_mp_mode} --np 3 --nsplit 3 --calmode 1 --store 1)
+        set_tests_properties(GC_MP_${gc_mp_mode}_EmptyRank_np3_mpi
+            PROPERTIES PROCESSORS 3)
+    endforeach()
+endif()
+add_gc_mp_test(GC_MP_Replay_OMP4_general_apbc_k1_m1
+    replay --mode general --boundary apbc --k 1 --calmode 1
+    --expect-threads 4)
+set_tests_properties(GC_MP_Replay_OMP4_general_apbc_k1_m1 PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    PROCESSORS 4)
+add_gc_mp_test(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0
+    replay --mode anti --boundary pbc --k 2 --calmode 0 --zero
+    --expect-threads 4)
+set_tests_properties(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0 PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    PROCESSORS 4)
+
+# Phase 3a: grand-canonical S=0 spin projection.
+add_test(NAME GC_SP_Oracle
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_spin_oracle.py --self-test)
+set_tests_properties(GC_SP_Oracle PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    TIMEOUT 600)
+
+function(add_gc_spin_test name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_spin.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+        TIMEOUT 600)
+endfunction()
+foreach(bc pbc apbc)
+    foreach(gauss 2 4 8 16)
+        foreach(store 0 1)
+            add_gc_spin_test(GC_SP_Replay_${bc}_g${gauss}_m0_o${store}
+                replay --boundary ${bc} --gauss ${gauss} --calmode 0
+                --store ${store})
+        endforeach()
+        add_gc_spin_test(GC_SP_Replay_${bc}_g${gauss}_m1_o0
+            replay --boundary ${bc} --gauss ${gauss} --calmode 1 --store 0)
+    endforeach()
+endforeach()
+add_gc_spin_test(GC_SP_Replay_pbc_g3_m1_o0
+    replay --boundary pbc --gauss 3 --calmode 1 --store 0)
+add_gc_spin_test(GC_SP_Weights weights)
+add_gc_spin_test(GC_SP_DumpFail dumpfail --np 1)
+set_tests_properties(GC_SP_DumpFail PROPERTIES TIMEOUT 120)
+if(MPI_FOUND)
+    add_gc_spin_test(GC_SP_DumpFail_mpi dumpfail --np 2)
+    set_tests_properties(GC_SP_DumpFail_mpi PROPERTIES PROCESSORS 2 TIMEOUT 120)
+endif()
+if(MPI_FOUND)
+    foreach(bc pbc apbc)
+        foreach(np 2 3)
+            add_gc_spin_test(GC_SP_MPI_${bc}_g2_m1_o0_np${np}_mpi
+                mpi --boundary ${bc} --gauss 2 --calmode 1 --store 0
+                --np ${np} --nsplit ${np})
+            set_tests_properties(GC_SP_MPI_${bc}_g2_m1_o0_np${np}_mpi
+                PROPERTIES PROCESSORS ${np} TIMEOUT 600)
+            foreach(store 0 1)
+                add_gc_spin_test(GC_SP_MPI_${bc}_g2_m0_o${store}_np${np}_mpi
+                    mpi --boundary ${bc} --gauss 2 --calmode 0
+                    --store ${store} --np ${np} --nsplit ${np})
+                set_tests_properties(
+                    GC_SP_MPI_${bc}_g2_m0_o${store}_np${np}_mpi
+                    PROPERTIES PROCESSORS ${np} TIMEOUT 600)
+            endforeach()
+        endforeach()
+        add_gc_spin_test(GC_SP_MPI_${bc}_g4_m1_o0_np2_split1_mpi
+            mpi --boundary ${bc} --gauss 4 --calmode 1 --store 0
+            --np 2 --nsplit 1)
+        set_tests_properties(GC_SP_MPI_${bc}_g4_m1_o0_np2_split1_mpi
+            PROPERTIES PROCESSORS 2 TIMEOUT 600)
+    endforeach()
+endif()
+foreach(bc pbc apbc)
+    add_gc_spin_test(GC_SP_SR_NStore_${bc} store --boundary ${bc})
+    add_gc_spin_test(GC_SP_Optimize_${bc} optimization --boundary ${bc})
+    add_gc_spin_test(GC_SP_Convergence_${bc} convergence --boundary ${bc})
+endforeach()
+add_gc_spin_test(GC_SP_Mutation mutation)
+add_gc_spin_test(GC_SP_FixtureContract fixture-contract)
+add_gc_spin_test(GC_SP_PilotStats pilotstats)
+add_gc_spin_test(GC_SP_ThresholdContract threshold-contract)
+foreach(bc pbc apbc)
+    add_gc_spin_test(GC_SP_Physical_${bc} physical --boundary ${bc})
+    add_gc_spin_test(GC_SP_SR_${bc} sr --boundary ${bc})
+endforeach()
+foreach(calmode 0 1)
+    add_gc_spin_test(GC_SP_Sample_m${calmode} sample --calmode ${calmode}
+        --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/SpinProjection)
+endforeach()
+add_gc_spin_test(GC_SP_Replay_OMP4_pbc_g8_m1
+    replay --boundary pbc --gauss 8 --calmode 1 --store 0 --expect-threads 4)
+set_tests_properties(GC_SP_Replay_OMP4_pbc_g8_m1 PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+    PROCESSORS 4)
+set(GC_SP_INPUT_CASES
+    g_zero g_negative g_fraction g_decimal g_nan g_inf g_minus_inf
+    g_int_over g_huge g_long g_extra g_workspace_over g_workspace_sum_over
+    s_negative s_nonzero s_fraction s_decimal s_nan s_inf s_int_over
+    general combined spin_jastrow opttrans
+    positive_g2 positive_g3 positive_g8
+    compat_g1_spin_jastrow compat_g1_momentum compat_canonical_g2)
+foreach(gc_sp_case ${GC_SP_INPUT_CASES})
+    foreach(order early late)
+        add_gc_spin_test(GC_SP_Input_${gc_sp_case}_${order}
+            input --case ${gc_sp_case} --order ${order} --np 1)
+        set_tests_properties(GC_SP_Input_${gc_sp_case}_${order}
+            PROPERTIES TIMEOUT 60)
+        if(MPI_FOUND)
+            add_gc_spin_test(GC_SP_Input_${gc_sp_case}_${order}_mpi
+                input --case ${gc_sp_case} --order ${order} --np 2)
+            set_tests_properties(GC_SP_Input_${gc_sp_case}_${order}_mpi
+                PROPERTIES PROCESSORS 2 TIMEOUT 60)
+        endif()
+    endforeach()
+endforeach()
+
 add_test(NAME GC_HPhi_CrossCheck
     COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)
 set_tests_properties(GC_HPhi_CrossCheck PROPERTIES
@@ -1342,6 +1831,52 @@ add_test(NAME GC_VacuumStorage_Positive_mpi
     "initial GC particle number is 0" allow_success NGCInitNelec=0)
 set_tests_properties(GC_VacuumStorage_Positive_mpi PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2")
+
+add_test(NAME GC_MeasureFault_Disabled
+    COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py gc_invalid/base
+    "Finish calculation." allow_success NSplitSize=1
+    "work_tag:measure_fault_disabled")
+set_tests_properties(GC_MeasureFault_Disabled PROPERTIES TIMEOUT 60
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+
+foreach(gc_fault rebuild_nonfinite zero_ip)
+    if(gc_fault STREQUAL "rebuild_nonfinite")
+        set(gc_fault_reason rebuild_fault_reason)
+    else()
+        set(gc_fault_reason "expect:has a zero or nonfinite amplitude")
+    endif()
+    foreach(gc_fault_mode general anti)
+        if(gc_fault_mode STREQUAL "anti")
+            set(gc_fault_extra gc_noorbgen 2Sz=0)
+        else()
+            set(gc_fault_extra "")
+        endif()
+        add_test(NAME GC_MeasureFault_${gc_fault}_${gc_fault_mode}
+            COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
+            gc_invalid/base "Error: GC measurement rank:0 sample:0"
+            ${gc_fault_extra} NSplitSize=1 ${gc_fault_reason}
+            "expect:GC fault injected: kind=${gc_fault} world_rank=0 sample=0"
+            "work_tag:measure_${gc_fault}_${gc_fault_mode}_serial")
+        set_tests_properties(
+            GC_MeasureFault_${gc_fault}_${gc_fault_mode} PROPERTIES
+            TIMEOUT 60
+            ENVIRONMENT
+              "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_GC_FAULT_MEASURE=${gc_fault}:0")
+        if(MPI_FOUND)
+            add_test(NAME GC_MeasureFault_${gc_fault}_${gc_fault_mode}_mpi
+                COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py
+                gc_invalid/base "Error: GC measurement rank:0 sample:0"
+                ${gc_fault_extra} NSplitSize=1 ${gc_fault_reason}
+                "expect:GC fault injected: kind=${gc_fault} world_rank=1 sample=0"
+                "work_tag:measure_${gc_fault}_${gc_fault_mode}_mpi")
+            set_tests_properties(
+                GC_MeasureFault_${gc_fault}_${gc_fault_mode}_mpi PROPERTIES
+                TIMEOUT 60 PROCESSORS 2
+                ENVIRONMENT
+                  "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_GC_FAULT_MEASURE=${gc_fault}:0:rank=1")
+        endif()
+    endforeach()
+endforeach()
 
 foreach(real_rbm_case
     family-charge
@@ -1736,9 +2271,12 @@ set_tests_properties(BackFlow_MultiQP_PhysicalCovariance_AP PROPERTIES ENVIRONME
 add_test(NAME BackFlow_SingleQP_NonIdentity_CanonicalFallback
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --reverse-projection-order --use-single-projection-row --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_SingleQP_NonIdentity_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_NonIdentity_CanonicalFallback")
+add_test(NAME BackFlow_SingleQP_AP_LegacyPath
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-single-projection-row --check-bf-legacy-route)
+set_tests_properties(BackFlow_SingleQP_AP_LegacyPath PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_LegacyPath")
 add_test(NAME BackFlow_SingleQP_AP_CanonicalFallback
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Optimization_Complex_MultiQP --compare-proj-bf-finite-diff --use-nonidentity-init --use-ap-projection --use-single-projection-row --check-multiqp-full-rebuild)
-set_tests_properties(BackFlow_SingleQP_AP_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_CanonicalFallback")
+set_tests_properties(BackFlow_SingleQP_AP_CanonicalFallback PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_FORCE_CANONICAL_NONFSZ=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_SingleQP_AP_CanonicalFallback")
 add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_PBC pbc)
 add_python_vmc_test_bf_projection_variants(BackFlow_MultiQP_OrderInvariant_AP_Mutation ap)
 add_test(NAME BackFlow_MultiQP_Green1_PBC_Complex
@@ -1802,10 +2340,10 @@ add_test(NAME BackFlow_MultiQP_NBody_State_PBC
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_PBC PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_PBC")
 add_test(NAME BackFlow_MultiQP_NBody_State_AP
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_AP PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP")
 add_test(NAME BackFlow_MultiQP_NBody_State_AP_mpi
-         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-complex-projection-weights --check-multiqp-full-rebuild)
+         COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Complex_MultiQP --check-bf-nbody-dispatch --check-bf-nbody-state --use-nonidentity-init --use-ap-projection --use-asymmetric-complex-projection-weights --check-multiqp-full-rebuild)
 set_tests_properties(BackFlow_MultiQP_NBody_State_AP_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_BF_TEST_WORK_SUFFIX=_BackFlow_MultiQP_NBody_State_AP_mpi")
 add_test(NAME BackFlow_MultiQP_AP_NonIdentity_RealVsComplex
          COMMAND ${PYTHON_EXECUTABLE} runtest_bf.py BackFlow_Identity_Real_MultiQP --compare-real-complex-nonidentity BackFlow_Identity_Complex_MultiQP --use-ap-projection --reject-output "Error:" --reject-output "error:")
@@ -1916,6 +2454,28 @@ add_python_vmc_test_invalid_expert(BackFlow_InvalidSpinProjection "NSPGaussLeg==
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path4_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond2_J_path5_InvalidRBM "does not support RBM")
 add_python_vmc_test_invalid_expert(TJChainL4_Ncond4_J_path4_InvalidFullFilling "requires 2*Ne < Nsite")
+# These inputs made makeInitialSample loop forever; TIMEOUT keeps a regression from stalling ctest.
+add_python_vmc_test_invalid_expert_with_updates(
+    Ncond_InvalidPureSpin HeisenbergChain_SpinJastrow
+    "Ncond (in modpara.def) must be 0 when every site is a localized spin"
+    Ncond=4)
+add_python_vmc_test_invalid_expert_with_updates(
+    Ncond_InvalidOverFilling HubbardChain_SpinJastrow
+    "must not exceed 2*(Nsite-NLocalSpin) (= 12)"
+    Ncond=14)
+set_tests_properties(Ncond_InvalidPureSpin Ncond_InvalidOverFilling
+    PROPERTIES TIMEOUT 60)
+# Kondo chain above half filling: vmc.out did not end with some of the seeds.
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_initial_sample.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+foreach(initial_sample_variant real cmp fsz)
+    add_test(NAME InitialSample_AboveHalfFilling_${initial_sample_variant}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_initial_sample.py
+                ${initial_sample_variant})
+    set_tests_properties(InitialSample_AboveHalfFilling_${initial_sample_variant}
+        PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1"
+        TIMEOUT 300)
+endforeach()
 add_python_projection_parser_test(ProjectionParserContract serial)
 if(MPI_FOUND)
     add_python_projection_parser_test(ProjectionParserContract_mpi mpi)
@@ -2097,6 +2657,24 @@ add_test(NAME PowerLanczosP5CDirect_Unit
                  ${CMAKE_CURRENT_SOURCE_DIR}/data/power_lanczos_p5b_sensitivity_policy.json)
 set_tests_properties(PowerLanczosP5CDirect_Unit PROPERTIES
     ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+
+# A short real-solver check keeps logging observational and bounded.
+add_test(NAME Sampler_Component_Repair_Smoke
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sampler_repair.py
+    $<TARGET_FILE:vmc.out> $<TARGET_FILE:vmcdry.out>
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/HubbardChainLanczos
+    ${CMAKE_BINARY_DIR}/test/sampler_repair_smoke)
+set_tests_properties(Sampler_Component_Repair_Smoke PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1")
+if(MPI_FOUND)
+    add_test(NAME Sampler_Component_Repair_Smoke_mpi
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sampler_repair.py
+        $<TARGET_FILE:vmc.out> $<TARGET_FILE:vmcdry.out>
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/HubbardChainLanczos
+        ${CMAKE_BINARY_DIR}/test/sampler_repair_smoke_mpi
+        ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2)
+    set_tests_properties(Sampler_Component_Repair_Smoke_mpi PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1" PROCESSORS 2)
+endif()
 
 # "vmc.out -v" and "vmcdry.out -v"
 add_test(NAME Version_Option

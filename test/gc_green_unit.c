@@ -18,10 +18,12 @@ extern int omp_get_num_threads(void);
 
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
+#include "../src/mVMC/gc_component.c"
 #include "../src/mVMC/projection.c"
 #include "../src/mVMC/gc_config.c"
 #include "../src/mVMC/matrix_gc.c"
 #include "../src/mVMC/pfupdate_gc.c"
+#include "../src/mVMC/gc_antiparallel.c"
 
 double complex CalculateIP_fcmp(double complex *const pfM, const int qpStart,
                                 const int qpEnd, MPI_Comm comm) {
@@ -47,8 +49,10 @@ void StopTimer(int timer) { (void)timer; }
 #define QPS 2
 #define MAX_N 3
 #define SMALL_COUNT 36
+#define AUDIT_ANOMALOUS_ROWS 4096
 
 static int failures = 0;
+static int multiqpFixture = 0;
 static const int baseEleIdx[ACTIVE] = {0, 2, 4, 7};
 static const uint64_t intGuard = UINT64_C(0x6543cdef1234abcd);
 static const double complex complexGuard = 71.25 - 39.5 * I;
@@ -339,9 +343,13 @@ static void test_anomalous_green_exhaustive(void) {
     int kind;
     for (kind = 0; kind < 4; kind++) {
       int baseIdx[ORBITALS] = {0};
+      int baseSnapshot[ORBITALS];
       int eleCfgL[ORBITALS];
+      int cfgSnapshot[ORBITALS];
       int eleNumL[ORBITALS];
+      int numSnapshot[ORBITALS];
       int projCnt[1];
+      int projSnapshot[1];
       int rs1;
       int rs2;
       double complex ipSorted;
@@ -349,7 +357,15 @@ static void test_anomalous_green_exhaustive(void) {
       GuardedScratch guarded;
       if (ncur < 2 && kind > 0) continue;
       permute_base(bases[b], baseIdx, ncur, kind);
+      {
+        int tail;
+        for (tail = ncur; tail < ORBITALS; tail++) baseIdx[tail] = 999;
+      }
       build_state(baseIdx, ncur, eleCfgL, eleNumL, projCnt);
+      memcpy(baseSnapshot, baseIdx, sizeof(baseSnapshot));
+      memcpy(cfgSnapshot, eleCfgL, sizeof(cfgSnapshot));
+      memcpy(numSnapshot, eleNumL, sizeof(numSnapshot));
+      memcpy(projSnapshot, projCnt, sizeof(projSnapshot));
       CHECK(CalculateMAllGC_fcmp(ncur, baseIdx, 0, NQPFull) == GC_MALL_OK,
             "rebuild failed ncur=%d kind=%d", ncur, kind);
       ipPermuted = CalculateIP_fcmp(PfM, 0, NQPFull, MPI_COMM_SELF);
@@ -400,6 +416,12 @@ static void test_anomalous_green_exhaustive(void) {
                     eleNumL[rs2] == (eleCfgL[rs2] >= 0),
                 "eleNum not restored ncur=%d rs=(%d,%d)",
                 ncur, rs1, rs2);
+          CHECK(memcmp(baseIdx, baseSnapshot, sizeof(baseSnapshot)) == 0 &&
+                    memcmp(eleCfgL, cfgSnapshot, sizeof(cfgSnapshot)) == 0 &&
+                    memcmp(eleNumL, numSnapshot, sizeof(numSnapshot)) == 0 &&
+                    memcmp(projCnt, projSnapshot, sizeof(projSnapshot)) == 0,
+                "anomalous kernel changed state ncur=%d kind=%d rs=(%d,%d)",
+                ncur, kind, rs1, rs2);
         }
       }
       check_scratch_guards(&guarded);
@@ -540,6 +562,7 @@ static void assert_state_unchanged(const int *eleIdx, const int *eleCfg,
                                    const int *eleNum, const int *projCnt,
                                    const double complex *invSnapshot,
                                    const double complex *pfSnapshot,
+                                   const int *stateSnapshot,
                                    const char *label) {
   int expectedCfg[ORBITALS];
   int expectedNum[ORBITALS] = {0};
@@ -571,6 +594,8 @@ static void assert_state_unchanged(const int *eleIdx, const int *eleCfg,
         "%s changed shared InvM", label);
   CHECK(memcmp(PfM, pfSnapshot, QPS * sizeof(*PfM)) == 0,
         "%s changed shared PfM", label);
+  CHECK(memcmp(GCQpState, stateSnapshot, QPS * sizeof(*GCQpState)) == 0,
+        "%s changed component states", label);
 }
 
 static void initialize_state(int *eleIdx, int *eleCfg, int *eleNum,
@@ -597,6 +622,7 @@ static void test_green_kernels(void) {
   int projCnt[1];
   double complex invSnapshot[QPS * ORBITALS * ORBITALS];
   double complex pfSnapshot[QPS];
+  int stateSnapshot[QPS];
   double complex baseOverlap;
   int i;
   int j;
@@ -606,9 +632,17 @@ static void test_green_kernels(void) {
   initialize_state(eleIdx, eleCfg, eleNum, projCnt);
   CHECK(CalculateMAllGC_fcmp(ACTIVE, eleIdx, 0, QPS) == GC_MALL_OK,
         "baseline rebuild failed");
+  if (multiqpFixture) {
+    CHECK(GCQpState[0] == GC_QP_INVERSE &&
+              GCQpState[1] == GC_QP_PFONLY,
+          "multiqp base states %s/%s",
+          GCComponentStateName(GCQpState[0]),
+          GCComponentStateName(GCQpState[1]));
+  }
   baseOverlap = CalculateIP_fcmp(PfM, 0, QPS, MPI_COMM_SELF);
   memcpy(invSnapshot, InvM, sizeof(invSnapshot));
   memcpy(pfSnapshot, PfM, sizeof(pfSnapshot));
+  memcpy(stateSnapshot, GCQpState, sizeof(stateSnapshot));
 
   for (i = 0; i < ORBITALS; i++) {
     for (j = 0; j < ORBITALS; j++) {
@@ -624,7 +658,7 @@ static void test_green_kernels(void) {
             i, j, creal(actual), cimag(actual), creal(expected),
             cimag(expected));
       assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                             pfSnapshot, "Green1");
+                             pfSnapshot, stateSnapshot, "Green1");
     }
   }
 
@@ -644,7 +678,7 @@ static void test_green_kernels(void) {
                 i, j, k, l, creal(actual), cimag(actual), creal(expected),
                 cimag(expected));
           assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                                 pfSnapshot, "Green2");
+                                 pfSnapshot, stateSnapshot, "Green2");
         }
       }
     }
@@ -675,7 +709,7 @@ static void test_green_kernels(void) {
             "GreenN n=%d got=(%.17g,%.17g) expected=(%.17g,%.17g)", n,
             creal(actual), cimag(actual), creal(expected), cimag(expected));
       assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                             pfSnapshot, "GreenN");
+                             pfSnapshot, stateSnapshot, "GreenN");
     }
   }
   check_scratch_guards(&guarded);
@@ -689,6 +723,7 @@ static void test_hamiltonian_and_measurement(void) {
   int projCnt[1];
   double complex invSnapshot[QPS * ORBITALS * ORBITALS];
   double complex pfSnapshot[QPS];
+  int stateSnapshot[QPS];
   double complex baseOverlap;
   double complex baseSortedOverlap;
   double complex expectedEnergy;
@@ -738,12 +773,14 @@ static void test_hamiltonian_and_measurement(void) {
       {1, 0, 0, 0}, {3, 0, 2, 0}, {1, 1, 0, 1}};
   int *nbodyGFactorRows[3] = {
       nbodyGFactors[0], nbodyGFactors[1], nbodyGFactors[2]};
+  int anomalousAuditStorage[AUDIT_ANOMALOUS_ROWS][5];
+  int *anomalousAuditRows[AUDIT_ANOMALOUS_ROWS];
   double complex local[2] = {0.0, 0.0};
   double complex phys1[2] = {0.0, 0.0};
   double complex phys2[1] = {0.0};
   double complex physDC[1] = {0.0};
   double complex physN[1] = {0.0};
-  double complex physAnomalous[4] = {0.0, 0.0, 0.0, 0.0};
+  double complex physAnomalous[AUDIT_ANOMALOUS_ROWS] = {0.0};
   const double measurementWeight = 0.37;
   int create1[1];
   int annihilate1[1];
@@ -756,6 +793,9 @@ static void test_hamiltonian_and_measurement(void) {
   double complex expectedDC;
   double complex expectedN;
   int anomalousIdx;
+  const char *auditText = getenv("MVMC_GC_OMP_AUDIT");
+  const int auditMeasurement =
+      multiqpFixture && auditText != NULL && strcmp(auditText, "1") == 0;
 
   initialize_state(eleIdx, eleCfg, eleNum, projCnt);
   CHECK(CalculateMAllGC_fcmp(ACTIVE, eleIdx, 0, QPS) == GC_MALL_OK,
@@ -764,6 +804,7 @@ static void test_hamiltonian_and_measurement(void) {
   baseSortedOverlap = overlap_for_sorted_state(baseEleIdx, ACTIVE);
   memcpy(invSnapshot, InvM, sizeof(invSnapshot));
   memcpy(pfSnapshot, PfM, sizeof(pfSnapshot));
+  memcpy(stateSnapshot, GCQpState, sizeof(stateSnapshot));
 
   NCoulombIntra = 2;
   CoulombIntra = coulombIntraStorage;
@@ -915,7 +956,7 @@ static void test_hamiltonian_and_measurement(void) {
   anomalousParameter[1] = -anomalousParameter[1];
   CHECK(CalculateSzGC(eleNum) == 0.0, "CalculateSzGC normalization");
   assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                         pfSnapshot, "Hamiltonian");
+                         pfSnapshot, stateSnapshot, "Hamiltonian");
 
   NCisAjs = 2;
   CisAjsIdx = cisRows;
@@ -934,8 +975,15 @@ static void test_hamiltonian_and_measurement(void) {
   PhysCisAjsCktAlt = phys2;
   PhysCisAjsCktAltDC = physDC;
   PhysNBodyG = physN;
-  NAnomalousG = 4;
-  AnomalousG = anomalousRows;
+  NAnomalousG = auditMeasurement ? AUDIT_ANOMALOUS_ROWS : 4;
+  for (anomalousIdx = 0; anomalousIdx < NAnomalousG; anomalousIdx++) {
+    const int source = anomalousIdx % 4;
+    memcpy(anomalousAuditStorage[anomalousIdx],
+           anomalousRowsStorage[source],
+           sizeof(anomalousAuditStorage[anomalousIdx]));
+    anomalousAuditRows[anomalousIdx] = anomalousAuditStorage[anomalousIdx];
+  }
+  AnomalousG = auditMeasurement ? anomalousAuditRows : anomalousRows;
   PhysAnomalousG = physAnomalous;
   create1[0] = 1;
   annihilate1[0] = 0;
@@ -986,12 +1034,446 @@ static void test_hamiltonian_and_measurement(void) {
             cabs(physAnomalous[2]) > 1.0e-6,
         "AnomalousG create/remove fixture is vacuous");
   assert_state_unchanged(eleIdx, eleCfg, eleNum, projCnt, invSnapshot,
-                         pfSnapshot, "measurement");
+                         pfSnapshot, stateSnapshot, "measurement");
+}
+
+/* ------------------------------------------------------------------------
+ * Anti-parallel fixture: both projection slots hold the same matrix
+ * A = [[0,F],[-F^T,0]] with weight 1/2 each, i.e. one anti-parallel pair
+ * wave function on four sites.  Every Sz=0 configuration (70), several
+ * electron orders, and one-body/two-body/N-body/anomalous operators are
+ * compared with direct Fock-space application; Sz-changing targets have zero
+ * amplitude, so their Green functions must vanish.
+ * ---------------------------------------------------------------------- */
+static int finite_close_green(const double complex actual,
+                              const double complex expected,
+                              const double tolerance) {
+  return isfinite(creal(actual)) && isfinite(cimag(actual)) &&
+         isfinite(creal(expected)) && isfinite(cimag(expected)) &&
+         isfinite(tolerance) && tolerance >= 0.0 &&
+         cabs(actual - expected) <= tolerance;
+}
+
+static void fill_antiparallel_slater(void) {
+  static const double complex F[4][4] = {
+      {0.71 + 0.12 * I, 0.34 - 0.23 * I, -0.29 + 0.17 * I, 0.18 + 0.31 * I},
+      {-0.41 + 0.26 * I, 0.62 - 0.11 * I, 0.27 + 0.22 * I, -0.33 - 0.19 * I},
+      {0.23 + 0.37 * I, -0.36 + 0.14 * I, 0.58 + 0.09 * I, 0.31 - 0.28 * I},
+      {0.19 - 0.24 * I, 0.28 + 0.33 * I, -0.42 + 0.16 * I, 0.67 - 0.18 * I}};
+  int qpidx;
+  for (qpidx = 0; qpidx < QPS; qpidx++) {
+    double complex *slater = SlaterElm + (size_t)qpidx * ORBITALS * ORBITALS;
+    int i;
+    memset(slater, 0, ORBITALS * ORBITALS * sizeof(*slater));
+    for (i = 0; i < 4; i++) {
+      int j;
+      for (j = 0; j < 4; j++) {
+        slater[(size_t)i * ORBITALS + (size_t)(4 + j)] = F[i][j];
+        slater[(size_t)(4 + j) * ORBITALS + (size_t)i] = -F[i][j];
+      }
+    }
+    QPFullWeight[qpidx] = 0.5;
+  }
+}
+
+static int popcount_bits(unsigned int value) {
+  int count = 0;
+  while (value != 0U) {
+    count += (int)(value & 1U);
+    value >>= 1;
+  }
+  return count;
+}
+
+static int mask_sz_twice(const unsigned int mask) {
+  return popcount_bits(mask & 0xfU) - popcount_bits((mask >> 4) & 0xfU);
+}
+
+/* Direct application of prod_k c+_{rsi[k]} c_{rsj[k]} (rightmost first);
+ * returns the target occupancy or -1, with the fermion sign. */
+static long apply_product(const unsigned int base, const int n,
+                          const int *rsi, const int *rsj, int *sign) {
+  unsigned int occupancy = base;
+  int k;
+  *sign = 1;
+  for (k = n - 1; k >= 0; k--) {
+    if (!apply_annihilation(&occupancy, rsj[k], sign) ||
+        !apply_creation(&occupancy, rsi[k], sign)) {
+      return -1;
+    }
+  }
+  return (long)occupancy;
+}
+
+/* conj(sign * P(y)/P(x) * <y|phi>/<x|phi>) for y = O x, or 0. */
+static double complex brute_target(const long target, const int sign,
+                                   const double complex baseSortedOverlap,
+                                   const int *baseProjCnt) {
+  int finalEleIdx[ORBITALS];
+  int finalEleNum[ORBITALS] = {0};
+  int finalProjCnt[1];
+  int count = 0;
+  int k;
+  if (target < 0) return 0.0;
+  for (k = 0; k < ORBITALS; k++) {
+    if (((unsigned long)target >> k) & 1UL) {
+      finalEleIdx[count++] = k;
+      finalEleNum[k] = 1;
+    }
+  }
+  MakeProjCnt(finalProjCnt, finalEleNum);
+  return (double)sign * conj(ProjRatio(finalProjCnt, baseProjCnt) *
+                             overlap_for_sorted_state(finalEleIdx, count) /
+                             baseSortedOverlap);
+}
+
+/* Spin-projected fixture: both slots hold the anti-parallel matrix rotated by
+ * beta = 0.37 and 1.21, built here as U A U^T with U = [[c,-s],[s,c]]
+ * (c = cos(beta/2), s = sin(beta/2)), independently of UpdateSlaterElm_fcmp.
+ * The projected wave function is zero for M != 0, although each rotated
+ * component alone is not. */
+static void fill_rotated_antiparallel_slater(void) {
+  static const double beta[QPS] = {0.37, 1.21};
+  static const double weight[QPS] = {0.7, 0.3};
+  double complex base[ORBITALS * ORBITALS];
+  int qpidx;
+  fill_antiparallel_slater();
+  memcpy(base, SlaterElm, sizeof(base));
+  for (qpidx = 0; qpidx < QPS; qpidx++) {
+    const double c = cos(0.5 * beta[qpidx]);
+    const double s = sin(0.5 * beta[qpidx]);
+    double u[ORBITALS][ORBITALS];
+    double complex *slater = SlaterElm + (size_t)qpidx * ORBITALS * ORBITALS;
+    int a;
+    memset(u, 0, sizeof(u));
+    for (a = 0; a < 4; a++) {
+      u[a][a] = c;
+      u[a][a + 4] = -s;
+      u[a + 4][a] = s;
+      u[a + 4][a + 4] = c;
+    }
+    for (a = 0; a < ORBITALS; a++) {
+      int b;
+      for (b = 0; b < ORBITALS; b++) {
+        double complex sum = 0.0;
+        int k;
+        for (k = 0; k < ORBITALS; k++) {
+          int l;
+          for (l = 0; l < ORBITALS; l++) {
+            sum += u[a][k] * base[(size_t)k * ORBITALS + (size_t)l] * u[b][l];
+          }
+        }
+        slater[(size_t)a * ORBITALS + (size_t)b] = sum;
+      }
+    }
+    QPFullWeight[qpidx] = weight[qpidx];
+  }
+}
+
+/* The projected local value: zero when the target leaves M=0. */
+static double complex projected_value(const long target,
+                                      const double complex raw) {
+  if (target >= 0 && mask_sz_twice((unsigned int)target) != 0) return 0.0;
+  return raw;
+}
+
+typedef struct {
+  int eleIdx[ORBITALS];
+  int eleCfg[ORBITALS];
+  int eleNum[ORBITALS];
+  int projCnt[1];
+  double complex inv[QPS * ORBITALS * ORBITALS];
+  double complex pf[QPS];
+} AntiSnapshot;
+
+static void anti_snapshot(AntiSnapshot *snap, const int *eleIdx,
+                          const int *eleCfg, const int *eleNum,
+                          const int *projCnt) {
+  memcpy(snap->eleIdx, eleIdx, sizeof(snap->eleIdx));
+  memcpy(snap->eleCfg, eleCfg, sizeof(snap->eleCfg));
+  memcpy(snap->eleNum, eleNum, sizeof(snap->eleNum));
+  memcpy(snap->projCnt, projCnt, sizeof(snap->projCnt));
+  memcpy(snap->inv, InvM, sizeof(snap->inv));
+  memcpy(snap->pf, PfM, sizeof(snap->pf));
+}
+
+static int anti_unchanged(const AntiSnapshot *snap, const int *eleIdx,
+                          const int *eleCfg, const int *eleNum,
+                          const int *projCnt) {
+  return memcmp(snap->eleIdx, eleIdx, sizeof(snap->eleIdx)) == 0 &&
+         memcmp(snap->eleCfg, eleCfg, sizeof(snap->eleCfg)) == 0 &&
+         memcmp(snap->eleNum, eleNum, sizeof(snap->eleNum)) == 0 &&
+         memcmp(snap->projCnt, projCnt, sizeof(snap->projCnt)) == 0 &&
+         memcmp(snap->inv, InvM, sizeof(snap->inv)) == 0 &&
+         memcmp(snap->pf, PfM, sizeof(snap->pf)) == 0;
+}
+
+static void test_antiparallel_green(const int rotated) {
+  /* Sz-conserving products with spin-flip factors, and Sz-changing ones. */
+  static const int nbodyCreate[4][3] = {{0, 5, 2}, {2, 1, 4}, {0, 1, 2},
+                                        {4, 1, 6}};
+  static const int nbodyAnnihilate[4][3] = {{4, 1, 2}, {2, 5, 0}, {4, 1, 2},
+                                            {0, 5, 6}};
+  static const int twoOrbitals[4] = {0, 1, 4, 5};
+  GuardedScratch guarded;
+  unsigned int mask;
+  int evaluated = 0;
+  int mixedNonzero = 0;
+  int nbodyMixedNonzero = 0;
+  int forbiddenRawNonzero = 0;
+  int states = 0;
+  initialize_scratch(&guarded);
+  FlagGrandCanonical = 1;
+  iFlgOrbitalGeneral = 0;
+  if (rotated) {
+    fill_rotated_antiparallel_slater();
+  } else {
+    fill_antiparallel_slater();
+  }
+  for (mask = 0U; mask < (1U << ORBITALS); mask++) {
+    int sorted[ORBITALS];
+    int ncur = 0;
+    int order;
+    int k;
+    if (mask_sz_twice(mask) != 0) continue;
+    states++;
+    for (k = 0; k < ORBITALS; k++) {
+      if ((mask >> k) & 1U) sorted[ncur++] = k;
+    }
+    for (order = 0; order < 3; order++) {
+      int eleIdx[ORBITALS];
+      int eleCfg[ORBITALS];
+      int eleNum[ORBITALS];
+      int projCnt[1];
+      double complex ip;
+      double complex sortedOverlap;
+      AntiSnapshot snap;
+      int i;
+      int j;
+      for (k = 0; k < ORBITALS; k++) eleIdx[k] = -1;
+      permute_base(sorted, eleIdx, ncur, order);
+      build_state(eleIdx, ncur, eleCfg, eleNum, projCnt);
+      CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, QPS) == GC_MALL_OK,
+            "anti rebuild mask=%u order=%d", mask, order);
+      ip = CalculateIP_fcmp(PfM, 0, QPS, MPI_COMM_SELF);
+      sortedOverlap = overlap_for_sorted_state(sorted, ncur);
+      CHECK(cabs(sortedOverlap) > 1.0e-8,
+            "anti fixture has a node at mask=%u", mask);
+      anti_snapshot(&snap, eleIdx, eleCfg, eleNum, projCnt);
+
+      for (i = 0; i < ORBITALS; i++) {
+        for (j = 0; j < ORBITALS; j++) {
+          int sign;
+          const long target = apply_product(mask, 1, &i, &j, &sign);
+          const double complex raw =
+              brute_target(target, sign, sortedOverlap, projCnt);
+          const double complex expected = projected_value(target, raw);
+          const double complex actual = GreenFunc1GC(
+              i, j, ip, ncur, eleIdx, eleCfg, eleNum, projCnt,
+              &guarded.scratch);
+          CHECK(finite_close_green(actual, expected,
+                                   2.0e-10 * (1.0 + cabs(expected))),
+                "anti Green1 mask=%u order=%d (%d,%d) got=(%.17g,%.17g) "
+                "expected=(%.17g,%.17g)",
+                mask, order, i, j, creal(actual), cimag(actual),
+                creal(expected), cimag(expected));
+          if ((i < 4) != (j < 4)) {
+            CHECK(cabs(actual) <= 2.0e-10,
+                  "spin-flip Green1 (%d,%d) mask=%u is %.3g", i, j, mask,
+                  cabs(actual));
+          }
+          if (cabs(raw - expected) > 1.0e-3) forbiddenRawNonzero++;
+          evaluated++;
+        }
+      }
+
+      {
+        int a, b, c, d;
+        for (a = 0; a < 4; a++) {
+          for (b = 0; b < 4; b++) {
+            for (c = 0; c < 4; c++) {
+              for (d = 0; d < 4; d++) {
+                int create[2];
+                int annihilate[2];
+                int sign;
+                long target;
+                double complex raw;
+                double complex expected;
+                double complex actual;
+                create[0] = twoOrbitals[a];
+                annihilate[0] = twoOrbitals[b];
+                create[1] = twoOrbitals[c];
+                annihilate[1] = twoOrbitals[d];
+                target = apply_product(mask, 2, create, annihilate, &sign);
+                raw = brute_target(target, sign, sortedOverlap, projCnt);
+                expected = projected_value(target, raw);
+                if (cabs(raw - expected) > 1.0e-3) forbiddenRawNonzero++;
+                actual = GreenFunc2GC(create[0], annihilate[0], create[1],
+                                      annihilate[1], ip, ncur, eleIdx, eleCfg,
+                                      eleNum, projCnt, &guarded.scratch);
+                CHECK(finite_close_green(actual, expected,
+                                         2.0e-10 * (1.0 + cabs(expected))),
+                      "anti Green2 mask=%u order=%d (%d,%d,%d,%d)", mask,
+                      order, create[0], annihilate[0], create[1],
+                      annihilate[1]);
+                if ((create[0] < 4) != (annihilate[0] < 4) &&
+                    (create[1] < 4) != (annihilate[1] < 4) &&
+                    target >= 0 && mask_sz_twice((unsigned)target) == 0 &&
+                    cabs(actual) > 1.0e-3) {
+                  mixedNonzero++;
+                }
+                evaluated++;
+              }
+            }
+          }
+        }
+      }
+
+      {
+        int term;
+        for (term = 0; term < 4; term++) {
+          int rsi[MAX_N];
+          int rsj[MAX_N];
+          int sign;
+          long target;
+          double complex raw;
+          double complex expected;
+          double complex actual;
+          memcpy(rsi, nbodyCreate[term], sizeof(rsi));
+          memcpy(rsj, nbodyAnnihilate[term], sizeof(rsj));
+          target = apply_product(mask, 3, nbodyCreate[term],
+                                 nbodyAnnihilate[term], &sign);
+          raw = brute_target(target, sign, sortedOverlap, projCnt);
+          expected = projected_value(target, raw);
+          if (cabs(raw - expected) > 1.0e-3) forbiddenRawNonzero++;
+          actual = GreenFuncNGC(3, rsi, rsj, ip, ncur, eleIdx, eleCfg,
+                                eleNum, projCnt, &guarded.scratch);
+          CHECK(finite_close_green(actual, expected,
+                                   2.0e-10 * (1.0 + cabs(expected))),
+                "anti GreenN mask=%u order=%d term=%d", mask, order, term);
+          if (term == 2) {
+            CHECK(cabs(actual) <= 2.0e-10,
+                  "Sz-changing NBody term is %.3g at mask=%u", cabs(actual),
+                  mask);
+          }
+          /* term 0 = c+0up c0dn c+1dn c1up n2up: spin exchange times a
+           * density, which conserves Sz only as a whole. */
+          if (term == 0 && cabs(actual) > 1.0e-3) nbodyMixedNonzero++;
+          evaluated++;
+        }
+      }
+
+      for (i = 0; i < ORBITALS; i++) {
+        for (j = 0; j < ORBITALS; j++) {
+          int type;
+          if (i == j) continue;
+          for (type = 0; type < 2; type++) {
+            const double complex raw = brute_anomalous_param(
+                type, i, j, eleIdx, ncur, sortedOverlap, projCnt);
+            /* From M=0, a same-spin pair always leaves M=0. */
+            const double complex expected = (i < 4) == (j < 4) ? 0.0 : raw;
+            const double complex actual =
+                type == 1
+                    ? GreenFuncPairAddGC(i, j, ip, ncur, eleIdx, eleCfg,
+                                         eleNum, projCnt, &guarded.scratch)
+                    : GreenFuncPairRemoveGC(i, j, ip, ncur, eleIdx, eleCfg,
+                                            eleNum, projCnt,
+                                            &guarded.scratch);
+            CHECK(finite_close_green(actual, expected,
+                                     2.0e-10 * (1.0 + cabs(expected))),
+                  "anti anomalous type=%d mask=%u order=%d (%d,%d) "
+                  "got=(%.17g,%.17g) expected=(%.17g,%.17g)",
+                  type, mask, order, i, j, creal(actual), cimag(actual),
+                  creal(expected), cimag(expected));
+            if ((i < 4) == (j < 4)) {
+              CHECK(cabs(actual) <= 2.0e-10,
+                    "same-spin pair type=%d (%d,%d) mask=%u is %.3g", type, i,
+                    j, mask, cabs(actual));
+            }
+            if (cabs(raw - expected) > 1.0e-3) forbiddenRawNonzero++;
+            evaluated++;
+          }
+        }
+      }
+      CHECK(anti_unchanged(&snap, eleIdx, eleCfg, eleNum, projCnt),
+            "anti Green kernels changed the state mask=%u order=%d", mask,
+            order);
+    }
+  }
+  CHECK(states == 70, "anti fixture visited %d Sz=0 states", states);
+  CHECK(mixedNonzero > 0, "no nonzero mixed-spin Sz-conserving product");
+  CHECK(nbodyMixedNonzero > 0, "no nonzero spin-exchange N-body product");
+  CHECK(evaluated > 0, "anti Green fixture evaluated nothing");
+  /* Without rotation the forbidden targets are structural zeros; with it
+   * the selection rule, not the matrix structure, has to remove them. */
+  CHECK(rotated ? forbiddenRawNonzero > 0 : forbiddenRawNonzero == 0,
+        "forbidden targets with nonzero raw amplitude: %d", forbiddenRawNonzero);
+  printf("anti-parallel Green%s: %d Sz=0 states, %d evaluations, "
+         "%d nonzero mixed-spin products, %d nonzero spin-exchange N-body, "
+         "%d forbidden targets with nonzero raw amplitude\n",
+         rotated ? " (spin-rotated)" : "", states, evaluated, mixedNonzero,
+         nbodyMixedNonzero, forbiddenRawNonzero);
+  check_scratch_guards(&guarded);
+  free_scratch(&guarded);
+}
+
+/* General pairing has no Sz selection: the same rotated components must
+ * return their raw (beta-only) spin-flip values. */
+static void test_rotated_general_control(void) {
+  static const unsigned int masks[3] = {0x11U, 0x33U, 0x96U};
+  GuardedScratch guarded;
+  int nonzero = 0;
+  int m;
+  initialize_scratch(&guarded);
+  FlagGrandCanonical = 1;
+  iFlgOrbitalGeneral = 1;
+  fill_rotated_antiparallel_slater();
+  for (m = 0; m < 3; m++) {
+    const unsigned int mask = masks[m];
+    int sorted[ORBITALS];
+    int eleIdx[ORBITALS];
+    int eleCfg[ORBITALS];
+    int eleNum[ORBITALS];
+    int projCnt[1];
+    int ncur = 0;
+    int k;
+    int i;
+    double complex ip;
+    double complex sortedOverlap;
+    for (k = 0; k < ORBITALS; k++) {
+      eleIdx[k] = -1;
+      if ((mask >> k) & 1U) sorted[ncur++] = k;
+    }
+    for (k = 0; k < ncur; k++) eleIdx[k] = sorted[k];
+    build_state(eleIdx, ncur, eleCfg, eleNum, projCnt);
+    CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, QPS) == GC_MALL_OK,
+          "general control rebuild mask=%u", mask);
+    ip = CalculateIP_fcmp(PfM, 0, QPS, MPI_COMM_SELF);
+    sortedOverlap = overlap_for_sorted_state(sorted, ncur);
+    for (i = 0; i < 4; i++) {
+      int j = i + 4;
+      int sign;
+      const long target = apply_product(mask, 1, &i, &j, &sign);
+      const double complex raw =
+          brute_target(target, sign, sortedOverlap, projCnt);
+      const double complex actual = GreenFunc1GC(
+          i, j, ip, ncur, eleIdx, eleCfg, eleNum, projCnt, &guarded.scratch);
+      CHECK(finite_close_green(actual, raw, 2.0e-10 * (1.0 + cabs(raw))),
+            "general control Green1 (%d,%d) mask=%u", i, j, mask);
+      if (cabs(raw) > 1.0e-3) nonzero++;
+    }
+  }
+  CHECK(nonzero > 0, "general control has no nonzero spin-flip value");
+  iFlgOrbitalGeneral = 0;
+  check_scratch_guards(&guarded);
+  free_scratch(&guarded);
 }
 
 static void initialize_fixture(void) {
   int qpidx;
   NThread = omp_get_max_threads();
+  FlagGrandCanonical = 1;
+  iFlgOrbitalGeneral = 1;
   Nsite = 4;
   Nsite2 = ORBITALS;
   Nsize = ACTIVE;
@@ -1035,9 +1517,20 @@ static void initialize_fixture(void) {
     }
   }
   initializeWorkSpaceAll();
+  CHECK(GCComponentInit() == GC_MALL_OK, "component init");
+}
+
+static void isolate_orbital_zero_in_qp1(void) {
+  double complex *slater = SlaterElm + (size_t)ORBITALS * ORBITALS;
+  int orbital;
+  for (orbital = 0; orbital < ORBITALS; orbital++) {
+    slater[orbital] = 0.0;
+    slater[(size_t)orbital * ORBITALS] = 0.0;
+  }
 }
 
 static void free_fixture(void) {
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(QPFullWeight);
   free(PfM);
@@ -1047,17 +1540,48 @@ static void free_fixture(void) {
 }
 
 int main(int argc, char **argv) {
+  const int antiparallel =
+      argc == 2 && strcmp(argv[1], "--antiparallel") == 0;
+  const int spin = argc == 2 && strcmp(argv[1], "--spin") == 0;
+  const int multiqp = argc == 2 && strcmp(argv[1], "--multiqp") == 0;
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
-#else
-  (void)argc;
-  (void)argv;
 #endif
+  if (argc > 1 && !antiparallel && !spin && !multiqp) {
+    fprintf(stderr, "unknown option %s\n", argv[1]);
+    return EXIT_FAILURE;
+  }
   initialize_fixture();
-  test_green_kernels();
-  test_anomalous_green_exhaustive();
-  test_anomalous_omp_stress();
-  test_hamiltonian_and_measurement();
+  if (antiparallel) {
+    test_antiparallel_green(0);
+  } else if (spin) {
+    test_antiparallel_green(1);
+    test_rotated_general_control();
+  } else {
+    multiqpFixture = multiqp;
+    if (multiqp) isolate_orbital_zero_in_qp1();
+    test_green_kernels();
+    test_anomalous_green_exhaustive();
+    test_anomalous_omp_stress();
+    test_hamiltonian_and_measurement();
+  }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  {
+    const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
+    const char *auditText = getenv("MVMC_GC_OMP_AUDIT");
+    if (requiredText != NULL && *requiredText != '\0' &&
+        auditText != NULL && strcmp(auditText, "1") == 0) {
+      const int required = atoi(requiredText);
+      GCComponentOmpAudit audit;
+      GCComponentOmpAuditTotal(GC_OMP_GREEN, &audit);
+      CHECK(audit.teamMin == required && audit.teamMax == required,
+            "green audit team min/max=%d/%d expected=%d", audit.teamMin,
+            audit.teamMax, required);
+      CHECK(audit.workers >= 2, "green audit workers=%d", audit.workers);
+      CHECK(audit.workCount > 0, "green audit recorded no work");
+    }
+  }
+#endif
   free_fixture();
 #ifdef _mpi_use
   MPI_Finalize();

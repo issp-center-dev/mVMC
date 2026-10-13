@@ -34,6 +34,8 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <stdlib.h>
 #include <string.h>
 #include "./include/backflow.h"
+#include "./include/gc_antiparallel.h"
+#include "./include/gc_antiparallel_input.h"
 #include "./include/lanczos2_contract.h"
 #include "./include/readdef.h"
 #include "./include/global.h"
@@ -178,6 +180,64 @@ static int ParseStrictLongLong(const char *text, long long *value) {
   parsed = strtoll(text, &end, 10);
   if (errno == ERANGE || end == text || *end != '\0') return 1;
   *value = parsed;
+  return 0;
+}
+
+/* A ModPara integer whose conversion depends on NGrandCanonical, which may
+ * be declared later in the file: grand-canonical input requires an exact
+ * integer token, canonical input keeps the legacy conversion. */
+typedef struct {
+  int seen;
+  int invalid;
+  int exact;
+  double legacy;
+} ModParaIntRecord;
+
+static void RecordModParaInt(ModParaIntRecord *record, FILE *fp,
+                             const char *line, const char *valueText,
+                             const double legacy) {
+  long long raw;
+  int offset = 0;
+  record->seen = 1;
+  record->invalid = 0;
+  record->legacy = legacy;
+  if (strchr(line, '\n') == NULL && !feof(fp)) {
+    int ch;
+    record->invalid = 1;
+    /* A continuation is part of this value, never another keyword. */
+    while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
+  }
+  if (sscanf(line, "%*s %*s %n", &offset) < 0 ||
+      !LineTailIsWhitespace(line, offset) ||
+      ParseStrictLongLong(valueText, &raw) != 0 || raw < INT_MIN ||
+      raw > INT_MAX) {
+    record->invalid = 1;
+  } else {
+    record->exact = (int)raw;
+  }
+}
+
+static int StoreModParaInt(const ModParaIntRecord *record,
+                           const int grandCanonical, const char *name,
+                           int *target) {
+  if (!record->seen) return 0;
+  if (grandCanonical) {
+    if (record->invalid) {
+      fprintf(stderr, "Error: %s must be an exact integer in int range.\n",
+              name);
+      return 1;
+    }
+    *target = record->exact;
+    return 0;
+  }
+  /* Valid canonical input keeps the legacy cast; reject only values whose
+   * conversion to int would be undefined. */
+  if (!isfinite(record->legacy) || record->legacy < (double)INT_MIN ||
+      record->legacy > (double)INT_MAX) {
+    fprintf(stderr, "Error: %s must be a finite value in int range.\n", name);
+    return 1;
+  }
+  *target = (int)record->legacy;
   return 0;
 }
 
@@ -603,6 +663,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   int iFlgOrbitalAntiParallel = 0;
   int iFlgOrbitalParallel = 0;
   int itmp = 0;
+  int gcAntiHeader = 0;
+  int gcAntiDuplicate = 0;
 
   int iOrbitalComplex = 0;
   iFlgOrbitalGeneral = 0;
@@ -663,6 +725,25 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       printf("NBlockSize_RBMRatio Adjust to %d\n\n",bufInt[IdxNBlockSize_RBMRatio]);
     }
 
+    /* Anti-parallel-only grand canonical input (root-local): the orbital
+     * header is read strictly before any table is sized from it. */
+    {
+      const int hasAnti =
+          strcmp(cFileNameListFile[KWOrbitalAntiParallel], "") != 0;
+      const int hasAlias = strcmp(cFileNameListFile[KWOrbital], "") != 0;
+      gcAntiHeader = bufInt[IdxNGrandCanonical] == 1 &&
+                     (hasAnti || hasAlias) &&
+                     strcmp(cFileNameListFile[KWOrbitalGeneral], "") == 0 &&
+                     strcmp(cFileNameListFile[KWOrbitalParallel], "") == 0;
+      if (gcAntiHeader && hasAnti && hasAlias) {
+        fprintf(stderr,
+                "Error: GC anti-parallel orbital aliases must not be "
+                "duplicated (give either Orbital or OrbitalAntiParallel).\n");
+        gcAntiDuplicate = 1;
+        info = 1;
+      }
+    }
+
     for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
       strcpy(defname, cFileNameListFile[iKWidx]);
 
@@ -671,7 +752,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       fp = fopen(defname, "r");
       if (fp == NULL) {
         info = ReadDefFileError(defname);
-        fclose(fp);
         break;
       } else {
         switch (iKWidx) {
@@ -770,7 +850,33 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
 
           case KWOrbital:
           case KWOrbitalAntiParallel:
-            cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalAntiParallel, &iOrbitalComplex);
+            if (gcAntiDuplicate) {
+              cerr = "";
+              break;
+            }
+            if (gcAntiHeader) {
+              int norbHeader = 0;
+              int complexHeader = 0;
+              cerr = "";
+              if (GCAntiReadHeader(fp, bufInt[IdxNsite], &norbHeader,
+                                   &complexHeader, defname) != 0) {
+                info = ReadDefFileError(defname);
+                break;
+              }
+              if ((long long)bufInt[IdxNOrbit] + (long long)norbHeader >
+                  (long long)(INT_MAX / 2)) {
+                fprintf(stderr,
+                        "Error: the number of orbital parameters exceeds the "
+                        "supported range in %s.\n",
+                        defname);
+                info = 1;
+                break;
+              }
+              iNOrbitalAntiParallel = norbHeader;
+              iOrbitalComplex = complexHeader;
+            } else {
+              cerr = ReadBuffIntCmpFlg(fp, &iNOrbitalAntiParallel, &iOrbitalComplex);
+            }
             iFlgOrbitalAntiParallel = 1;
             bufInt[IdxNOrbit] += iNOrbitalAntiParallel;
             iComplexFlgOrbitalAntiParallel = iOrbitalComplex;
@@ -1071,20 +1177,26 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "Error: NGrandCanonical (in modpara.def) must be 0 or 1.\n");
         info = 1;
       }
-      if (iFlgOrbitalGeneral != 1) {
-        fprintf(stderr,
-                "Error: NGrandCanonical=1 requires OrbitalGeneral.\n");
-        info = 1;
-      }
       if (bufInt[IdxNLocSpin] > 0) {
         fprintf(stderr,
                 "Error: NGrandCanonical=1 does not support LocSpin "
                 "(pair add/remove breaks local-spin occupancy).\n");
         info = 1;
       }
-      if (bufInt[Idx2Sz] != -1) {
+      /* OrbitalAntiParallel/Orbital alone selects anti-parallel pairing in
+       * the Sz=0 sector; OrbitalGeneral or AntiParallel+Parallel input is
+       * general pairing without Sz conservation. */
+      if (iFlgOrbitalGeneral == 0) {
+        if (bufInt[Idx2Sz] != 0) {
+          fprintf(stderr,
+                  "Error: GC anti-parallel pairing requires 2Sz=0 "
+                  "(got %d).\n",
+                  bufInt[Idx2Sz]);
+          info = 1;
+        }
+      } else if (bufInt[Idx2Sz] != -1) {
         fprintf(stderr,
-                "Error: NGrandCanonical=1 requires 2Sz=-1 "
+                "Error: GC general pairing requires 2Sz=-1 "
                 "(Sz is not conserved by pair add/remove).\n");
         info = 1;
       }
@@ -1121,11 +1233,47 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "Error: NGrandCanonical=1 does not support BackFlow.\n");
         info = 1;
       }
-      if (bufInt[IdxSPGaussLeg] != 1 || bufInt[IdxMPTrans] != 1 ||
-          bufInt[IdxNQPOptTrans] > 1) {
-        fprintf(stderr,
-                "Error: NGrandCanonical=1 initially requires "
-                "NSPGaussLeg=1, NMPTrans=1, NQPOptTrans<=1.\n");
+      {
+        const int gcG = bufInt[IdxSPGaussLeg];
+        /* Under the admitted G>1 scope abs(NMPTrans)=NQPOptTrans=1, so
+         * NQPFull=NQPFix=G and setmemory.c allocates NQPFull+NQPFix+5*G
+         * complex entries in int arithmetic; check 7G before any int
+         * product or sum is formed.  The later CheckedIntProduct3 guard on
+         * NQPFix/NQPFull stays in place. */
+        if (gcG <= 0) {
+          fprintf(stderr, "Error: GC NSPGaussLeg must be positive.\n");
+          info = 1;
+        } else if (!GCSpinQuadratureFitsInt(gcG)) {
+          fprintf(stderr,
+                  "Error: GC NSPGaussLeg workspace exceeds int range.\n");
+          info = 1;
+        } else if (gcG > 1) {
+          if (iFlgOrbitalGeneral != 0) {
+            fprintf(stderr, "Error: GC spin projection requires "
+                            "anti-parallel pairing.\n");
+            info = 1;
+          }
+          if (bufInt[IdxSPStot] != 0) {
+            fprintf(stderr,
+                    "Error: GC spin projection requires NSPStot=0.\n");
+            info = 1;
+          }
+          if (bufInt[IdxMPTrans] != 1 && bufInt[IdxMPTrans] != -1) {
+            fprintf(stderr, "Error: GC spin projection currently requires "
+                            "abs(NMPTrans)=1.\n");
+            info = 1;
+          }
+          /* SpinJastrow exp(sum v m_i m_j) is not a spin scalar and would
+           * break the projected S=0 state, even from zero coefficients. */
+          if (bufInt[IdxNSpinJast] > 0) {
+            fprintf(stderr, "Error: GC spin projection does not support "
+                            "SpinJastrow.\n");
+            info = 1;
+          }
+        }
+      }
+      if (bufInt[IdxNQPOptTrans] > 1) {
+        fprintf(stderr, "Error: GC requires NQPOptTrans<=1.\n");
         info = 1;
       }
       if (FlagOptTrans > 0) {
@@ -1195,6 +1343,24 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               bufInt[IdxLanczosEstimatorMode]);
       info = 1;
     }
+    if (!(bufDouble[IdxLanczosGuideEps] >= 0.0) ||
+        !isfinite(bufDouble[IdxLanczosGuideEps])) {
+      fprintf(stderr,
+              "Error: DLanczosGuideEps must be a finite non-negative "
+              "number (got %g).\n",
+              bufDouble[IdxLanczosGuideEps]);
+      info = 1;
+    }
+    if (bufDouble[IdxLanczosGuideEps] > 0.0 &&
+        (bufInt[IdxVMCCalcMode] != 1 || bufInt[IdxLanczosMode] != 1 ||
+         bufInt[IdxLanczosStep] != 1 ||
+         bufInt[IdxLanczosEstimatorMode] != 0)) {
+      fprintf(stderr,
+              "Error: DLanczosGuideEps > 0 requires NVMCCalMode=1, "
+              "NLanczosMode=1, NLanczosStep=1 and "
+              "NLanczosEstimatorMode=0.\n");
+      info = 1;
+    }
     if (bufInt[IdxLanczosMode] > 0 &&
         bufInt[IdxLanczosEstimatorMode] == 1 &&
         bufInt[IdxLanczosMode] != 1) {
@@ -1233,6 +1399,25 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         fprintf(stderr,
                 "Error: FSZ NLanczosMode==1 requires NVMCCalMode==1 (got %d).\n",
                 bufInt[IdxVMCCalcMode]);
+        info = 1;
+      }
+    }
+
+    //Check the number of conduction electrons
+    if (bufInt[IdxNGrandCanonical] == 0) {
+      const long long nCond =
+          2LL * bufInt[IdxNe] - (long long)bufInt[IdxNLocSpin];
+      const long long nCondMax =
+          2LL * ((long long)bufInt[IdxNsite] - bufInt[IdxNLocSpin]);
+      if (nCond > nCondMax) {
+        fprintf(stderr,
+                "Error: The number of conduction electrons (= %lld) must not exceed 2*(Nsite-NLocalSpin) (= %lld).\n",
+                nCond, nCondMax);
+        if (bufInt[IdxNLocSpin] > 0 &&
+            bufInt[IdxNLocSpin] == bufInt[IdxNsite]) {
+          fprintf(stderr,
+                  "  Ncond (in modpara.def) must be 0 when every site is a localized spin.\n");
+        }
         info = 1;
       }
     }
@@ -1479,6 +1664,7 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   DSROptStaDel = bufDouble[IdxSROptStaDel];
   DSROptStepDt = bufDouble[IdxSROptStepDt];
   DSROptCGTol = bufDouble[IdxSROptCGTol];
+  DLanczosGuideEps = bufDouble[IdxLanczosGuideEps];
   TwoSz = bufInt[Idx2Sz];
 
   Nx = bufInt[IdxNx];
@@ -1754,6 +1940,30 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
     if (independentInfo != 0) MPI_Abort(comm, EXIT_FAILURE);
   }
 
+  FlagLanczosGuide = 0;
+  LanczosGuideSqrtEps = 0.0;
+  if (DLanczosGuideEps > 0.0) {
+    int guideInfo = 0;
+    if (rank == 0 &&
+        (NVMCCalMode != 1 || NLanczosMode != 1 || NLanczosStep != 1 ||
+         NLanczosEstimatorMode != 0 || AllComplexFlag != 0 ||
+         iFlgOrbitalGeneral != 0 || NProjBF != 0 || FlagRBM != 0 ||
+         reweight != 0 || FlagGrandCanonical != 0)) {
+      fprintf(stderr,
+              "Error: DLanczosGuideEps > 0 requires NVMCCalMode=1, "
+              "NLanczosMode=1, NLanczosStep=1, NLanczosEstimatorMode=0, "
+              "real variational parameters, and no BackFlow, RBM, "
+              "reweight or grand-canonical sampling.\n");
+      guideInfo = 1;
+    }
+#ifdef _mpi_use
+    MPI_Bcast(&guideInfo, 1, MPI_INT, 0, comm);
+#endif
+    if (guideInfo != 0) MPI_Abort(comm, EXIT_FAILURE);
+    FlagLanczosGuide = 1;
+    LanczosGuideSqrtEps = sqrt(DLanczosGuideEps);
+  }
+
   {
     int lanczos2NQPFull = 0;
     const long long lanczos2MPTrans =
@@ -1808,7 +2018,24 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   /* BFValidateSettings has already rejected unsupported BackFlow Twist and
      reweight inputs before the derived sizes are finalized here. */
 
-  NPara = NProj + NSlater + NOptTrans + NProjBF + NRBM * FlagRBM;
+  {
+    /* OptFlag holds 2*NPara and the SR buffers 2*(NPara+1) entries; sum in
+     * long long before narrowing to int. */
+    const long long nParaWide = (long long)NProj + (long long)NSlater +
+                                (long long)NOptTrans + (long long)NProjBF +
+                                (long long)NRBM * (long long)FlagRBM;
+    if (NProj < 0 || NSlater < 0 || NOptTrans < 0 || NProjBF < 0 ||
+        nParaWide < 0 || nParaWide > (long long)(INT_MAX / 2 - 1)) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: the number of variational parameters (%lld) is "
+                "outside the supported range.\n",
+                nParaWide);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    NPara = (int)nParaWide;
+  }
   if (CheckedIntProduct3(NSPGaussLeg, NMPTrans, 1, "NQPFix",
                          &NQPFix) != 0 ||
       CheckedIntProduct3(NQPFix, NQPOptTrans, 1, "NQPFull",
@@ -1885,6 +2112,8 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                                    "PosBF");
       sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nsite, 1,
                                    "RangeIdx");
+      sizeInfo |= CheckedCountTerm(&totalInt, Nsite, Nsite, 1,
+                                   "BFSeamPhase");
     }
 
     sizeInfo |= CheckedCountTerm(&totalDouble, NCoulombIntra, 1, 1,
@@ -1918,6 +2147,105 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   return 0;
 }
 
+static int GCAntiSiteSpinValid(const int site, const int spin) {
+  return site >= 0 && site < Nsite && (spin == 0 || spin == 1);
+}
+
+static int GCAntiCoefficientFinite(const double complex value) {
+  return isfinite(creal(value)) && isfinite(cimag(value));
+}
+
+static int GCAntiCoefficientNonzero(const double complex value) {
+  return creal(value) != 0.0 || cimag(value) != 0.0;
+}
+
+static int GCAntiSzError(const char *keyword, const int row) {
+  fprintf(stderr,
+          "Error: GC anti-parallel pairing requires an Sz-conserving "
+          "Hamiltonian: %s row %d changes Sz.\n",
+          keyword, row);
+  return 1;
+}
+
+static int GCAntiIndexError(const char *keyword, const int row) {
+  fprintf(stderr,
+          "Error: GC anti-parallel %s row %d has an invalid site/spin index "
+          "or a nonfinite coefficient.\n",
+          keyword, row);
+  return 1;
+}
+
+/*
+ * Anti-parallel grand-canonical sampling covers only the Sz=0 sector, so each
+ * Hamiltonian term must conserve Sz as a whole: for particle-number
+ * conserving products sum(spin_out - spin_in) = 0 (mixed spin-flip factors
+ * that cancel are allowed), and an anomalous pair must be up-down.  Rows
+ * with a zero coefficient are still checked for indices and finiteness.
+ * Called on rank 0 after the definition readers succeeded.
+ */
+static int ValidateGCAntiHamiltonian(void) {
+  int idx;
+  for (idx = 0; idx < NTransfer; idx++) {
+    const int *row = Transfer[idx];
+    if (!GCAntiSiteSpinValid(row[0], row[1]) ||
+        !GCAntiSiteSpinValid(row[2], row[3]) ||
+        !GCAntiCoefficientFinite(ParaTransfer[idx])) {
+      return GCAntiIndexError("Trans", idx + 1);
+    }
+    if (GCAntiCoefficientNonzero(ParaTransfer[idx]) && row[1] != row[3]) {
+      return GCAntiSzError("Trans", idx + 1);
+    }
+  }
+  for (idx = 0; idx < NInterAll; idx++) {
+    const int *row = InterAll[idx];
+    if (!GCAntiSiteSpinValid(row[0], row[1]) ||
+        !GCAntiSiteSpinValid(row[2], row[3]) ||
+        !GCAntiSiteSpinValid(row[4], row[5]) ||
+        !GCAntiSiteSpinValid(row[6], row[7]) ||
+        !GCAntiCoefficientFinite(ParaInterAll[idx])) {
+      return GCAntiIndexError("InterAll", idx + 1);
+    }
+    if (GCAntiCoefficientNonzero(ParaInterAll[idx]) &&
+        row[1] - row[3] + row[5] - row[7] != 0) {
+      return GCAntiSzError("InterAll", idx + 1);
+    }
+  }
+  for (idx = 0; idx < NNBodyInterAll; idx++) {
+    const int nbody = NBodyInterAllN[idx];
+    const int offset = NBodyInterAllOffset[idx];
+    long long change = 0;
+    int k;
+    if (nbody <= 0 || offset < 0 || offset > NBodyInterAllTotalFactors - nbody ||
+        !GCAntiCoefficientFinite(ParaNBodyInterAll[idx])) {
+      return GCAntiIndexError("NBodyInterAll", idx + 1);
+    }
+    for (k = 0; k < nbody; k++) {
+      const int *factor = NBodyInterAllIdx[offset + k];
+      if (!GCAntiSiteSpinValid(factor[0], factor[1]) ||
+          !GCAntiSiteSpinValid(factor[2], factor[3])) {
+        return GCAntiIndexError("NBodyInterAll", idx + 1);
+      }
+      change += (long long)factor[1] - (long long)factor[3];
+    }
+    if (GCAntiCoefficientNonzero(ParaNBodyInterAll[idx]) && change != 0) {
+      return GCAntiSzError("NBodyInterAll", idx + 1);
+    }
+  }
+  for (idx = 0; idx < NAnomalousTerm; idx++) {
+    const int *row = AnomalousTerm[idx];
+    if ((row[0] != 0 && row[0] != 1) ||
+        !GCAntiSiteSpinValid(row[1], row[2]) ||
+        !GCAntiSiteSpinValid(row[3], row[4]) ||
+        !GCAntiCoefficientFinite(ParaAnomalousTerm[idx])) {
+      return GCAntiIndexError("AnomalousTerm", idx + 1);
+    }
+    if (GCAntiCoefficientNonzero(ParaAnomalousTerm[idx]) && row[2] == row[4]) {
+      return GCAntiSzError("AnomalousTerm", idx + 1);
+    }
+  }
+  return 0;
+}
+
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
@@ -1940,12 +2268,32 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       fp = fopen(defname, "r");
       if (fp == NULL) {
         info = ReadDefFileError(defname);
-        fclose(fp);
         continue;
       }
 
       /*=======================================================================*/
-      for (i = 0; i < IgnoreLinesInDef; i++) fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+      if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral) &&
+          (iKWidx == KWOrbital || iKWidx == KWOrbitalAntiParallel)) {
+        int norbHeader, complexHeader;
+        /* Consume the same five physical lines as the allocation pass. */
+        if (GCAntiReadHeader(fp, Nsite, &norbHeader, &complexHeader,
+                             defname) != 0) {
+          info = 1;
+          fclose(fp);
+          continue;
+        }
+        if (norbHeader != iNOrbitalAntiParallel ||
+            complexHeader != iComplexFlgOrbital) {
+          fprintf(stderr, "Error: GC anti-parallel orbital file %s: "
+                          "header changed between reads.\n", defname);
+          info = 1;
+          fclose(fp);
+          continue;
+        }
+      } else {
+        for (i = 0; i < IgnoreLinesInDef; i++)
+          fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
+      }
       switch (iKWidx) {
         case KWInUpdateWeight:
           /* Parsed and normalized during ReadDefFileNInt(). */
@@ -2095,7 +2443,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
         case KWOrbitalAntiParallel:
           /*orbitalidxs.def------------------------------------*/
           fidx = NProj + FlagRBM * NRBM + NProjBF;
-          if (GetInfoOrbitalAntiParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
+          if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+            /* Strict reader: every row is validated before it is stored. */
+            if (GCAntiReadOrbitals(fp, OrbitalIdx, OrbitalSgn, OptFlag,
+                                   &count_idx, fidx, iComplexFlgOrbital,
+                                   APFlag, Nsite, iNOrbitalAntiParallel,
+                                   defname) != 0)
+              info = 1;
+          } else if (GetInfoOrbitalAntiParallel(fp, OrbitalIdx, OptFlag, OrbitalSgn, &count_idx,
                                          fidx, iComplexFlgOrbital, iFlgOrbitalGeneral, APFlag, Nsite, iNOrbitalAntiParallel,
                                          defname) != 0)
             info = 1;
@@ -2145,7 +2500,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
           /*nbodyg.def----------------------------------------*/
           if (GetInfoNBodyG(fp, NBodyGN, NBodyGOffset, NBodyGIdx,
                             Nsite, NNBodyG, NBodyGTotalFactors,
-                            NBodyGMaxN, iFlgOrbitalGeneral,
+                            NBodyGMaxN,
+                            iFlgOrbitalGeneral ||
+                                GCAntiEnabled(FlagGrandCanonical,
+                                              iFlgOrbitalGeneral),
                             defname) != 0)
             info = 1;
           break;
@@ -2185,7 +2543,9 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
                                    Nsite, NNBodyInterAll,
                                    NBodyInterAllTotalFactors,
                                    NBodyInterAllMaxN,
-                                   iFlgOrbitalGeneral,
+                                   iFlgOrbitalGeneral ||
+                                       GCAntiEnabled(FlagGrandCanonical,
+                                                     iFlgOrbitalGeneral),
                                    defname) != 0)
             info = 1;
           break;
@@ -2256,6 +2616,10 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
       }
     }
     if (info == 0 && BFValidateFszDefinitionDetails() != 0) info = 1;
+    /* Root owns the definition arrays; the verdict is broadcast below. */
+    if (info == 0 && GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+      info = ValidateGCAntiHamiltonian();
+    }
     fprintf(stdout, "finish reading parameters.\n");
   } /* if(rank==0) */
 
@@ -2281,6 +2645,14 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     }
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
+
+  /* Only rank 0 owns the definition payload until SafeMpiBcastInt below.
+   * The existing info abort above must precede this table traversal. */
+  if (rank == 0 && info == 0) info = BFValidateSeamTransforms();
+#ifdef _mpi_use
+  MPI_Bcast(&info, 1, MPI_INT, 0, comm);
+#endif
+  if (info != 0) MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
   if (FlagLsExplicit) {
     int lsInfo = 0;
@@ -2453,7 +2825,6 @@ int ReadInputParameters(char *xNameListFile, MPI_Comm comm) {
       fp = fopen(defname, "r");
       if (fp == NULL) {
         info = ReadDefFileError(defname);
-        fclose(fp);
         continue;
       }
       /*=======================================================================*/
@@ -3134,6 +3505,7 @@ void SetDefaultValuesModPara(int *bufInt, double *bufDouble) {
   bufDouble[IdxSROptStaDel] = 0.02;
   bufDouble[IdxSROptStepDt] = 0.02;
   bufDouble[IdxSROptCGTol] = 1.0e-10;
+  bufDouble[IdxLanczosGuideEps] = 0.0;
   NStoreO = 1;
   NSRCG = 0;
   NSRCGFallback = 0;
@@ -3162,6 +3534,17 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
 
   int iKWidx = 0;
   int iret = 0;
+  /* This function runs on rank 0, which owns cFileNameListFile. GC may be
+   * declared after 2Sz, so defer conversion for anti-only orbital input. */
+  const int antiOnly =
+      (cFileNameListFile[KWOrbital][0] != '\0' ||
+       cFileNameListFile[KWOrbitalAntiParallel][0] != '\0') &&
+      cFileNameListFile[KWOrbitalGeneral][0] == '\0' &&
+      cFileNameListFile[KWOrbitalParallel][0] == '\0';
+  int sawTwoSz = 0, invalidTwoSz = 0, exactTwoSz = 0;
+  double legacyTwoSz = 0.0;
+  ModParaIntRecord spinGauss = {0, 0, 0, 0.0};
+  ModParaIntRecord spinStot = {0, 0, 0, 0.0};
   fprintf(stdout, "Start: Read ModPara File .\n");
   for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
     strcpy(defname, cFileNameListFile[iKWidx]);
@@ -3169,7 +3552,6 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
     fp = fopen(defname, "r");
     if (fp == NULL) {
       iret=ReadDefFileError(defname);
-      fclose(fp);
       break;
     } else {
       switch (iKWidx) {
@@ -3240,11 +3622,33 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
             } else if (CheckWords(ctmp, "Ncond") == 0) {
               bufInt[IdxNCond] = (int) dtmp;
             } else if (CheckWords(ctmp, "2Sz") == 0) {
-              bufInt[Idx2Sz] = (int) dtmp;
+              if (antiOnly) {
+                long long rawTwoSz;
+                int offset = 0;
+                sawTwoSz = 1;
+                legacyTwoSz = dtmp;
+                if (strchr(ctmp2, '\n') == NULL && !feof(fp)) {
+                  int ch;
+                  invalidTwoSz = 1;
+                  /* A continuation is part of this value, never another
+                   * keyword or separator (including NGrandCanonical). */
+                  while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
+                }
+                if (sscanf(ctmp2, "%*s %*s %n", &offset) < 0 ||
+                    !LineTailIsWhitespace(ctmp2, offset) ||
+                    ParseStrictLongLong(valueText, &rawTwoSz) != 0 ||
+                    rawTwoSz < INT_MIN || rawTwoSz > INT_MAX) {
+                  invalidTwoSz = 1;
+                } else {
+                  exactTwoSz = (int)rawTwoSz;
+                }
+              } else {
+                bufInt[Idx2Sz] = (int)dtmp;
+              }
             } else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
-              bufInt[IdxSPGaussLeg] = (int) dtmp;
+              RecordModParaInt(&spinGauss, fp, ctmp2, valueText, dtmp);
             } else if (CheckWords(ctmp, "NSPStot") == 0) {
-              bufInt[IdxSPStot] = (int) dtmp;
+              RecordModParaInt(&spinStot, fp, ctmp2, valueText, dtmp);
             } else if (CheckWords(ctmp, "NMPTrans") == 0) {
               long long rawNMPTrans;
               int offset = 0;
@@ -3262,6 +3666,8 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               bufInt[IdxSROptItrStep] = (int) dtmp;
             } else if (CheckWords(ctmp, "NSROptItrSmp") == 0) {
               bufInt[IdxSROptItrSmp] = (int) dtmp;
+            } else if (CheckWords(ctmp, "DLanczosGuideEps") == 0) {
+              bufDouble[IdxLanczosGuideEps] = (double) dtmp;
             } else if (CheckWords(ctmp, "DSROptRedCut") == 0) {
               bufDouble[IdxSROptRedCut] = (double) dtmp;
             } else if (CheckWords(ctmp, "DSROptStaDel") == 0) {
@@ -3318,6 +3724,27 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               iret = ReadDefFileError(defname);
               return iret;
             }
+          }
+          if (sawTwoSz) {
+            if (bufInt[IdxNGrandCanonical] == 1) {
+              if (invalidTwoSz) {
+                fprintf(stderr, "Error: GC anti-parallel 2Sz must be an "
+                                "exact integer in int range.\n");
+                fclose(fp);
+                return ReadDefFileError(defname);
+              }
+              bufInt[Idx2Sz] = exactTwoSz;
+            } else {
+              /* Preserve the canonical reader's existing conversion. */
+              bufInt[Idx2Sz] = (int)legacyTwoSz;
+            }
+          }
+          if (StoreModParaInt(&spinGauss, bufInt[IdxNGrandCanonical] == 1,
+                              "NSPGaussLeg", &bufInt[IdxSPGaussLeg]) != 0 ||
+              StoreModParaInt(&spinStot, bufInt[IdxNGrandCanonical] == 1,
+                              "NSPStot", &bufInt[IdxSPStot]) != 0) {
+            fclose(fp);
+            return ReadDefFileError(defname);
           }
           if (bufInt[IdxRndSeed] < 0) {
             bufInt[IdxRndSeed] = (int) time(NULL);
@@ -4852,7 +5279,9 @@ int GetInfoInterAll(FILE *fp, int **ArrayIdx, double complex *ArrayValue,
 
     ArrayValue[idx] = dReValue + I * dImValue;
 
-    if (TwoSz != -1 && !(x1 == x3 && x5 == x7)) {
+    /* Anti-parallel GC checks Sz conservation of the whole term later. */
+    if (TwoSz != -1 && !GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral) &&
+        !(x1 == x3 && x5 == x7)) {
       fprintf(stderr, "  Error:  Sz non-conserved system is not yet supported for InterAll.\n");
       info = ReadDefFileError(defname);
       break;
@@ -5091,6 +5520,297 @@ int GetInfoOrbitalAntiParallel(FILE *fp, int **Array, int *ArrayOpt, int **Array
   return info;
 }
 
+/* Count whitespace-separated tokens of one input row. */
+static int CountLineTokens(const char *line) {
+  const unsigned char *cursor = (const unsigned char *)line;
+  int count = 0;
+  while (*cursor != '\0') {
+    while (*cursor != '\0' && isspace(*cursor)) cursor++;
+    if (*cursor == '\0') break;
+    count++;
+    while (*cursor != '\0' && !isspace(*cursor)) cursor++;
+  }
+  return count;
+}
+
+/* Read the next token, which must be a whole base-10 integer in long long. */
+static int ReadStrictIntegerToken(const char **cursor, long long *value) {
+  const char *start;
+  char *end = NULL;
+  long long parsed;
+  if (cursor == NULL || *cursor == NULL || value == NULL) return 1;
+  start = *cursor;
+  while (*start != '\0' && isspace((unsigned char)*start)) start++;
+  if (*start == '\0') return 1;
+  errno = 0;
+  parsed = strtoll(start, &end, 10);
+  if (errno == ERANGE || end == start ||
+      (*end != '\0' && !isspace((unsigned char)*end))) {
+    return 1;
+  }
+  *value = parsed;
+  *cursor = end;
+  return 0;
+}
+
+/*
+ * OptFlag block of the anti-periodic OrbitalGeneral reader.  Each line is
+ * "index flag"; every index in [0, NArray) appears exactly once and the flag
+ * is 0 or 1, all checked before ArrayOpt is written.  Only blank lines may
+ * follow the last row, so a surplus pair row cannot be taken for OptFlags.
+ */
+static int GetInfoOrbitalGeneralAPOpt(FILE *fp, int *ArrayOpt,
+                                      int *iOptCount, int _fidx,
+                                      int _iComplexFlag, int NArray,
+                                      const char *defname) {
+  char line[D_CharTmpReadDef];
+  unsigned char *seen;
+  int row = 0;
+  int info = 0;
+
+  seen = (unsigned char *)calloc((size_t)NArray, sizeof(*seen));
+  if (seen == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate OrbitalGeneral OptFlag state for %s.\n",
+            defname);
+    return 1;
+  }
+  while (row < NArray) {
+    long long value[2];
+    const char *cursor = line;
+    int columns;
+    int column;
+    int index;
+
+    if (fgets(line, sizeof(line), fp) == NULL) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral in %s ended after %d of %d OptFlag rows "
+              "(anti-periodic mode).\n",
+              defname, row, NArray);
+      info = 1;
+      break;
+    }
+    if (strchr(line, '\n') == NULL && !feof(fp)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s is too long.\n",
+              row + 1, defname);
+      info = 1;
+      break;
+    }
+    columns = CountLineTokens(line);
+    if (columns != 2) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s has %d columns; "
+              "anti-periodic mode requires exactly 2 integer columns "
+              "(index flag): %s",
+              row + 1, defname, columns, line);
+      info = 1;
+      break;
+    }
+    for (column = 0; column < 2; column++) {
+      if (ReadStrictIntegerToken(&cursor, &value[column]) != 0) break;
+    }
+    if (column != 2 || !LineTailIsWhitespace(cursor, 0)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s must contain integer "
+              "columns only (column %d is malformed or out of range): %s",
+              row + 1, defname, column + 1, line);
+      info = 1;
+      break;
+    }
+    if (value[0] < 0 || value[0] >= NArray) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s has a parameter "
+              "index out of range [0, %d): %s",
+              row + 1, defname, NArray, line);
+      info = 1;
+      break;
+    }
+    if (value[1] != 0 && value[1] != 1) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral OptFlag row %d in %s has flag %lld; "
+              "the flag must be 0 or 1.\n",
+              row + 1, defname, value[1]);
+      info = 1;
+      break;
+    }
+    index = (int)value[0];
+    if (seen[index] != 0) {
+      fprintf(stderr,
+              "Error: duplicate OrbitalGeneral OptFlag index %d in %s "
+              "(row %d).\n",
+              index, defname, row + 1);
+      info = 1;
+      break;
+    }
+    seen[index] = 1;
+    ArrayOpt[2 * (_fidx + index)] = (int)value[1];
+    ArrayOpt[2 * (_fidx + index) + 1] =
+        _iComplexFlag > 0 ? (int)value[1] : 0;
+    (*iOptCount)++;
+    row++;
+  }
+  free(seen);
+  if (info != 0) return info;
+
+  while (fgets(line, sizeof(line), fp) != NULL) {
+    if (CountLineTokens(line) != 0) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral in %s has rows after the %d OptFlag "
+              "rows (anti-periodic mode): %s",
+              defname, NArray, line);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/*
+ * Anti-periodic OrbitalGeneral rows carry the sign that enters F_IJ, so a
+ * malformed row cannot silently fall back to +1 or to the previous row.  Every
+ * row must be "I spin_I J spin_J index sign" with I<J in the fused (site +
+ * spin*Nsite) order, and each upper-triangle pair must appear exactly once.
+ */
+static int GetInfoOrbitalGeneralAP(FILE *fp, int **Array, int *ArrayOpt,
+                                   int **ArraySgn, int *iOptCount, int _fidx,
+                                   int _iComplexFlag, int Nsite, int NArray,
+                                   const char *defname) {
+  char line[D_CharTmpReadDef];
+  unsigned char *seen = NULL;
+  const int nsite2 = 2 * Nsite;
+  size_t expectedRows;
+  size_t row = 0;
+  int info = 0;
+
+  if (Nsite <= 0 || NArray <= 0 ||
+      (size_t)nsite2 > SIZE_MAX / (size_t)nsite2) {
+    fprintf(stderr, "Error: invalid OrbitalGeneral dimensions in %s.\n",
+            defname);
+    return 1;
+  }
+  expectedRows = (size_t)nsite2 * (size_t)(nsite2 - 1) / 2;
+  seen = (unsigned char *)calloc((size_t)nsite2 * (size_t)nsite2,
+                                 sizeof(*seen));
+  if (seen == NULL) {
+    fprintf(stderr,
+            "Error: failed to allocate OrbitalGeneral parser state for %s.\n",
+            defname);
+    return 1;
+  }
+
+  while (row < expectedRows) {
+    long long value[6];
+    const char *cursor = line;
+    long long allI, allJ;
+    size_t key;
+    int columns;
+    int column;
+
+    if (fgets(line, sizeof(line), fp) == NULL) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral in %s ended after %zu of %zu pair rows "
+              "(anti-periodic mode).\n",
+              defname, row, expectedRows);
+      info = 1;
+      break;
+    }
+    if (strchr(line, '\n') == NULL && !feof(fp)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s is too long.\n",
+              row + 1, defname);
+      info = 1;
+      break;
+    }
+    columns = CountLineTokens(line);
+    if (columns != 6) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has %d columns; "
+              "anti-periodic mode requires exactly 6 integer columns "
+              "(I spin_I J spin_J index sign): %s",
+              row + 1, defname, columns, line);
+      info = 1;
+      break;
+    }
+    for (column = 0; column < 6; column++) {
+      if (ReadStrictIntegerToken(&cursor, &value[column]) != 0) break;
+    }
+    if (column != 6 || !LineTailIsWhitespace(cursor, 0)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s must contain integer "
+              "columns only (column %d is malformed or out of range): %s",
+              row + 1, defname, column + 1, line);
+      info = 1;
+      break;
+    }
+    if (value[0] < 0 || value[0] >= Nsite || value[2] < 0 ||
+        value[2] >= Nsite) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has a site index out of "
+              "range [0, %d): %s",
+              row + 1, defname, Nsite, line);
+      info = 1;
+      break;
+    }
+    if ((value[1] != 0 && value[1] != 1) ||
+        (value[3] != 0 && value[3] != 1)) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has a spin index other "
+              "than 0 or 1: %s",
+              row + 1, defname, line);
+      info = 1;
+      break;
+    }
+    if (value[4] < 0 || value[4] >= NArray) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has a parameter index out "
+              "of range [0, %d): %s",
+              row + 1, defname, NArray, line);
+      info = 1;
+      break;
+    }
+    if (value[5] != 1 && value[5] != -1) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s has sign %lld; "
+              "anti-periodic mode requires +1 or -1.\n",
+              row + 1, defname, value[5]);
+      info = 1;
+      break;
+    }
+    allI = value[0] + value[1] * (long long)Nsite;
+    allJ = value[2] + value[3] * (long long)Nsite;
+    if (allI >= allJ) {
+      fprintf(stderr,
+              "Error: OrbitalGeneral row %zu in %s must satisfy I<J with "
+              "I=site+spin*Nsite (got I=%lld, J=%lld).\n",
+              row + 1, defname, allI, allJ);
+      info = 1;
+      break;
+    }
+    key = (size_t)allI * (size_t)nsite2 + (size_t)allJ;
+    if (seen[key] != 0) {
+      fprintf(stderr,
+              "Error: duplicate OrbitalGeneral pair in %s "
+              "(I=%lld, J=%lld, row %zu).\n",
+              defname, allI, allJ, row + 1);
+      info = 1;
+      break;
+    }
+    seen[key] = 1;
+    Array[allI][allJ] = (int)value[4];
+    ArraySgn[allI][allJ] = (int)value[5];
+    /* Note F_{IJ}=-F_{JI} */
+    Array[allJ][allI] = (int)value[4];
+    ArraySgn[allJ][allI] = -(int)value[5];
+    row++;
+  }
+  free(seen);
+  if (info != 0) return info;
+
+  /* expectedRows distinct I<J pairs cover the whole upper triangle. */
+  return GetInfoOrbitalGeneralAPOpt(fp, ArrayOpt, iOptCount, _fidx,
+                                    _iComplexFlag, NArray, defname);
+}
+
 int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, int *iOptCount,
                           int _fidx, int _iComplexFlag, int _iFlagOrbitalGeneral, int _APFlag, int Nsite, int NArray,
                           char *defname) {
@@ -5104,6 +5824,11 @@ int GetInfoOrbitalGeneral(FILE *fp, int **Array, int *ArrayOpt, int **ArraySgn, 
   int fidx = _fidx;
 
   if (NArray == 0) return 0;
+  if (_APFlag != 0) {
+    return GetInfoOrbitalGeneralAP(fp, Array, ArrayOpt, ArraySgn, iOptCount,
+                                   fidx, _iComplexFlag, Nsite, NArray,
+                                   defname);
+  }
   while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
     sscanf(ctmp2, "%d %d %d %d %d %d\n", &i, &spn_i, &j, &spn_j, &fij, &fijSign);
     all_i = i + spn_i * Nsite; //fsz

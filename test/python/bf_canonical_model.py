@@ -114,6 +114,11 @@ class CanonicalModel(object):
         self.rangeidx = [
             _integers(block, "rangeidx_{}".format(site), self.nsite)
             for site in range(self.nsite)]
+        # Old diagnostic dumps predate the seam field and represent phi=+1.
+        self.seam_phase = [
+            (_integers(block, "seam_phase_{}".format(site), self.nsite)
+             if "seam_phase_{}".format(site) in block else [1]*self.nsite)
+            for site in range(self.nsite)]
         self.bfsubidx = [
             _integers(block, "bfsubidx_{}".format(idx), self.nrangeidx)
             for idx in range(self.nrangeidx)]
@@ -202,15 +207,18 @@ class CanonicalModel(object):
                                 (count_ji_i == 0 or count_ji_j == 0)):
                             continue
                         parameter = self.bfsubidx[nidx][midx]
+                        mapping = self.transform[transform_index]
+                        phase = (self.seam_phase[mapping[ri]][mapping[rk]] *
+                                 self.seam_phase[mapping[rj]][mapping[rl]])
                         if count_ij_i != 0 and count_ij_j != 0:
                             slater_ij -= (self.projbf[parameter] *
-                                           count_ij_i * count_ij_j *
+                                           count_ij_i * count_ij_j * phase *
                                            self.orbital(
                                                rk, rl, transform_index,
                                                virtual_neighbor_signs))
                         if count_ji_i != 0 and count_ji_j != 0:
                             slater_ji -= (self.projbf[parameter] *
-                                           count_ji_i * count_ji_j *
+                                           count_ji_i * count_ji_j * phase *
                                            self.orbital(
                                                rl, rk, transform_index,
                                                virtual_neighbor_signs))

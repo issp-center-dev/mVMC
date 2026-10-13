@@ -142,7 +142,10 @@ xxx\_out\_yyy.dat
 
 が順に出力されます。 :math:`\langle H \rangle` については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
-``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。以下に出力例を記載します。
+``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
+反平行のgrand-canonical mode（``NGrandCanonical=1`` で ``OrbitalAntiParallel`` または ``Orbital`` のみ、``2Sz=0``）では
+全sampleが :math:`S^z=0` なので最後の2列は0になり、:math:`\langle H^2\rangle` にはExpert入力の
+``NGrandCanonical`` に記載した制限があります。以下に出力例を記載します。
 
 ::
 
@@ -484,6 +487,23 @@ Power Lanczos法により求めた :math:`\langle H \rangle`,
 2、``NLanczosStep`` = 1に設定することで計算されます。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
+
+xxx\_nzguide\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~
+
+``DLanczosGuideEps > 0`` のときだけ出力されます。1行9列で、順に
+:math:`\varepsilon`、guide分布から得た全保存sample数、
+:math:`|P| < \sqrt{\varepsilon} A` となったsample数、:math:`P=0` のため
+局所量を評価しなかったsample数、数値guardで評価を中止したsample数、重み
+:math:`|\psi|^2/q_\varepsilon` の和、その二乗和、重みの最小値、有限かつ
+非零の :math:`P` に対する :math:`A/|P|` の最大値です。
+:math:`P=0, A>0` のsampleは最初の2つのsample数に含まれ、重み0として
+重み和へ寄与しません。数値guardによる中止が0なら、全保存sample数を
+重みの和で割った値が :math:`Z_q/Z_\psi` の推定になります。
+:math:`P=0` または数値guardによる中止が1件でもあるbinは、Lanczos momentに
+欠落があるため採用しないでください。両方が0でも、:math:`A=0` または
+:math:`J=0` でguide重み自体が0となる状態のfull supportを証明するものでは
+ありません。
 
 xxx\_ls2\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~

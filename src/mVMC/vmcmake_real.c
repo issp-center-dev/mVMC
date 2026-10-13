@@ -37,11 +37,31 @@ which follows "The BSD 3-Clause License".
 #include "splitloop.h"
 #include "vmcmake.h"
 #include "rbm.h"
+#include "near_zero_guide.h"
 
 #ifdef _pf_block_update
 // Block-update extension.
 #include "../pfupdates/pf_interface.h"
 #endif
+
+/* Log of the square-root sampling weight without the correlation factor:
+ * log|<phi|L|x>| in the legacy path, or
+ * log max(|P|, sqrt(eps) A) with the near-zero guide. */
+static double logSamplingWeightPf_real(double *const pfM, const int qpStart,
+                                       const int qpEnd, MPI_Comm comm) {
+  if (FlagLanczosGuide) {
+    NearZeroGuide guide;
+    if (NearZeroGuideEvaluate(QPFullWeight, pfM, qpStart, qpEnd,
+                              LanczosGuideSqrtEps, comm, &guide) != 0) {
+      fprintf(stderr,
+              "Error: near-zero guide evaluation failed in "
+              "VMCMakeSample_real.\n");
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    return guide.log_guide;
+  }
+  return CalculateLogIP_real(pfM, qpStart, qpEnd, comm);
+}
 
 void VMCMakeSample_real(MPI_Comm comm) {
   int outStep, nOutStep;
@@ -49,6 +69,9 @@ void VMCMakeSample_real(MPI_Comm comm) {
   UpdateType updateType;
   int mi, mj, ri, rj, s, t, i;
   int nAccept = 0;
+  int recomputeInfo = 0;
+  int accepted, rebuiltAccepted;
+  double uniform;
   int sample;
 
   double logIpOld, logIpNew; /* logarithm of inner product <phi|L|x> */ // is this ok ? TBC
@@ -104,12 +127,14 @@ void VMCMakeSample_real(MPI_Comm comm) {
                        pfUpdator, pfOrbital);
   updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
-  CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
+  recomputeInfo = CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
 #endif
   // printf("DEBUG: maker1: PfM=%lf\n",creal(PfM[0]));
-  logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+  logIpOld = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
 
   if (!isfinite(logIpOld)) {
+    const double beforeRemake = logIpOld;
+    SamplerRepairCurrent(-1, -1, 0, logIpOld, logIpOld, "remake-initial");
     if (rank == 0) fprintf(stderr, "waring: VMCMakeSample remakeSample logIpOld=%e\n", creal(logIpOld)); //TBC
     makeInitialSample(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
                       qpStart, qpEnd, comm);
@@ -125,13 +150,16 @@ void VMCMakeSample_real(MPI_Comm comm) {
                          pfUpdator, pfOrbital);
     updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
-    CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
+    recomputeInfo = CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
 #endif
     //printf("DEBUG: maker2: PfM=%lf\n",creal(PfM[0]));
-    logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+    logIpOld = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
+    SamplerRepairCurrent(-1, -1, 0, beforeRemake, logIpOld, "check-after-remake");
     BurnFlag = 0;
   }
+  SamplerRepairRequireCurrent(logIpOld, recomputeInfo, "abort-initial");
   StopTimer(30);
+  SamplerRepairRecompute();
 
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
@@ -186,7 +214,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(62);
         /* calculate inner product <phi|L|x> */
         //logIpNew = CalculateLogIP_fcmp(pfMNew,qpStart,qpEnd,comm);
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = logSamplingWeightPf_real(pfMNew_real, qpStart, qpEnd, comm);
         StopTimer(62);
 
         /* Metroplis */
@@ -195,9 +223,14 @@ void VMCMakeSample_real(MPI_Comm comm) {
           x += creal(LogRBMRatio(rbmCntNew, TmpRBMCnt));
         }
         w = exp(2.0 * (x + (logIpNew - logIpOld)));
-        if (!isfinite(w)) w = -1.0; /* should be rejected */
+        uniform = genrand_real2();
+        accepted = Sr.enabled ? SamplerRepairLogAccept(logIpOld, logIpNew, x, uniform)
+                              : (isfinite(w) && w > uniform);
+        SamplerRepairProposal(outStep, inStep, 1, logIpOld, logIpNew, x, w, accepted);
 
-        if (w > genrand_real2()) { /* accept */
+        if (accepted) { /* provisional accept; commit counts only after recovery */
+          rebuiltAccepted = 0;
+          SamplerRepairAcceptPre(pfMNew_real);
           StartTimer(63);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
@@ -208,16 +241,30 @@ void VMCMakeSample_real(MPI_Comm comm) {
           //            UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
 #endif
           StopTimer(63);
-
-          for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
-          if (FlagRBM) {
-            for (i = 0; i < NRBM_PhysLayerIdx + Nneuron; i++) {
-              TmpRBMCnt[i] = rbmCntNew[i];
-            }
+          if (SamplerRepairAcceptPost(TmpEleIdx, qpStart, qpEnd)) {
+            logIpNew = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
           }
-          logIpOld = logIpNew;
-          nAccept++;
-          Counter[1]++;
+          if (Sr.enabled && !isfinite(logIpNew)) {
+            Sr.out_step = outStep; Sr.in_step = inStep; Sr.move = 1;
+            accepted = SamplerRepairResolveAccepted(TmpEleIdx, TmpEleCfg, TmpEleNum,
+                mi, -1, ri, rj, s, 1, qpStart, qpEnd, comm,
+                &logIpNew, &logIpOld);
+            rebuiltAccepted = 1;
+            nAccept = 0; /* recovery rebuilt the current inverse from scratch */
+          }
+
+          if (accepted) {
+            for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
+            if (FlagRBM) {
+              for (i = 0; i < NRBM_PhysLayerIdx + Nneuron; i++) {
+                TmpRBMCnt[i] = rbmCntNew[i];
+              }
+            }
+            logIpOld = logIpNew;
+            if (!rebuiltAccepted) nAccept++;
+            if (Sr.logging) Sr.accepts++;
+            Counter[1]++;
+          }
         } else { /* reject */
 #ifdef _pf_block_update
           StartTimer(61);
@@ -274,7 +321,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = logSamplingWeightPf_real(pfMNew_real, qpStart, qpEnd, comm);
 
         StopTimer(67);
 
@@ -284,9 +331,14 @@ void VMCMakeSample_real(MPI_Comm comm) {
           x += creal(LogRBMRatio(rbmCntNew, TmpRBMCnt));
         }
         w = exp(2.0 * (x + (logIpNew - logIpOld))); //TBC
-        if (!isfinite(w)) w = -1.0; /* should be rejected */
+        uniform = genrand_real2();
+        accepted = Sr.enabled ? SamplerRepairLogAccept(logIpOld, logIpNew, x, uniform)
+                              : (isfinite(w) && w > uniform);
+        SamplerRepairProposal(outStep, inStep, 2, logIpOld, logIpNew, x, w, accepted);
 
-        if (w > genrand_real2()) { /* accept */
+        if (accepted) { /* provisional accept; commit counts only after recovery */
+          rebuiltAccepted = 0;
+          SamplerRepairAcceptPre(pfMNew_real);
           StartTimer(68);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
@@ -295,16 +347,30 @@ void VMCMakeSample_real(MPI_Comm comm) {
           UpdateMAllTwo_real(mi, s, mj, t, ri, rj, TmpEleIdx, qpStart, qpEnd);
 #endif
           StopTimer(68);
-
-          for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
-          if (FlagRBM) {
-            for (i = 0; i < NRBM_PhysLayerIdx + Nneuron; i++) {
-              TmpRBMCnt[i] = rbmCntNew[i];
-            }
+          if (SamplerRepairAcceptPost(TmpEleIdx, qpStart, qpEnd)) {
+            logIpNew = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
           }
-          logIpOld = logIpNew;
-          nAccept++;
-          Counter[3]++;
+          if (Sr.enabled && !isfinite(logIpNew)) {
+            Sr.out_step = outStep; Sr.in_step = inStep; Sr.move = 2;
+            accepted = SamplerRepairResolveAccepted(TmpEleIdx, TmpEleCfg, TmpEleNum,
+                mi, mj, ri, rj, s, 2, qpStart, qpEnd, comm,
+                &logIpNew, &logIpOld);
+            rebuiltAccepted = 1;
+            nAccept = 0; /* recovery rebuilt the current inverse from scratch */
+          }
+
+          if (accepted) {
+            for (i = 0; i < NProj; i++) TmpEleProjCnt[i] = projCntNew[i];
+            if (FlagRBM) {
+              for (i = 0; i < NRBM_PhysLayerIdx + Nneuron; i++) {
+                TmpRBMCnt[i] = rbmCntNew[i];
+              }
+            }
+            logIpOld = logIpNew;
+            if (!rebuiltAccepted) nAccept++;
+            if (Sr.logging) Sr.accepts++;
+            Counter[3]++;
+          }
         } else { /* reject */
 #ifdef _pf_block_update
           StartTimer(66);
@@ -353,7 +419,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
         StartTimer(67);
 
         /* calculate inner product <phi|L|x> */
-        logIpNew = CalculateLogIP_real(pfMNew_real, qpStart, qpEnd, comm);
+        logIpNew = logSamplingWeightPf_real(pfMNew_real, qpStart, qpEnd, comm);
         StopTimer(67);
 
         /* Metropolis */
@@ -388,6 +454,7 @@ void VMCMakeSample_real(MPI_Comm comm) {
       }
 
       if (nAccept > Nsite) {
+        const double beforeFullRecompute = logIpOld;
         // Recalculate PfM and InvM.
         StartTimer(34);
 #ifdef _pf_block_update
@@ -401,11 +468,14 @@ void VMCMakeSample_real(MPI_Comm comm) {
                              pfUpdator, pfOrbital);
         updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
 #else
-        CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
+        recomputeInfo = CalculateMAll_real(TmpEleIdx, qpStart, qpEnd);
 #endif
         //printf("DEBUG: maker3: PfM=%lf\n",creal(PfM[0]));
-        logIpOld = CalculateLogIP_real(PfM_real, qpStart, qpEnd, comm);
+        logIpOld = logSamplingWeightPf_real(PfM_real, qpStart, qpEnd, comm);
+        SamplerRepairCurrent(outStep, inStep, 0, beforeFullRecompute, logIpOld, "check-after-full-recompute");
+        SamplerRepairRequireCurrent(logIpOld, recomputeInfo, "abort-full-recompute");
         StopTimer(34);
+        SamplerRepairRecompute();
         nAccept = 0;
       }
     } /* end of instep */
@@ -435,32 +505,16 @@ void VMCMakeSample_real(MPI_Comm comm) {
 
 int makeInitialSample_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,
                            const int qpStart, const int qpEnd, MPI_Comm comm) {
-  const int nsize = Nsize;
   const int nsite2 = Nsite2;
   int flag = 1, flagRdc, loop = 0;
-  int ri, mi, si, msi, rsi;
+  int ri, mi, si, rsi;
   int rank, size;
   MPI_Comm_size(comm, &size);
   MPI_Comm_rank(comm, &rank);
 
   do {
-    /* initialize */
-#pragma omp parallel for default(shared) private(msi)
-    for (msi = 0; msi < nsize; msi++) eleIdx[msi] = -1;
-#pragma omp parallel for default(shared) private(rsi)
-    for (rsi = 0; rsi < nsite2; rsi++) eleCfg[rsi] = -1;
-
-    /* local spin */
-    for (ri = 0; ri < Nsite; ri++) {
-      if (LocSpn[ri] == 1) {
-        do {
-          mi = gen_rand32() % Ne;
-          si = (genrand_real2() < 0.5) ? 0 : 1;
-        } while (eleIdx[mi + si * Ne] != -1);
-        eleCfg[ri + si * Nsite] = mi;
-        eleIdx[mi + si * Ne] = ri;
-      }
-    }
+    /* initialize and local spin */
+    initSampleWithLocalSpin(eleIdx,eleCfg,NULL);
 
     /* itinerant electron */
     if (NExUpdatePath == 6) {

@@ -609,6 +609,9 @@ static void OutputBFProfileCounters(FILE *fp) {
   fprintf(fp,"    BF exchange metropolis reject   [949] %12lld\n",BFProfileCounter[BFPROF_EXCHANGE_METROPOLIS_REJECT]);
   fprintf(fp,"    BF canonical full rebuild       [985] %12lld\n",BFProfileCounter[BFPROF_FULL_REBUILD]);
   fprintf(fp,"    BF multi-QP legacy incremental  [986] %12lld\n",BFProfileCounter[BFPROF_MULTI_QP_LEGACY_INCREMENTAL]);
+  fprintf(fp,"    BF legacy non-FSZ proposal      [987] %12lld\n",BFProfileCounter[BFPROF_LEGACY_NONFSZ_PROPOSAL]);
+  fprintf(fp,"    BF legacy non-FSZ accept prep   [988] %12lld\n",BFProfileCounter[BFPROF_LEGACY_NONFSZ_ACCEPT]);
+  fprintf(fp,"    BF legacy non-FSZ Green rows    [989] %12lld\n",BFProfileCounter[BFPROF_LEGACY_NONFSZ_GREEN_ROWS]);
 
   for(i=0;i<NBFFSZProfileSource;i++) {
     const char *label = (i == BFFSZ_PROFILE_SAMPLE) ? "sample" : "green";

@@ -166,7 +166,12 @@ the others is a real number. Here, xxx is the header indicated by
 ``CDataFileHead`` in ``ModPara`` file and yyy is a number given by
 ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
-``ModPara`` file. An example of outputted file is shown as follows.
+``ModPara`` file. In the anti-parallel grand-canonical mode
+(``NGrandCanonical=1`` with ``OrbitalAntiParallel`` or ``Orbital`` alone,
+``2Sz=0``), every sample has :math:`S^z=0`, so the last two columns are
+zero, and :math:`\langle H^2\rangle` has the limitation described for
+``NGrandCanonical`` in the expert-mode input. An example of outputted file is
+shown as follows.
 
 ::
 
@@ -531,6 +536,25 @@ file and ``NLanczosStep`` = 1. Here, xxx is the header indicated by ``CDataFileH
 ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
+
+xxx\_nzguide\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~
+
+Written only when ``DLanczosGuideEps > 0``. One line has nine columns:
+:math:`\varepsilon`, the total number of saved samples drawn from the guide
+distribution, the number of samples with
+:math:`|P| < \sqrt{\varepsilon} A`, the number of samples whose local
+quantities were not evaluated because :math:`P=0`, the number stopped by a
+numerical guard, the sum of the weights
+:math:`|\psi|^2/q_\varepsilon`, the sum of their squares, the minimum
+weight, and the maximum of :math:`A/|P|` over finite nonzero :math:`P`.
+Samples with :math:`P=0, A>0` are included in the first two counts and
+contribute zero to the weight sum. If the numerical-skip count is zero, the
+total saved-sample count divided by the weight sum estimates
+:math:`Z_q/Z_\psi`. Do not use Lanczos moments from a bin with a nonzero
+exact-zero or numerical-skip count. Zero counts do not prove full support
+for states where :math:`A=0` or :math:`J=0` makes the guide weight itself
+zero.
 
 xxx\_ls2\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~

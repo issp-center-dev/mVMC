@@ -154,7 +154,8 @@ def prepare_workdir(rootdir, fixture_root, manifest, case_name, seed, stage,
                 os.path.join(workdir, "coulombintra.def"))
     add_namelist_entry(os.path.join(workdir, "namelist.def"),
                        "CoulombIntra", "coulombintra.def")
-    write_chain_nn_backflow(workdir, length=4, optimize=True)
+    write_chain_nn_backflow(workdir, length=4, optimize=True,
+                           antiperiodic=int(case["ap_flag"]) != 0)
     write_uniform_gutzwiller(workdir, 4)
     add_namelist_entry(os.path.join(workdir, "namelist.def"),
                        "Gutzwiller", "gutzwilleridx.def")

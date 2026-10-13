@@ -18,6 +18,7 @@ extern int omp_get_max_threads(void);
  * global.h owns the legacy process-wide storage definitions. */
 #include "../src/mVMC/gc_size.c"
 #include "../src/mVMC/workspace.c"
+#include "../src/mVMC/gc_component.c"
 #include "../src/mVMC/matrix_gc.c"
 
 #define MAX_DIMENSION 6
@@ -33,6 +34,10 @@ static int failures = 0;
       failures++;                                                               \
     }                                                                           \
   } while (0)
+
+static void reset_component(void) {
+  CHECK(GCComponentInit() == GC_MALL_OK, "component init");
+}
 
 static int popcount(unsigned int value) {
   int count = 0;
@@ -157,6 +162,49 @@ static void check_inactive_sentinel(const int ncur,
   }
 }
 
+static void legacy_inverse(const double complex *x, const int ncur,
+                           double complex *invRowMajor) {
+  double complex *work =
+      malloc((size_t)ncur * (size_t)ncur * sizeof(*work));
+  double complex *lwork = malloc(256 * sizeof(*lwork));
+  int *ipiv = malloc((size_t)ncur * sizeof(*ipiv));
+  int n = ncur, lda = ncur, info = 0, lw = 256, row, col;
+  for (row = 0; row < ncur; row++)
+    for (col = 0; col < ncur; col++)
+      work[row + (size_t)col * (size_t)ncur] =
+          x[(size_t)row * (size_t)ncur + (size_t)col];
+  M_ZGETRF(&n, &n, work, &lda, ipiv, &info);
+  CHECK(info == 0, "legacy GETRF info=%d", info);
+  M_ZGETRI(&n, work, &lda, ipiv, lwork, &lw, &info);
+  CHECK(info == 0, "legacy GETRI info=%d", info);
+  for (row = 0; row < ncur; row++)
+    for (col = 0; col < ncur; col++)
+      invRowMajor[(size_t)row * (size_t)NsizeMax + (size_t)col] =
+          -work[col + (size_t)row * (size_t)ncur];
+  free(ipiv);
+  free(lwork);
+  free(work);
+}
+
+static void check_regular_matches_legacy(const int ncur, const int *eleIdx,
+                                         const char *label) {
+  double complex x[MAX_DIMENSION * MAX_DIMENSION];
+  double complex legacy[MAX_DIMENSION * MAX_DIMENSION];
+  int row, col;
+  build_active_x(ncur, eleIdx, x);
+  legacy_inverse(x, ncur, legacy);
+  CHECK(GCQpState[0] == GC_QP_INVERSE,
+        "%s state is not INVERSE", label);
+  for (row = 0; row < ncur; row++)
+    for (col = 0; col < ncur; col++) {
+      const size_t k =
+          (size_t)row * (size_t)NsizeMax + (size_t)col;
+      CHECK(cabs(InvM[k] - legacy[k]) <=
+                1.0e-12 * (1.0 + cabs(legacy[k])),
+            "%s inverse row=%d col=%d", label, row, col);
+    }
+}
+
 static void test_dimension_patterns(const int dimension, const int ncur) {
   const double complex sentinel = 73.0 - 19.0 * I;
   unsigned int mask;
@@ -174,6 +222,7 @@ static void test_dimension_patterns(const int dimension, const int ncur) {
         dimension);
   if (SlaterElm == NULL || InvM == NULL) exit(EXIT_FAILURE);
   PfM = InvM + 2U * (size_t)dimension * (size_t)dimension;
+  reset_component();
   fill_slater(SlaterElm, dimension, 1.0);
   fill_slater(SlaterElm + (size_t)dimension * (size_t)dimension, dimension,
               1.7);
@@ -204,7 +253,10 @@ static void test_dimension_patterns(const int dimension, const int ncur) {
           "%s Pf got=(%.17g,%.17g) expected=(%.17g,%.17g)", label,
           creal(PfM[0]), cimag(PfM[0]), creal(expectedPf), cimag(expectedPf));
     CHECK(PfM[1] == -302.0 + 18.0 * I, "%s changed unused Pf slot", label);
-    if (ncur > 0) check_inverse(matrix, ncur, label);
+    if (ncur > 0) {
+      check_inverse(matrix, ncur, label);
+      check_regular_matches_legacy(ncur, eleIdx, label);
+    }
     check_inactive_sentinel(ncur, sentinel, label);
   }
 }
@@ -232,23 +284,113 @@ static void test_qp_range_layout(void) {
   }
 }
 
-static void test_failure_does_not_commit(void) {
+static void test_singular_commits_pfonly(void) {
   const int eleIdx[4] = {0, 1, 2, 3};
   const double complex invSentinel = 27.0 - 4.0 * I;
-  const double complex pfSentinel = -11.0 + 8.0 * I;
   const size_t block = (size_t)NsizeMax * (size_t)NsizeMax;
   size_t i;
+  reset_component();
   memset(SlaterElm, 0, 2U * block * sizeof(*SlaterElm));
   for (i = 0; i < 2 * block; i++) InvM[i] = invSentinel;
-  PfM[0] = pfSentinel;
-  PfM[1] = pfSentinel;
-  CHECK(CalculateMAllGC_fcmp(4, eleIdx, 0, 1) == GC_MALL_PFAFFIAN,
-        "singular matrix reports Pfaffian stage");
-  CHECK(PfM[0] == pfSentinel, "singular matrix committed Pfaffian");
-  for (i = 0; i < 2 * block; i++) {
+  PfM[0] = -11.0 + 8.0 * I;
+  CHECK(CalculateMAllGC_fcmp(4, eleIdx, 0, 1) == GC_MALL_OK,
+        "singular matrix must classify, not fail");
+  CHECK(GCQpState[0] == GC_QP_PFONLY, "singular matrix state");
+  CHECK(PfM[0] == 0.0, "singular matrix PfM must be exactly 0");
+  for (i = 0; i < 2 * block; i++)
     CHECK(InvM[i] == invSentinel,
-          "singular matrix committed inverse index=%zu", i);
+          "singular matrix touched inverse %zu", i);
+}
+
+static void test_structural_zero_row(void) {
+  const int with0[2] = {0, 2};
+  const int without0[2] = {1, 3};
+  int k;
+  reset_component();
+  fill_slater(SlaterElm, NsizeMax, 1.0);
+  for (k = 0; k < NsizeMax; k++) {
+    SlaterElm[k] = 0.0;
+    SlaterElm[(size_t)k * (size_t)NsizeMax] = 0.0;
   }
+  CHECK(CalculateMAllGC_fcmp(2, with0, 0, 1) == GC_MALL_OK,
+        "zero-row rebuild");
+  CHECK(GCQpState[0] == GC_QP_PFONLY && PfM[0] == 0.0,
+        "zero-row state");
+  CHECK(CalculateMAllGC_fcmp(2, without0, 0, 1) == GC_MALL_OK,
+        "regular rebuild");
+  CHECK(GCQpState[0] == GC_QP_INVERSE,
+        "regular state after zero-row");
+  check_regular_matches_legacy(2, without0, "after zero-row");
+}
+
+static void test_low_rank_is_pfonly(void) {
+  const double complex u[4] = {0.7 + 0.1 * I, -0.3 + 0.4 * I,
+                               0.5 - 0.2 * I, 0.9 + 0.3 * I};
+  const double complex v[4] = {0.2 - 0.6 * I, 0.8 + 0.1 * I,
+                               -0.4 + 0.5 * I, 0.1 + 0.7 * I};
+  const int all[4] = {0, 1, 2, 3};
+  const int pair[2] = {0, 1};
+  int i, j;
+  reset_component();
+  for (i = 0; i < 4; i++)
+    for (j = 0; j < 4; j++)
+      SlaterElm[(size_t)i * (size_t)NsizeMax + (size_t)j] =
+          u[i] * v[j] - v[i] * u[j];
+  CHECK(CalculateMAllGC_fcmp(4, all, 0, 1) == GC_MALL_OK,
+        "low-rank rebuild");
+  CHECK(GCQpState[0] == GC_QP_PFONLY, "low-rank state (got %s)",
+        GCComponentStateName(GCQpState[0]));
+  CHECK(cabs(PfM[0]) <= 1.0e-12, "low-rank Pf magnitude %.3e",
+        cabs(PfM[0]));
+  CHECK(CalculateMAllGC_fcmp(2, pair, 0, 1) == GC_MALL_OK,
+        "low-rank pair");
+  CHECK(GCQpState[0] == GC_QP_INVERSE,
+        "two-electron low-rank is regular");
+}
+
+static void test_mixed_components(void) {
+  const int eleIdx[2] = {0, 3};
+  const size_t block = (size_t)NsizeMax * (size_t)NsizeMax;
+  int k;
+  reset_component();
+  fill_slater(SlaterElm, NsizeMax, 1.0);
+  fill_slater(SlaterElm + block, NsizeMax, 1.7);
+  for (k = 0; k < NsizeMax; k++) {
+    SlaterElm[block + (size_t)k] = 0.0;
+    SlaterElm[block + (size_t)k * (size_t)NsizeMax] = 0.0;
+  }
+  CHECK(CalculateMAllGC_fcmp(2, eleIdx, 0, 2) == GC_MALL_OK,
+        "mixed rebuild");
+  CHECK(GCQpState[0] == GC_QP_INVERSE &&
+            GCQpState[1] == GC_QP_PFONLY,
+        "mixed states");
+  CHECK(PfM[1] == 0.0, "mixed PfM[1]");
+  CHECK(CalculateMAllGC_fcmp(2, eleIdx, 1, 2) == GC_MALL_OK,
+        "range rebuild");
+  CHECK(GCQpState[0] == GC_QP_PFONLY,
+        "range slot 0 reads global qp1");
+}
+
+static void test_nonfinite_is_error(void) {
+  const int eleIdx[2] = {0, 1};
+  const double complex pfSentinel = 5.0 + 5.0 * I;
+  reset_component();
+  fill_slater(SlaterElm, NsizeMax, 1.0);
+  SlaterElm[1] = NAN;
+  SlaterElm[(size_t)NsizeMax] = NAN;
+  PfM[0] = pfSentinel;
+  GCQpState[0] = GC_QP_INVERSE;
+  CHECK(CalculateMAllGC_fcmp(2, eleIdx, 0, 1) == GC_MALL_NONFINITE,
+        "NaN status");
+  CHECK(PfM[0] == pfSentinel, "NaN committed PfM");
+}
+
+static void test_vacuum_component(void) {
+  reset_component();
+  CHECK(CalculateMAllGC_fcmp(0, NULL, 0, 1) == GC_MALL_OK,
+        "vacuum rebuild");
+  CHECK(PfM[0] == 1.0 && GCQpState[0] == GC_QP_INVERSE,
+        "vacuum Pf/state");
 }
 
 static void test_invalid_arguments(void) {
@@ -282,11 +424,17 @@ int main(int argc, char **argv) {
   test_dimension_patterns(4, 2);
   test_dimension_patterns(4, 4);
   test_qp_range_layout();
-  test_failure_does_not_commit();
+  test_singular_commits_pfonly();
+  test_structural_zero_row();
+  test_low_rank_is_pfonly();
+  test_mixed_components();
+  test_nonfinite_is_error();
+  test_vacuum_component();
   test_invalid_arguments();
   test_dimension_patterns(6, 2);
   test_dimension_patterns(6, 4);
   test_dimension_patterns(6, 6);
+  GCComponentRelease();
   FreeWorkSpaceAll();
   free(InvM);
   free(SlaterElm);

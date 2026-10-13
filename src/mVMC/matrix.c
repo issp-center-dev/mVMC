@@ -477,7 +477,7 @@ int CalculatePfM_BF_fsz_from(const double complex *sltElmBF, const int *eleIdx,
       if(myStatus!=BF_FSZ_PF_OK) {
 #pragma omp critical
         {
-          if(status==BF_FSZ_PF_OK) {
+          if(myStatus > status) {
             status = myStatus;
             detail = myDetail;
           }
@@ -527,7 +527,7 @@ int CalculatePfM_BF_from_workspace(const double complex *sltElmBF,
     int myDetail = 0;
     int myStatus = calculatePfM_BF_fsz_child_from(sltElmBF, eleIdx, eleSpn,
         qpStart, qpidx, bufM, iwork, work, lwork, rwork, pfMOut, &myDetail);
-    if(status==BF_PF_OK && myStatus!=BF_PF_OK) {
+    if(myStatus > status) {
       status = myStatus;
       detail = myDetail;
     }
@@ -696,7 +696,7 @@ int calculatePfM_BF_fsz_child_from(
   M_ZSKPFA(&uplo, &mthd, &n, bufM, &lda, &pfaff, iwork, work, &lwork, rwork, &info);
   if(info!=0) {
     if(failureDetail != NULL) *failureDetail = info;
-    return BF_FSZ_PF_LAPACK_FAILURE;
+    return info < 0 ? BF_FSZ_PF_INVALID_ARGUMENT : BF_FSZ_PF_LAPACK_FAILURE;
   }
   if(!(isfinite(creal(pfaff)) && isfinite(cimag(pfaff)))) {
     if(failureDetail != NULL) *failureDetail = qpidx+qpStart;

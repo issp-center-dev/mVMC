@@ -31,6 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "physcal_lanczos2.h"
 #include "power_lanczos_stabilized.h"
 #include "power_lanczos_independent.h"
+#include "near_zero_guide.h"
 
 // #define _DEBUG
 // #define _DEBUG_DUMP_SROPTO_STORE
@@ -70,6 +71,88 @@ static void DumpGCSROpt(const int step, const int rank) {
             cimag(meanOH), gradient);
   }
   fclose(fp);
+}
+
+/* Optional read-back of the sign-bearing GC inputs.  Only world rank 0 writes,
+ * after ReadDefFileIdxPara() has validated and broadcast the tables. */
+static void DumpGCInputAudit(void) {
+  const char *path;
+  FILE *fp;
+  int worldRank = 0;
+  int negativeOrbitalInputSignCount = 0;
+  int negativeQPTransSignCount = 0;
+  int writeFailed;
+  int i, j, mpidx;
+  if (FlagGrandCanonical == 0) return;
+  MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  if (worldRank != 0) return;
+  path = getenv("MVMC_GC_INPUT_AUDIT");
+  if (path == NULL || *path == '\0') return;
+  fp = fopen(path, "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open MVMC_GC_INPUT_AUDIT '%s'.\n", path);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    /* Anti-parallel tables are Nsite x Nsite (up site i, down site j). */
+    for (i = 0; i < Nsite; i++) {
+      for (j = 0; j < Nsite; j++) {
+        if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+      }
+    }
+  } else {
+    for (i = 0; i < Nsite2; i++) {
+      for (j = i + 1; j < Nsite2; j++) {
+        if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+      }
+    }
+  }
+  for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
+    for (i = 0; i < Nsite; i++) {
+      if (QPTransSgn[mpidx][i] < 0) negativeQPTransSignCount++;
+    }
+  }
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    fprintf(fp, "orbital_mode antiparallel\n");
+  }
+  fprintf(fp, "ap_flag %d\n", APFlag);
+  fprintf(fp, "nsite %d\n", Nsite);
+  fprintf(fp, "nmptrans %d\n", NMPTrans);
+  fprintf(fp, "nslater %d\n", NSlater);
+  fprintf(fp, "negative_orbital_input_sign_count %d\n",
+          negativeOrbitalInputSignCount);
+  fprintf(fp, "negative_qptrans_sign_count %d\n", negativeQPTransSignCount);
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    /* Spin-orbital numbering: up site i is i, down site j is j+Nsite. */
+    for (i = 0; i < Nsite; i++) {
+      for (j = 0; j < Nsite; j++) {
+        fprintf(fp, "ORBITAL %d %d %d %d\n", i, j + Nsite, OrbitalIdx[i][j],
+                OrbitalSgn[i][j]);
+      }
+    }
+  } else {
+    for (i = 0; i < Nsite2; i++) {
+      for (j = i + 1; j < Nsite2; j++) {
+        fprintf(fp, "ORBITAL %d %d %d %d\n", i, j, OrbitalIdx[i][j],
+                OrbitalSgn[i][j]);
+      }
+    }
+  }
+  for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
+    fprintf(fp, "TRANSWEIGHT %d %.17e %.17e\n", mpidx,
+            creal(ParaQPTrans[mpidx]), cimag(ParaQPTrans[mpidx]));
+    for (i = 0; i < Nsite; i++) {
+      fprintf(fp, "TRANS %d %d %d %d\n", mpidx, i, QPTrans[mpidx][i],
+              QPTransSgn[mpidx][i]);
+    }
+  }
+  /* Buffered write errors (e.g. a full device) surface at ferror/fclose. */
+  writeFailed = ferror(fp) != 0;
+  if (fclose(fp) != 0) writeFailed = 1;
+  if (writeFailed) {
+    fprintf(stderr, "Error: failed to write MVMC_GC_INPUT_AUDIT '%s'.\n", path);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
 }
 void StdFace_main(char *fname);
 
@@ -548,6 +631,7 @@ int main(int argc, char* argv[])
   ReadDefFileIdxPara(fileDefList, comm0);
   if(rank0==0) fprintf(stdout,"End  : Read parameters from *def files.\n");
   StopTimer(11);
+  DumpGCInputAudit();
 
   if(NProjBF > 0 && AllComplexFlag == 0 && NQPFull > 1) {
     /* The real BackFlow MultiQP path is kept serial for OpenMP stability. */
@@ -558,6 +642,11 @@ int main(int argc, char* argv[])
   StartTimer(12);
   if(rank0==0) fprintf(stdout,"Start: Set memories.\n");
   SetMemory();
+  if (FlagGrandCanonical != 0 && GCComponentInit() != GC_MALL_OK) {
+    if (rank0 == 0)
+      fprintf(stderr, "Error: GC component initialization failed.\n");
+    MPI_Abort(comm0, EXIT_FAILURE);
+  }
   if(rank0==0) fprintf(stdout,"End  : Set memories.\n");
   StopTimer(12);
 
@@ -609,6 +698,9 @@ int main(int argc, char* argv[])
   /* initialize variables for quantum projection */
   if(rank0==0) fprintf(stdout,"Start: Initialize variables for quantum projection.\n");
   InitQPWeight();
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  GCTestDumpSpinQP(comm0);
+#endif
   if(rank0==0) fprintf(stdout,"End  : Initialize variables for quantum projection.\n");
   /* initialize output files */
   if(rank0==0) InitFile(fileDefList, rank0);
@@ -648,6 +740,7 @@ int main(int argc, char* argv[])
   if(rank0==0) CloseFile(rank0);
 
   if(rank0==0) fprintf(stdout,"Start: Free Memory.\n");
+  if (FlagGrandCanonical != 0) GCComponentFinalize(comm0);
   FreeMemory();
   FreeMemoryDef();
   if(rank0==0) fprintf(stdout,"End: Free Memory.\n");
@@ -902,9 +995,11 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
   }
 
+  SamplerRepairInit(comm_parent);
   if(rank==0) fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
+    SamplerRepairSetBin(ismp);
     FlushFile(0,rank);
     InitFilePhysCal(ismp, rank);
     if (NLanczosMode == 1 && NLanczosEstimatorMode == 1) {
@@ -992,6 +1087,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StartTimer(21);
 
     WeightAverageWE(comm_parent);
+    if(FlagLanczosGuide) WeightAverageNearZeroGuide(comm_parent);
     WeightAverageGreenFunc(comm_parent);
     ReduceCounter(comm_child2);
 
@@ -1005,6 +1101,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StopTimer(5);
   }
 
+  SamplerRepairFinalize();
   if(rank==0) OutputTime(NDataQtySmp);
 
   return 0;
@@ -1103,6 +1200,28 @@ void outputData() {
 
     if (NLanczosMode > 0 && NLanczosEstimatorMode == 0) {
       if (NLanczosStep == 1) {
+      if (FlagLanczosGuide) {
+        fprintf(FileNZGuide,
+                "% .18e % .0f % .0f % .0f % .0f % .18e % .18e % .18e % .18e\n",
+                DLanczosGuideEps,
+                NearZeroGuideStat[NZG_SAMPLES],
+                NearZeroGuideStat[NZG_FLOORED],
+                NearZeroGuideStat[NZG_EXACT_ZERO],
+                NearZeroGuideStat[NZG_NUMERIC_SKIPPED],
+                NearZeroGuideStat[NZG_SUM_W],
+                NearZeroGuideStat[NZG_SUM_W2],
+                NearZeroGuideStat[NZG_MIN_W],
+                NearZeroGuideStat[NZG_MAX_RATIO]);
+        if(NearZeroGuideStat[NZG_EXACT_ZERO] != 0.0 ||
+           NearZeroGuideStat[NZG_NUMERIC_SKIPPED] != 0.0) {
+          fprintf(stderr,
+                  "warning: near-zero guide bin has %.0f exact-zero and "
+                  "%.0f numerical-skip samples; do not use its Lanczos "
+                  "moments\n",
+                  NearZeroGuideStat[NZG_EXACT_ZERO],
+                  NearZeroGuideStat[NZG_NUMERIC_SKIPPED]);
+        }
+      }
       if (AllComplexFlag == 0) { //real
         lanczosStatus = PhysCalLanczos_real(
           QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQDC_real,

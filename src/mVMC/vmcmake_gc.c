@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "../sfmt/SFMT.h"
+#include "include/gc_antiparallel.h"
 #include "include/gc_config.h"
 #include "include/gc_size.h"
 #include "include/global.h"
@@ -23,6 +24,74 @@
 
 void UpdateProjCnt_fsz(int ri, int rj, int s, int t, int *projCntNew,
                        const int *projCntOld, const int *eleNum);
+
+static int GCAntiMode(void) {
+  return GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral);
+}
+
+static uint32_t GCAntiNext32(void) { return gen_rand32(); }
+
+static void GCRecordCompositeZero(MPI_Comm comm) {
+  int rank = 0;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0)
+    GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+}
+
+static void GCRequireRebuiltAmplitude(const double complex logIp,
+                                      const char *label, MPI_Comm comm) {
+  int rank = 0;
+  if (isfinite(creal(logIp)) && isfinite(cimag(logIp))) return;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0) {
+    if (creal(logIp) == -INFINITY && isfinite(cimag(logIp))) {
+      fprintf(stderr,
+              "Error: GC sampler state has zero projected amplitude "
+              "after %s rebuild.\n",
+              label);
+    } else {
+      fprintf(stderr,
+              "Error: GC sampler state has a nonfinite projected "
+              "amplitude after %s rebuild.\n",
+              label);
+    }
+  }
+  MPI_Abort(comm, EXIT_FAILURE);
+}
+
+/* Uniform index in [0, bound); -1 is checked before any int conversion of
+ * the UINT32_MAX failure value. */
+static int GCAntiDrawIndex(const int bound) {
+  uint32_t draw;
+  if (bound <= 0) return -1;
+  draw = GCAntiDrawBelow((uint32_t)bound, GCAntiNext32);
+  if (draw == UINT32_MAX || draw >= (uint32_t)bound) return -1;
+  return (int)draw; /* draw < positive int bound: representable */
+}
+
+static void GCAntiAbortState(const char *label, MPI_Comm comm) {
+  int rank = 0;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0) {
+    fprintf(stderr,
+            "Error: GC anti-parallel %s state is not a consistent Sz=0 "
+            "configuration (Ncur=%d).\n",
+            label, Ncur);
+  }
+  MPI_Abort(comm, EXIT_FAILURE);
+}
+
+/* All ranks of a chain hold the same configuration; the verdict is shared
+ * so that every rank reaches the same abort before any collective work. */
+static void GCAntiRequireConfig(const int *eleIdx, const int *eleCfg,
+                                const int *eleNum, const char *label,
+                                MPI_Comm comm) {
+  const int invalid =
+      GCAntiValidateConfig(eleIdx, eleCfg, eleNum, Nsite, Ncur) ? 0 : 1;
+  int globalInvalid = invalid;
+  MPI_Allreduce(&invalid, &globalInvalid, 1, MPI_INT, MPI_MAX, comm);
+  if (globalInvalid != 0) GCAntiAbortState(label, comm);
+}
 
 static double GCMoveClassProbability(const enum GCMoveClass moveClass,
                                      const int ncur,
@@ -87,8 +156,8 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
   double proposalRatio = 1.0;
   double complex logIpNew;
   double x;
-  double weight;
   int accepted;
+  const int anti = GCAntiMode();
 
   if (eleIdx == NULL || eleCfg == NULL || eleNum == NULL ||
       (NProj > 0 && (eleProjCnt == NULL || projCntNew == NULL)) ||
@@ -106,6 +175,8 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
         eleNum[arg1] != 0) {
       return 0;
     }
+    /* Anti-parallel pairs vanish outside Sz=0: a hop keeps its spin. */
+    if (anti && eleIdx[arg0] / Nsite != arg1 / Nsite) return 0;
     GCMutateHop(arg0, arg1, eleIdx, eleCfg, eleNum, &oldRs);
     oldSite = oldRs % Nsite;
     newSite = arg1 % Nsite;
@@ -129,6 +200,7 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
         ncurOld + 2 > NsizeMax) {
       return 0;
     }
+    if (anti && arg0 / Nsite == arg1 / Nsite) return 0;
     oldTail0 = eleIdx[ncurOld];
     oldTail1 = eleIdx[ncurOld + 1];
     GCAddPair(arg0, arg1, eleIdx, eleCfg, eleNum, &ncurProposal);
@@ -136,7 +208,8 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
     CalculateNewPfMAddGC(arg0, arg1, pfMNew, eleIdx, ncurOld, qpStart,
                          qpEnd);
     proposalRatio =
-        GCProposalRatioAdd(ncurOld, Nsite2, pAddX, pRemoveY);
+        anti ? GCAntiRatioAdd(ncurOld / 2, Nsite, pAddX, pRemoveY)
+             : GCProposalRatioAdd(ncurOld, Nsite2, pAddX, pRemoveY);
   } else if (moveClass == GC_MOVE_REMOVE) {
     const double pRemoveX =
         GCMoveClassProbability(GC_MOVE_REMOVE, ncurOld, Nsite2);
@@ -146,34 +219,58 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
         arg1 >= ncurOld || ncurOld < 2) {
       return 0;
     }
+    if (anti && eleIdx[arg0] / Nsite == eleIdx[arg1] / Nsite) return 0;
     (void)GCRemovePair(arg0, arg1, eleIdx, eleCfg, eleNum,
                        &ncurProposal);
     MakeProjCnt(projCntNew, eleNum);
     CalculateNewPfMRemoveGC(arg0, arg1, pfMNew, eleIdx, ncurOld,
                             qpStart, qpEnd);
     proposalRatio =
-        GCProposalRatioRemove(ncurOld, Nsite2, pRemoveX, pAddY);
+        anti ? GCAntiRatioRemove(ncurOld / 2, Nsite, pRemoveX, pAddY)
+             : GCProposalRatioRemove(ncurOld, Nsite2, pRemoveX, pAddY);
   } else {
     return 0;
   }
 
   logIpNew = CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm);
   x = LogProjRatio(projCntNew, eleProjCnt);
-  weight = exp(2.0 * (x + creal(logIpNew - *logIpOld))) * proposalRatio;
-  accepted = isfinite(weight) && weight > acceptDraw;
+  if (GCAntiAcceptLog(*logIpOld, logIpNew, x, proposalRatio, acceptDraw,
+                      &accepted) != 0) {
+    int rank = 0;
+    MPI_Comm_rank(comm, &rank);
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: GC sampler met a nonfinite or invalid acceptance "
+              "input (%s mode, move=%d oldLog=(%.17g,%.17g) "
+              "newLog=(%.17g,%.17g) logProjRatio=%.17g ratio=%.17g).\n",
+              anti ? "anti-parallel" : "general", (int)moveClass,
+              creal(*logIpOld), cimag(*logIpOld), creal(logIpNew),
+              cimag(logIpNew), x, proposalRatio);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (creal(logIpNew) == -INFINITY) GCRecordCompositeZero(comm);
   if (accepted) {
-    if (moveClass == GC_MOVE_HOP) {
-      UpdateMAllHopGC(arg0, eleIdx, ncurOld, qpStart, qpEnd);
-    } else if (moveClass == GC_MOVE_ADD) {
-      UpdateMAllAddGC(arg0, arg1, eleIdx, ncurOld, qpStart, qpEnd);
-    } else {
-      UpdateMAllRemoveGC(arg0, arg1, eleIdx, ncurOld, qpStart, qpEnd);
+    const int kind = moveClass == GC_MOVE_HOP
+                         ? GC_COMMIT_HOP
+                         : moveClass == GC_MOVE_ADD ? GC_COMMIT_ADD
+                                                    : GC_COMMIT_REMOVE;
+    const int status = GCCommitAccepted(kind, arg0, arg1, pfMNew, eleIdx,
+                                        ncurOld, ncurProposal, qpStart,
+                                        qpEnd);
+    if (status != GC_MALL_OK) {
+      int rank = 0;
+      MPI_Comm_rank(comm, &rank);
+      if (rank == 0)
+        fprintf(stderr,
+                "Error: GC component commit failed (move=%d status=%d).\n",
+                (int)moveClass, status);
+      MPI_Abort(comm, EXIT_FAILURE);
     }
-    if (NProj > 0) {
+    if (NProj > 0)
       memcpy(eleProjCnt, projCntNew, (size_t)NProj * sizeof(*eleProjCnt));
-    }
     Ncur = ncurProposal;
-    *logIpOld = logIpNew;
+    *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
     return 1;
   }
 
@@ -269,23 +366,38 @@ static void GCDebugCheckFastState(const int *eleIdx,
       GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
   const size_t qpCount = (size_t)(qpEnd - qpStart);
   const size_t invCount = GCCheckedMulSize(qpCount, invStride);
-  const size_t totalCount = GCCheckedAddSize(invCount, qpCount);
-  const int workspaceCount =
-      GCCheckedSizeToInt(totalCount, "GC debug rebuild workspace");
+  double complex *fastInv = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(invCount, sizeof(*fastInv)),
+      "GC debug inverse snapshot");
+  double complex *fastPf = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(qpCount, sizeof(*fastPf)), "GC debug Pf snapshot");
+  int *fastState = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(qpCount, sizeof(*fastState)),
+      "GC debug state snapshot");
   size_t index;
-  RequestWorkSpaceComplex(workspaceCount);
   {
-    double complex *fastInv = GetWorkSpaceComplex((int)invCount);
-    double complex *fastPf = GetWorkSpaceComplex((int)qpCount);
     memcpy(fastInv, InvM, invCount * sizeof(*fastInv));
     memcpy(fastPf, PfM, qpCount * sizeof(*fastPf));
+    memcpy(fastState, GCQpState, qpCount * sizeof(*fastState));
     if (CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd) != GC_MALL_OK) {
       fprintf(stderr, "Error: GC debug full rebuild failed.\n");
       MPI_Abort(comm, EXIT_FAILURE);
     }
     for (index = 0; index < qpCount; index++) {
+      const int fast = fastState[index];
+      const int rebuilt = GCQpState[index];
       const double error = cabs(fastPf[index] - PfM[index]) /
                            fmax(1.0, cabs(PfM[index]));
+      if (fast == GC_QP_PFONLY && rebuilt == GC_QP_INVERSE) {
+        fprintf(stderr,
+                "Error: GC debug state mismatch qp=%zu fast=PFONLY "
+                "rebuild=INVERSE.\n",
+                index + (size_t)qpStart);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      if (fast == GC_QP_INVERSE && rebuilt == GC_QP_PFONLY)
+        GCComponentCountersOf(GCComponentThreadCache())
+            ->debugNearSingular++;
       if (!(isfinite(error) && error <= 1.0e-8)) {
         fprintf(stderr,
                 "Error: GC debug Pfaffian mismatch qp=%zu error=%.17e.\n",
@@ -295,6 +407,9 @@ static void GCDebugCheckFastState(const int *eleIdx,
     }
     for (index = 0; index < qpCount; index++) {
       int row;
+      if (fastState[index] != GC_QP_INVERSE ||
+          GCQpState[index] != GC_QP_INVERSE)
+        continue;
       for (row = 0; row < Ncur; row++) {
         int column;
         for (column = 0; column < Ncur; column++) {
@@ -314,8 +429,11 @@ static void GCDebugCheckFastState(const int *eleIdx,
       }
     }
   }
-  ReleaseWorkSpaceComplex();
+  free(fastState);
+  free(fastPf);
+  free(fastInv);
   *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+  GCRequireRebuiltAmplitude(*logIpOld, "debug", comm);
 }
 
 int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
@@ -328,7 +446,56 @@ int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
   int arg0;
   int arg1;
   int accepted;
-  if (moveClass == GC_MOVE_HOP) {
+  if (GCAntiMode()) {
+    /* Spin-resolved candidates; m pairs occupy m up and m down sites. */
+    const int m = Ncur / 2;
+    if (moveClass == GC_MOVE_HOP) {
+      const int s = GCAntiDrawIndex(2);
+      const int oldK = GCAntiDrawIndex(m);
+      const int newK = GCAntiDrawIndex(Nsite - m);
+      int oldRs;
+      int site;
+      if (s < 0 || oldK < 0 || newK < 0) return 0;
+      oldRs = GCAntiFindOccupied(eleNum, Nsite, s, oldK);
+      site = GCFindKthEmpty(eleNum + s * Nsite, Nsite, newK);
+      if (oldRs < 0 || oldRs >= Nsite2 || site < 0 || site >= Nsite) {
+        return 0;
+      }
+      arg0 = eleCfg[oldRs];
+      if (arg0 < 0 || arg0 >= Ncur) return 0;
+      arg1 = s * Nsite + site;
+    } else if (moveClass == GC_MOVE_ADD) {
+      const int upK = GCAntiDrawIndex(Nsite - m);
+      const int downK = GCAntiDrawIndex(Nsite - m);
+      int up;
+      int down;
+      if (upK < 0 || downK < 0) return 0;
+      up = GCFindKthEmpty(eleNum, Nsite, upK);
+      down = GCFindKthEmpty(eleNum + Nsite, Nsite, downK);
+      if (up < 0 || up >= Nsite || down < 0 || down >= Nsite) return 0;
+      arg0 = up;
+      arg1 = Nsite + down;
+    } else if (moveClass == GC_MOVE_REMOVE) {
+      const int upK = GCAntiDrawIndex(m);
+      const int downK = GCAntiDrawIndex(m);
+      int up;
+      int down;
+      if (upK < 0 || downK < 0) return 0;
+      up = GCAntiFindOccupied(eleNum, Nsite, 0, upK);
+      down = GCAntiFindOccupied(eleNum, Nsite, 1, downK);
+      if (up < 0 || up >= Nsite2 || down < 0 || down >= Nsite2) return 0;
+      arg0 = eleCfg[up];
+      arg1 = eleCfg[down];
+      if (arg0 < 0 || arg0 >= Ncur || arg1 < 0 || arg1 >= Ncur) return 0;
+      if (arg0 > arg1) {
+        const int temporary = arg0;
+        arg0 = arg1;
+        arg1 = temporary;
+      }
+    } else {
+      return 0;
+    }
+  } else if (moveClass == GC_MOVE_HOP) {
     const int emptyCount = Nsite2 - Ncur;
     arg0 = (int)(gen_rand32() % (uint32_t)Ncur);
     arg1 = GCFindKthEmpty(eleNum, Nsite2,
@@ -366,6 +533,7 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
                         const int qpEnd, MPI_Comm comm) {
   int attempt;
   int rank;
+  double complex logIp;
   MPI_Comm_rank(comm, &rank);
   for (attempt = 0; attempt < 100; attempt++) {
     int position;
@@ -376,21 +544,79 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
       eleCfg[position] = -1;
       eleNum[position] = 0;
     }
-    for (position = 0; position < Ncur; position++) {
-      const int emptyCount = Nsite2 - position;
-      const int kth = (int)(gen_rand32() % (uint32_t)emptyCount);
-      const int rs = GCFindKthEmpty(eleNum, Nsite2, kth);
-      eleIdx[position] = rs;
-      eleCfg[rs] = position;
-      eleNum[rs] = 1;
+    if (GCAntiMode()) {
+      /* m up and m down electrons, each spin drawn without repetition. */
+      int s;
+      for (s = 0; s < 2; s++) {
+        int k;
+        for (k = 0; k < Ncur / 2; k++) {
+          const int q = GCAntiDrawIndex(Nsite - k);
+          const int site =
+              q < 0 ? -1 : GCFindKthEmpty(eleNum + s * Nsite, Nsite, q);
+          int rs;
+          int pos;
+          if (site < 0 || site >= Nsite) {
+            if (rank == 0) {
+              fprintf(stderr,
+                      "Error: GC anti-parallel initialization could not "
+                      "place a spin-%d electron (Ncur=%d, Nsite=%d).\n",
+                      s, Ncur, Nsite);
+            }
+            MPI_Abort(comm, EXIT_FAILURE);
+          }
+          rs = s * Nsite + site;
+          pos = s * (Ncur / 2) + k;
+          eleIdx[pos] = rs;
+          eleCfg[rs] = pos;
+          eleNum[rs] = 1;
+        }
+      }
+      GCAntiRequireConfig(eleIdx, eleCfg, eleNum, "initial", comm);
+    } else {
+      for (position = 0; position < Ncur; position++) {
+        const int emptyCount = Nsite2 - position;
+        const int kth = (int)(gen_rand32() % (uint32_t)emptyCount);
+        const int rs = GCFindKthEmpty(eleNum, Nsite2, kth);
+        eleIdx[position] = rs;
+        eleCfg[rs] = position;
+        eleNum[rs] = 1;
+      }
     }
     MakeProjCnt(eleProjCnt, eleNum);
     status = CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd);
     globalStatus = GCCollectiveRebuildStatus(status, comm);
-    if (globalStatus == GC_MALL_OK) return 0;
+    if (globalStatus != GC_MALL_OK) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: GC initial rebuild failed (status=%d).\n",
+                globalStatus);
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    logIp = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+    if (isfinite(creal(logIp)) && isfinite(cimag(logIp))) return 0;
+    if (!(creal(logIp) == -INFINITY && isfinite(cimag(logIp)))) {
+      if (rank == 0) {
+        fprintf(stderr,
+                "Error: GC initial configuration has a nonfinite projected "
+                "amplitude.\n");
+      }
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    if (rank == 0)
+      GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+    if (Ncur == 0) {
+      attempt = 1;
+      break;
+    }
   }
   if (rank == 0) {
-    fprintf(stderr, "Error: makeInitialSampleGC exceeded 100 attempts.\n");
+    fprintf(stderr,
+            "Error: GC initial configuration has zero projected amplitude "
+            "after %d attempt(s) (%s, Ncur=%d). Increase NGCInitNelec or "
+            "check the TransSym weights.\n",
+            attempt, GCAntiMode() ? "anti-parallel mode" : "general mode",
+            Ncur);
   }
   MPI_Abort(comm, EXIT_FAILURE);
   return 1;
@@ -472,16 +698,28 @@ void VMCMakeSampleGC(MPI_Comm comm) {
     copyFromBurnSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
     GCWriteStateDump(stateDump, "RESTORE", -1, TmpEleIdx, TmpEleCfg,
                      TmpEleNum, TmpEleProjCnt);
+    if (GCAntiMode()) {
+      GCAntiRequireConfig(TmpEleIdx, TmpEleCfg, TmpEleNum, "restored", comm);
+    }
     rebuildStatus = CalculateMAllGC_fcmp(Ncur, TmpEleIdx, qpStart, qpEnd);
     rebuildStatus = GCCollectiveRebuildStatus(rebuildStatus, comm);
     if (rebuildStatus != GC_MALL_OK) {
-      (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
-                                TmpEleProjCnt, qpStart, qpEnd, comm);
-      BurnFlag = 0;
+      if (rank == 0)
+        fprintf(stderr,
+                "Error: GC burn-sample rebuild failed (status=%d).\n",
+                rebuildStatus);
+      MPI_Abort(comm, EXIT_FAILURE);
     }
   }
   logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
   if (!isfinite(creal(logIpOld)) || !isfinite(cimag(logIpOld))) {
+    if (!(creal(logIpOld) == -INFINITY && isfinite(cimag(logIpOld)))) {
+      if (rank == 0)
+        fprintf(stderr,
+                "Error: GC restored configuration has a nonfinite "
+                "amplitude.\n");
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
     (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
                               TmpEleProjCnt, qpStart, qpEnd, comm);
     logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
@@ -503,11 +741,16 @@ void VMCMakeSampleGC(MPI_Comm comm) {
           MPI_Abort(comm, EXIT_FAILURE);
         }
         logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+        GCRequireRebuiltAmplitude(logIpOld, "periodic", comm);
         nAccept = 0;
       }
     }
     if (outStep >= nOutStep - NVMCSample) {
       const int sample = outStep - (nOutStep - NVMCSample);
+      if (GCAntiMode() && !GCAntiValidateConfig(TmpEleIdx, TmpEleCfg,
+                                                 TmpEleNum, Nsite, Ncur)) {
+        GCAntiAbortState("sampled", comm);
+      }
       saveEleConfigGC(sample, logIpOld, TmpEleIdx, TmpEleCfg, TmpEleNum,
                       TmpEleProjCnt, Ncur);
       GCWriteStateDump(stateDump, "SAMPLE", sample, TmpEleIdx, TmpEleCfg,

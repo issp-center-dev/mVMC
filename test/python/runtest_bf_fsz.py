@@ -341,7 +341,17 @@ def make_momentum_projection(workdir, nsite=4):
             ))
 
 
+def make_ap_seam_range(workdir, nsite=4):
+    """Migrate the range only; preserve the fixture's BF optimization flags."""
+    path = os.path.join(workdir, "rangebf.def")
+    if os.path.exists(path):
+        definition = build_chain_nn_backflow(length=nsite, antiperiodic=True)
+        with open(path, "w") as fp:
+            fp.write(definition.rangebf_text)
+
+
 def make_ap_momentum_projection(workdir, nsite=4, all_positive=False):
+    make_ap_seam_range(workdir, nsite)
     with open(os.path.join(workdir, "qptransidx.def"), "w") as fp:
         fp.write("=============================================\n")
         fp.write("NQPTrans          2\n")
@@ -360,6 +370,7 @@ def make_ap_momentum_projection(workdir, nsite=4, all_positive=False):
 
 
 def make_ap_opt_projection(workdir, nsite=4, all_positive=False):
+    make_ap_seam_range(workdir, nsite)
     with open(os.path.join(workdir, "qpopttrans.def"), "w") as fp:
         fp.write("=============================================\n")
         fp.write("NQPOptTrans       1\n")
@@ -1420,7 +1431,9 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
         "NVMCWarmUp": "8",
     }
     if use_ap and nonidentity:
-        updates["NVMCSample"] = "64"
+        # The seam-covariant state has a broader H^2 estimator distribution.
+        # Keep the strict support gate and seed; collect enough samples for it.
+        updates["NVMCSample"] = "1024"
     if case_name.endswith("Identity_Real_Experimental"):
         updates["NLanczosSupportMode"] = "1"
     if spin_changing:
@@ -1430,6 +1443,8 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
     elif use_ap:
         updates["NMPTrans"] = "-1"
     update_modpara(bf_workdir, updates)
+    if use_ap:
+        make_ap_seam_range(bf_workdir)
     if spin_changing:
         write_spin_changing_c1_defs(bf_workdir)
     if momentum:
@@ -1437,7 +1452,8 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
             make_ap_momentum_projection(bf_workdir)
         else:
             make_momentum_projection(bf_workdir)
-    init_path = write_nonidentity_init(bf_workdir) if nonidentity else None
+    init_path = write_nonidentity_init(
+        bf_workdir, complex_orbitals=use_ap) if nonidentity else None
     bf_dump = "lanczos_oracle_bf_fsz.dat"
     bf_env = {
         "MVMC_LANCZOS_ORACLE_DUMP": bf_dump,
@@ -1511,12 +1527,11 @@ def run_bf_fsz_lanczos_case(rootdir, case_name, mpi_procs=None):
                 "MVMC_LANCZOS_ORACLE_DUMP": mutation_dump,
                 "MVMC_BF_LANCZOS_STATE_CHECK": "1",
             })
-        if mutation_proc.returncode != 0:
+        if (mutation_proc.returncode == 0 or
+                "BackFlow seam transform mismatch" not in mutation_proc.stdout):
             print(mutation_proc.stdout)
-            return mutation_proc.returncode
-        return assert_lanczos_sign_mutation_changes_oracle(
-            bf_workdir, bf_dump, mutation_workdir, mutation_dump,
-            rank_count=int(mpi_procs) if mpi_procs else 1)
+            return -1
+        return 0
 
     no_bf_workdir = prepare_case(
         rootdir, case_name + "_nobf", include_backflow=False,
@@ -2423,18 +2438,11 @@ def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
                 "MVMC_BF_FSZ_SR_DIFF_FIXED_CONFIG": "1",
             },
         )
-        if mutation_proc.returncode != 0 or not os.path.exists(mutation_dump):
+        if (mutation_proc.returncode == 0 or
+                "BackFlow seam transform mismatch" not in mutation_proc.stdout or
+                os.path.exists(mutation_dump)):
+            print("ERROR: inconsistent AP projection signs were not rejected")
             print(mutation_proc.stdout)
-            return mutation_proc.returncode or -1
-        mutation_values = read_key_values(mutation_dump)
-        if get_int(mutation_values, "negative_qptrans_sign_count") != 0:
-            print("ERROR: all-positive QPTrans sign mutation was not applied")
-            return -1
-        base_ip = complex(*[float(value) for value in values["ip_bf"]])
-        mutation_ip = complex(
-            *[float(value) for value in mutation_values["ip_bf"]])
-        if abs(base_ip - mutation_ip) <= 1.0e-10:
-            print("ERROR: QPTrans sign mutation did not change the BF-FSZ amplitude")
             return -1
     if use_orbital_sign:
         mutation_name = case_name + "_all_positive_orbital_sign_mutation"
@@ -2488,18 +2496,11 @@ def run_sr_diff_case(rootdir, case_name, mpi_procs=None):
             },
             opttrans=True,
         )
-        if mutation_proc.returncode != 0 or not os.path.exists(mutation_dump):
+        if (mutation_proc.returncode == 0 or
+                "BackFlow seam transform mismatch" not in mutation_proc.stdout or
+                os.path.exists(mutation_dump)):
+            print("ERROR: inconsistent AP projection signs were not rejected")
             print(mutation_proc.stdout)
-            return mutation_proc.returncode or -1
-        mutation_values = read_key_values(mutation_dump)
-        if get_int(mutation_values, "negative_qpopttrans_sign_count") != 0:
-            print("ERROR: all-positive QPOptTrans sign mutation was not applied")
-            return -1
-        base_ip = complex(*[float(value) for value in values["ip_bf"]])
-        mutation_ip = complex(
-            *[float(value) for value in mutation_values["ip_bf"]])
-        if abs(base_ip - mutation_ip) <= 1.0e-10:
-            print("ERROR: QPOptTrans sign mutation did not change the BF-FSZ amplitude")
             return -1
     return 0
 
@@ -3911,6 +3912,7 @@ def main():
     if case_name in ap_identity_cases:
         for workdir in (bf_workdir, no_bf_workdir):
             update_modpara(workdir, {"NMPTrans": "-1"})
+            make_ap_seam_range(workdir)
     init_path = write_nonidentity_init(bf_workdir) if nonidentity_momentum_case else None
 
     bf_proc = run_vmc(rootdir, bf_workdir, mpi_procs, init_path)
