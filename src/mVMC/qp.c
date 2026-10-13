@@ -85,6 +85,48 @@ void InitQPWeight() {
   return;
 }
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+/* Testing only: the production quadrature coefficients, so that independent
+ * oracles can use exactly the binary64 values of this run.  Header
+ * "GC_SPIN_QP_V1 G <G> Q <NQPFull>", then "q spidx cs cc ss w_re w_im". */
+void GCTestDumpSpinQP(MPI_Comm comm) {
+  int rank;
+  int failed = 0;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0 && FlagGrandCanonical) {
+    const char *path = getenv("MVMC_GC_SPIN_QP_DUMP");
+    if (path != NULL && *path != '\0') {
+      FILE *fp = fopen(path, "w");
+      if (fp == NULL) {
+        failed = 1;
+      } else {
+        int q;
+        if (fprintf(fp, "GC_SPIN_QP_V1 G %d Q %d\n", NSPGaussLeg, NQPFull) <
+            0)
+          failed = 1;
+        for (q = 0; q < NQPFull; q++) {
+          const int s = q % NSPGaussLeg;
+          if (fprintf(fp, "%d %d %a %a %a %a %a\n", q, s,
+                      creal(SPGLCosSin[s]), creal(SPGLCosCos[s]),
+                      creal(SPGLSinSin[s]), creal(QPFullWeight[q]),
+                      cimag(QPFullWeight[q])) < 0)
+            failed = 1;
+        }
+        if (fclose(fp) != 0) failed = 1;
+      }
+    }
+  }
+  /* No-MPI builds have no MPI_Bcast/MPI_INT stub. */
+#ifdef _mpi_use
+  MPI_Bcast(&failed, 1, MPI_INT, 0, comm);
+#endif
+  if (failed) {
+    if (rank == 0) fprintf(stderr, "Error: GC spin qp dump failed.\n");
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+}
+#endif
+
 
 /* Calculate logarithm of inner product <phi|L|x> */
 double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm) {

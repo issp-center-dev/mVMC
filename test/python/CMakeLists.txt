@@ -59,6 +59,9 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_exact_oracle.py DESTINATION
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_ap_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_ap.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_mp.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_spin_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_spin.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/gc_spin_thresholds.json DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_antiparallel_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_antiparallel_death.py
@@ -1307,7 +1310,7 @@ add_gc_invalid_test(GC_Invalid_HintNegative "NGCInitNelec must satisfy" NGCInitN
 # OrbitalAntiParallel alone selects anti-parallel GC; 2Sz=-1 is rejected.
 add_gc_invalid_test(GC_Invalid_NoOrbitalGeneral "requires 2Sz=0" gc_noorbgen)
 add_gc_invalid_test(GC_Invalid_RealParameter "requires complex variational parameters" gc_realparam)
-add_gc_invalid_test(GC_Invalid_GaussLeg "initially requires NSPGaussLeg=1, NQPOptTrans<=1" NSPGaussLeg=2)
+add_gc_invalid_test(GC_Invalid_GaussLeg "spin projection requires anti-parallel pairing" NSPGaussLeg=2)
 add_gc_invalid_test(GC_Invalid_MPTrans "1 <= abs(NMPTrans) <= NQPTrans"
     gc_qptrans1 NMPTrans=2)
 add_gc_invalid_test(GC_Invalid_MPTransMinus2 "1 <= abs(NMPTrans) <= NQPTrans"
@@ -1318,7 +1321,7 @@ add_gc_invalid_test(GC_Invalid_MPTransIntMin "must be a nonzero integer"
 add_gc_invalid_test(GC_Invalid_MPTransTooLarge "1 <= abs(NMPTrans) <= NQPTrans" NMPTrans=3)
 add_gc_invalid_test(GC_Invalid_MPTransOverflow "must be an exact integer in int range"
     NMPTrans=2147483648)
-add_gc_invalid_test(GC_Invalid_QPOptTrans "initially requires NSPGaussLeg=1, NQPOptTrans<=1"
+add_gc_invalid_test(GC_Invalid_QPOptTrans "GC requires NQPOptTrans<=1"
     gc_opttrans2 opttrans_mode)
 add_gc_invalid_test(GC_Invalid_OptTrans "does not support OptTrans" gc_opttrans1 opttrans_mode)
 
@@ -1505,7 +1508,7 @@ set(GC_ANTIPAIR_INPUT_MUTATIONS header_missing header_norb_zero
     opt_blank_middle orbital_file_missing sz_transfer_flip sz_interall_net2
     sz_nbody_net1 sz_anomalous_same_spin zero_nonconserving_rows alias_orbital
     start_vacuum start_full start_default start_odd ncond_ignored
-    twosz_missing twosz_minus1 twosz_two alias_duplicate all_real gaussleg2
+    twosz_missing twosz_minus1 twosz_two alias_duplicate all_real gaussleg2_stot1
     mptrans2 opttrans backflow rbm locspin lanczos srcg exupdate updateweight)
 list(APPEND GC_ANTIPAIR_INPUT_MUTATIONS
     twosz_fractional twosz_negative_fractional twosz_garbage twosz_suffix
@@ -1693,6 +1696,108 @@ add_gc_mp_test(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0
 set_tests_properties(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0 PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
     PROCESSORS 4)
+
+# Phase 3a: grand-canonical S=0 spin projection.
+add_test(NAME GC_SP_Oracle
+    COMMAND ${PYTHON_EXECUTABLE} grandcanonical_spin_oracle.py --self-test)
+set_tests_properties(GC_SP_Oracle PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    TIMEOUT 600)
+
+function(add_gc_spin_test name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_spin.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+        TIMEOUT 600)
+endfunction()
+foreach(bc pbc apbc)
+    foreach(gauss 2 4 8 16)
+        foreach(store 0 1)
+            add_gc_spin_test(GC_SP_Replay_${bc}_g${gauss}_m0_o${store}
+                replay --boundary ${bc} --gauss ${gauss} --calmode 0
+                --store ${store})
+        endforeach()
+        add_gc_spin_test(GC_SP_Replay_${bc}_g${gauss}_m1_o0
+            replay --boundary ${bc} --gauss ${gauss} --calmode 1 --store 0)
+    endforeach()
+endforeach()
+add_gc_spin_test(GC_SP_Replay_pbc_g3_m1_o0
+    replay --boundary pbc --gauss 3 --calmode 1 --store 0)
+add_gc_spin_test(GC_SP_Weights weights)
+add_gc_spin_test(GC_SP_DumpFail dumpfail --np 1)
+set_tests_properties(GC_SP_DumpFail PROPERTIES TIMEOUT 120)
+if(MPI_FOUND)
+    add_gc_spin_test(GC_SP_DumpFail_mpi dumpfail --np 2)
+    set_tests_properties(GC_SP_DumpFail_mpi PROPERTIES PROCESSORS 2 TIMEOUT 120)
+endif()
+if(MPI_FOUND)
+    foreach(bc pbc apbc)
+        foreach(np 2 3)
+            add_gc_spin_test(GC_SP_MPI_${bc}_g2_m1_o0_np${np}_mpi
+                mpi --boundary ${bc} --gauss 2 --calmode 1 --store 0
+                --np ${np} --nsplit ${np})
+            set_tests_properties(GC_SP_MPI_${bc}_g2_m1_o0_np${np}_mpi
+                PROPERTIES PROCESSORS ${np} TIMEOUT 600)
+            foreach(store 0 1)
+                add_gc_spin_test(GC_SP_MPI_${bc}_g2_m0_o${store}_np${np}_mpi
+                    mpi --boundary ${bc} --gauss 2 --calmode 0
+                    --store ${store} --np ${np} --nsplit ${np})
+                set_tests_properties(
+                    GC_SP_MPI_${bc}_g2_m0_o${store}_np${np}_mpi
+                    PROPERTIES PROCESSORS ${np} TIMEOUT 600)
+            endforeach()
+        endforeach()
+        add_gc_spin_test(GC_SP_MPI_${bc}_g4_m1_o0_np2_split1_mpi
+            mpi --boundary ${bc} --gauss 4 --calmode 1 --store 0
+            --np 2 --nsplit 1)
+        set_tests_properties(GC_SP_MPI_${bc}_g4_m1_o0_np2_split1_mpi
+            PROPERTIES PROCESSORS 2 TIMEOUT 600)
+    endforeach()
+endif()
+foreach(bc pbc apbc)
+    add_gc_spin_test(GC_SP_SR_NStore_${bc} store --boundary ${bc})
+    add_gc_spin_test(GC_SP_Optimize_${bc} optimization --boundary ${bc})
+    add_gc_spin_test(GC_SP_Convergence_${bc} convergence --boundary ${bc})
+endforeach()
+add_gc_spin_test(GC_SP_Mutation mutation)
+add_gc_spin_test(GC_SP_FixtureContract fixture-contract)
+add_gc_spin_test(GC_SP_PilotStats pilotstats)
+add_gc_spin_test(GC_SP_ThresholdContract threshold-contract)
+foreach(bc pbc apbc)
+    add_gc_spin_test(GC_SP_Physical_${bc} physical --boundary ${bc})
+    add_gc_spin_test(GC_SP_SR_${bc} sr --boundary ${bc})
+endforeach()
+foreach(calmode 0 1)
+    add_gc_spin_test(GC_SP_Sample_m${calmode} sample --calmode ${calmode}
+        --sample-dir ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/SpinProjection)
+endforeach()
+add_gc_spin_test(GC_SP_Replay_OMP4_pbc_g8_m1
+    replay --boundary pbc --gauss 8 --calmode 1 --store 0 --expect-threads 4)
+set_tests_properties(GC_SP_Replay_OMP4_pbc_g8_m1 PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+    PROCESSORS 4)
+set(GC_SP_INPUT_CASES
+    g_zero g_negative g_fraction g_decimal g_nan g_inf g_minus_inf
+    g_int_over g_huge g_long g_extra g_workspace_over g_workspace_sum_over
+    s_negative s_nonzero s_fraction s_decimal s_nan s_inf s_int_over
+    general combined spin_jastrow opttrans
+    positive_g2 positive_g3 positive_g8
+    compat_g1_spin_jastrow compat_g1_momentum compat_canonical_g2)
+foreach(gc_sp_case ${GC_SP_INPUT_CASES})
+    foreach(order early late)
+        add_gc_spin_test(GC_SP_Input_${gc_sp_case}_${order}
+            input --case ${gc_sp_case} --order ${order} --np 1)
+        set_tests_properties(GC_SP_Input_${gc_sp_case}_${order}
+            PROPERTIES TIMEOUT 60)
+        if(MPI_FOUND)
+            add_gc_spin_test(GC_SP_Input_${gc_sp_case}_${order}_mpi
+                input --case ${gc_sp_case} --order ${order} --np 2)
+            set_tests_properties(GC_SP_Input_${gc_sp_case}_${order}_mpi
+                PROPERTIES PROCESSORS 2 TIMEOUT 60)
+        endif()
+    endforeach()
+endforeach()
 
 add_test(NAME GC_HPhi_CrossCheck
     COMMAND ${PYTHON_EXECUTABLE} compare_hphi_anomalous.py)

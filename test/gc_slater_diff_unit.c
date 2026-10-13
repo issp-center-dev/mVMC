@@ -99,14 +99,23 @@ static double complex finite_difference(const int ncur, const int *eleIdx,
                                         const int imaginary,
                                         const double epsilon,
                                         const double complex baseOverlap) {
+  const double complex original = Slater[parameter];
   const double complex delta = imaginary ? I * epsilon : epsilon;
   double complex plus;
   double complex minus;
-  Slater[parameter] += delta;
+  double complex restored;
+  Slater[parameter] = original + delta;
   plus = rebuild_overlap(ncur, eleIdx);
-  Slater[parameter] -= 2.0 * delta;
+  Slater[parameter] = original - delta;
   minus = rebuild_overlap(ncur, eleIdx);
-  Slater[parameter] += delta;
+  Slater[parameter] = original;
+  restored = rebuild_overlap(ncur, eleIdx);
+  CHECK(finite_close(restored, baseOverlap,
+                     2.0e-13 * (1.0 + cabs(baseOverlap))),
+        "FD baseline restore ncur=%d parameter=%d got=(%.17g,%.17g) "
+        "expected=(%.17g,%.17g)",
+        ncur, parameter, creal(restored), cimag(restored), creal(baseOverlap),
+        cimag(baseOverlap));
   return (plus - minus) / (2.0 * epsilon * baseOverlap);
 }
 
@@ -907,6 +916,213 @@ static void run_antiparallel_checks(void) {
   }
 }
 
+/* ------------------------------------------------------------------------
+ * Spin-projected anti-parallel fixtures (NSPGaussLeg=G, single translation).
+ * The G=1 fixture above is widened to G spin-quadrature components built by
+ * the production UpdateSlaterElm_fcmp() rotation, so d ln Psi/d f has to
+ * include every rotated spin block, not only the up-down one.
+ * ---------------------------------------------------------------------- */
+static void extend_antiparallel_spin(const int gauss, const double *beta,
+                                     const double *weight) {
+  const size_t slaterCount =
+      (size_t)gauss * (size_t)Nsite2 * (size_t)Nsite2;
+  const size_t inverseCount =
+      (size_t)gauss * (size_t)NsizeMax * (size_t)NsizeMax;
+  int q;
+  NSPGaussLeg = gauss;
+  NQPFix = gauss;
+  NQPFull = gauss;
+  SlaterElm = realloc(SlaterElm, slaterCount * sizeof(*SlaterElm));
+  InvM = realloc(InvM, inverseCount * sizeof(*InvM));
+  PfM = realloc(PfM, (size_t)gauss * sizeof(*PfM));
+  QPFullWeight = realloc(QPFullWeight, (size_t)gauss * sizeof(*QPFullWeight));
+  SPGLCosSin = realloc(SPGLCosSin, (size_t)gauss * sizeof(*SPGLCosSin));
+  SPGLCosCos = realloc(SPGLCosCos, (size_t)gauss * sizeof(*SPGLCosCos));
+  SPGLSinSin = realloc(SPGLSinSin, (size_t)gauss * sizeof(*SPGLSinSin));
+  if (SlaterElm == NULL || InvM == NULL || PfM == NULL ||
+      QPFullWeight == NULL || SPGLCosSin == NULL || SPGLCosCos == NULL ||
+      SPGLSinSin == NULL) {
+    fprintf(stderr, "spin fixture allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  for (q = 0; q < gauss; q++) {
+    const double c = cos(0.5 * beta[q]);
+    const double s = sin(0.5 * beta[q]);
+    SPGLCosSin[q] = c * s;
+    SPGLCosCos[q] = c * c;
+    SPGLSinSin[q] = s * s;
+    QPFullWeight[q] = weight[q];
+  }
+  CHECK(GCComponentInit() == GC_MALL_OK, "spin component init");
+}
+
+/* The rotated same-spin block must be present, otherwise the derivative
+ * checks below could pass with the G=1 (up-down only) chain rule. */
+static void check_rotation_is_present(const int q) {
+  UpdateSlaterElm_fcmp();
+  CHECK(cabs(SlaterElm[(size_t)q * (size_t)Nsite2 * (size_t)Nsite2 + 1U]) >
+            1.0e-3,
+        "spin component %d has no up-up block", q);
+}
+
+static void run_spin_checks(void) {
+  const double beta[2] = {0.37, 1.21};
+  const double weight[2] = {0.7, 0.3};
+  const int two2[] = {3, 0};
+  const int two4[] = {2, 0, 3, 1};
+  const int four2[] = {5, 2};
+  const int four4[] = {6, 1, 0, 5};
+  const int four6[] = {7, 3, 4, 0, 6, 2};
+  const int four8[] = {4, 1, 7, 2, 0, 5, 3, 6};
+  int shared;
+  int ap;
+
+  for (shared = 0; shared < 2; shared++) {
+    for (ap = 0; ap < 2; ap++) {
+      initialize_antiparallel_fixture(2, shared, ap);
+      extend_antiparallel_spin(2, beta, weight);
+      /* The shared two-site table has F01 = F10 (a pure singlet), whose
+       * same-spin blocks vanish for every beta. */
+      if (!shared) {
+        check_rotation_is_present(0);
+        check_rotation_is_present(1);
+      }
+      check_all_derivatives(0, NULL);
+      check_all_derivatives(2, two2);
+      check_all_derivatives(4, two4);
+      set_antiparallel_translation(1);
+      check_all_derivatives(2, two2);
+      check_all_derivatives(4, two4);
+      free_antiparallel_fixture();
+
+      initialize_antiparallel_fixture(4, shared, ap);
+      extend_antiparallel_spin(2, beta, weight);
+      check_rotation_is_present(1);
+      check_all_derivatives(0, NULL);
+      check_all_derivatives(2, four2);
+      check_all_derivatives(4, four4);
+      check_all_derivatives(6, four6);
+      check_all_derivatives(8, four8);
+      set_antiparallel_translation(1);
+      check_all_derivatives(4, four4);
+      check_all_derivatives(8, four8);
+      free_antiparallel_fixture();
+    }
+  }
+}
+
+/* One spin component is exactly zero (PFONLY) while the projected overlap is
+ * not: its cofactor must still enter the derivative. */
+static void run_spin_pfonly_checks(void) {
+  const double beta[2] = {0.0, 0.5 * acos(-1.0)};
+  const double weight[2] = {0.7, 0.3};
+  const int occupied03[2] = {0, 3};
+  double complex gradient[16];
+  double complex ip;
+  initialize_antiparallel_fixture(2, 0, 0);
+  extend_antiparallel_spin(2, beta, weight);
+  Slater[0] = 1.0;
+  Slater[1] = 0.0;
+  Slater[2] = 2.0 + 0.2 * I;
+  Slater[3] = 3.0;
+  ip = rebuild_overlap(2, occupied03);
+  CHECK(GCQpState[0] == GC_QP_PFONLY, "spin zero component state %s",
+        GCComponentStateName(GCQpState[0]));
+  CHECK(GCQpState[1] == GC_QP_INVERSE, "spin regular component state %s",
+        GCComponentStateName(GCQpState[1]));
+  CHECK(PfM[0] == 0.0, "spin zero component Pf=(%.17g,%.17g)",
+        creal(PfM[0]), cimag(PfM[0]));
+  CHECK(cabs(ip) > 0.1, "spin composite is nonzero");
+  CHECK(GCComponentGradient(0, 0, 2, occupied03, gradient,
+                            GCComponentThreadCache()) == GC_MALL_OK,
+        "spin zero component gradient");
+  /* beta=0: A_{0up,1dn} = cc F01 with cc=1, so dPf/dF01 of the zero
+   * component is the cofactor 1. */
+  CHECK(finite_close(gradient[1], 1.0, 1.0e-14),
+        "spin zero component dPf/dF01=(%.17g,%.17g)", creal(gradient[1]),
+        cimag(gradient[1]));
+  check_all_derivatives(2, occupied03);
+  CHECK(GCQpState[0] == GC_QP_PFONLY,
+        "spin restored zero component state %s",
+        GCComponentStateName(GCQpState[0]));
+  CHECK(GCQpState[1] == GC_QP_INVERSE,
+        "spin restored regular component state %s",
+        GCComponentStateName(GCQpState[1]));
+  CHECK(PfM[0] == 0.0, "spin restored zero component Pf=(%.17g,%.17g)",
+        creal(PfM[0]), cimag(PfM[0]));
+  free_antiparallel_fixture();
+}
+
+/* Rotated PFONLY cofactors under OpenMP.  F = diag(0,1,2,3) has no
+ * antisymmetric part and cc+ss=1, so every rotated component equals
+ * [[0,D],[-D,0]] with D = F: Pf = det D = 0 at full filling and the only
+ * nonzero cofactor is C[0,4] = 1*2*3 = 6.  The 28 pairs of each call are
+ * distributed over the team. */
+static void run_spin_cofactor_omp_audit(void) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
+  const double beta[2] = {0.37, 1.21};
+  const double weight[2] = {0.7, 0.3};
+  int eleIdx[8];
+  double complex gradient[64];
+  int iteration;
+  int i;
+  int q;
+  if (requiredText == NULL || *requiredText == '\0') {
+    CHECK(0, "--spin-omp requires MVMC_GC_REQUIRE_OMP_THREADS");
+    return;
+  }
+  initialize_antiparallel_fixture(4, 0, 0);
+  extend_antiparallel_spin(2, beta, weight);
+  for (i = 0; i < NSlater; i++) Slater[i] = 0.0;
+  for (i = 0; i < 4; i++) Slater[i * 4 + i] = (double)i;
+  UpdateSlaterElm_fcmp();
+  for (i = 0; i < 8; i++) eleIdx[i] = i;
+  for (q = 0; q < 2; q++) {
+    CHECK(GCComponentRebuild(q, q, 8, eleIdx, GCComponentThreadCache()) ==
+              GC_MALL_OK,
+          "spin cofactor audit rebuild q=%d", q);
+    CHECK(GCQpState[q] == GC_QP_PFONLY,
+          "rotated component %d is not PFONLY (%s)", q,
+          GCComponentStateName(GCQpState[q]));
+  }
+  for (iteration = 0; iteration < 64; iteration++) {
+    q = iteration % 2;
+    CHECK(GCComponentGradient(q, q, 8, eleIdx, gradient,
+                              GCComponentThreadCache()) == GC_MALL_OK,
+          "spin cofactor audit gradient iteration=%d", iteration);
+    for (i = 0; i < 8; i++) {
+      int j;
+      for (j = 0; j < 8; j++) {
+        const double complex expected =
+            i == 0 && j == 4 ? 6.0 : i == 4 && j == 0 ? -6.0 : 0.0;
+        CHECK(finite_close(gradient[(size_t)i * 8U + (size_t)j], expected,
+                           1.0e-12),
+              "spin cofactor audit gradient[%d,%d] q=%d", i, j, q);
+      }
+    }
+  }
+  {
+    const int required = atoi(requiredText);
+    GCComponentOmpAudit audit;
+    GCComponentOmpAuditTotal(GC_OMP_COFACTOR, &audit);
+    CHECK(audit.teamMin == required && audit.teamMax == required,
+          "spin cofactor audit team min/max=%d/%d expected=%d",
+          audit.teamMin, audit.teamMax, required);
+    CHECK(audit.workers >= 2, "spin cofactor audit workers=%d",
+          audit.workers);
+    CHECK(audit.workCount == 64LL * 28LL,
+          "spin cofactor audit work=%lld expected=%lld", audit.workCount,
+          64LL * 28LL);
+    printf("spin cofactor audit: team=%d/%d workers=%d work=%lld\n",
+           audit.teamMin, audit.teamMax, audit.workers, audit.workCount);
+  }
+  free_antiparallel_fixture();
+#else
+  CHECK(0, "--spin-omp requires MVMC_ENABLE_FAULT_INJECTION");
+#endif
+}
+
 static void free_fixture(void) {
   GCComponentRelease();
   FreeWorkSpaceAll();
@@ -925,6 +1141,12 @@ int main(int argc, char **argv) {
 #endif
   if (argc > 1 && strcmp(argv[1], "--antiparallel") == 0) {
     run_antiparallel_checks();
+  } else if (argc > 1 && strcmp(argv[1], "--spin") == 0) {
+    run_spin_checks();
+  } else if (argc > 1 && strcmp(argv[1], "--spin-pfonly") == 0) {
+    run_spin_pfonly_checks();
+  } else if (argc > 1 && strcmp(argv[1], "--spin-omp") == 0) {
+    run_spin_cofactor_omp_audit();
   } else if (argc > 1 && strcmp(argv[1], "--multiqp") == 0) {
     run_multiqp_checks();
     run_cofactor_omp_audit();

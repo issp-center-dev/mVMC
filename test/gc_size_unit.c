@@ -17,6 +17,17 @@ static int check_boundaries(void) {
     return 1;
   }
   if (GCCheckedSizeToInt((size_t)INT_MAX, "int max") != INT_MAX) return 1;
+  /* 7G workspace bound of the GC spin-projection input gate. */
+  if (!GCSpinQuadratureFitsInt(1)) return 1;
+  if (!GCSpinQuadratureFitsInt(INT_MAX / 7)) return 1;
+  if (GCSpinQuadratureFitsInt(INT_MAX / 7 + 1)) return 1;
+  if (GCSpinQuadratureFitsInt(400000000)) return 1;
+  if (GCSpinQuadratureFitsInt(INT_MAX / 2)) return 1;
+  if (GCSpinQuadratureFitsInt(1073741824)) return 1;
+  if (GCSpinQuadratureFitsInt(INT_MAX)) return 1;
+  if (GCSpinQuadratureFitsInt(0)) return 1;
+  if (GCSpinQuadratureFitsInt(-1)) return 1;
+  if (GCSpinQuadratureFitsInt(INT_MIN)) return 1;
 
   zeroAllocation = GCCheckedMalloc(0, "logical zero allocation");
   if (zeroAllocation == NULL) return 1;

@@ -13,6 +13,7 @@ version.
 
 #include "include/gc_size.h"
 #include "include/global.h"
+#include "include/gc_antiparallel.h"
 #include "include/locgrn_gc.h"
 #include "include/pfupdate_gc.h"
 #include "include/projection.h"
@@ -26,6 +27,20 @@ static double complex GCProjectedCandidate(const double complex *pfMNew) {
                           MPI_COMM_SELF);
 }
 
+/* Anti-parallel GC samples only M=0 states and its (spin-projected) wave
+ * function vanishes outside M=0, so a local Green function vanishes whenever
+ * the operator as a whole changes S^z.  Single factors may flip spins (e.g.
+ * S+_i S-_j).  The individual spin-rotated components are not zero outside
+ * M=0, so this cannot be left to the matrix structure.  General pairing does
+ * not conserve S^z and is not filtered. */
+static int GCAntiSzForbidden(const long long twiceDeltaSz) {
+  return twiceDeltaSz != 0 &&
+         GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral);
+}
+
+/* 2 S^z carried by fused orbital rs = site + spin*Nsite (+1 up, -1 down). */
+static int GCTwiceSz(const int rs) { return 1 - 2 * (rs / Nsite); }
+
 double complex GreenFunc1GC(const int rsi, const int rsj,
                             const double complex ip, const int ncur,
                             int *eleIdx, int *eleCfg, int *eleNum,
@@ -35,6 +50,8 @@ double complex GreenFunc1GC(const int rsi, const int rsj,
   double projectionRatio;
   double complex candidateOverlap;
 
+  if (GCAntiSzForbidden((long long)GCTwiceSz(rsi) - GCTwiceSz(rsj)))
+    return 0.0;
   if (rsi == rsj) return (double)eleNum[rsi];
   if (eleNum[rsi] != 0 || eleNum[rsj] == 0) return 0.0;
   particle = eleCfg[rsj];
@@ -69,6 +86,9 @@ double complex GreenFunc2GC(const int rsi, const int rsj, const int rsk,
   double projectionRatio;
   double complex candidateOverlap;
 
+  if (GCAntiSzForbidden((long long)GCTwiceSz(rsi) + GCTwiceSz(rsk) -
+                        GCTwiceSz(rsj) - GCTwiceSz(rsl)))
+    return 0.0;
   if (rsi == rsj) {
     if (rsj == rsk) {
       if (rsk == rsl) return (double)eleNum[rsi];
@@ -157,6 +177,12 @@ double complex GreenFuncNGC(const int n, int *rsi, int *rsj,
   double complex candidateOverlap;
 
   if (n <= 0 || n > scratch->maxN) return 0.0;
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    long long twiceDeltaSz = 0;
+    for (k = 0; k < n; k++)
+      twiceDeltaSz += (long long)GCTwiceSz(rsi[k]) - GCTwiceSz(rsj[k]);
+    if (twiceDeltaSz != 0) return 0.0;
+  }
   if (n == 1) {
     return GreenFunc1GC(rsi[0], rsj[0], ip, ncur, eleIdx, eleCfg, eleNum,
                         eleProjCnt, scratch);
@@ -248,6 +274,8 @@ double complex GreenFuncPairAddGC(
   double projectionRatio;
   double complex candidateOverlap;
   (void)eleCfg;
+  if (GCAntiSzForbidden((long long)GCTwiceSz(rsa) + GCTwiceSz(rsb)))
+    return 0.0;
   if (rsa == rsb) return 0.0;
   if (eleNum[rsa] != 0 || eleNum[rsb] != 0) return 0.0;
   /* Defensive only: GC sets NsizeMax = Nsite2, so two empty orbitals
@@ -282,6 +310,8 @@ double complex GreenFuncPairRemoveGC(
   int p0;
   int p1;
   int qpidx;
+  if (GCAntiSzForbidden(-((long long)GCTwiceSz(rsi) + GCTwiceSz(rsj))))
+    return 0.0;
   if (rsi == rsj) return 0.0;
   if (eleNum[rsi] == 0 || eleNum[rsj] == 0) return 0.0;
   if (ncur < 2) return 0.0;

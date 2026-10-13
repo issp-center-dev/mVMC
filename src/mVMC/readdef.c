@@ -183,6 +183,64 @@ static int ParseStrictLongLong(const char *text, long long *value) {
   return 0;
 }
 
+/* A ModPara integer whose conversion depends on NGrandCanonical, which may
+ * be declared later in the file: grand-canonical input requires an exact
+ * integer token, canonical input keeps the legacy conversion. */
+typedef struct {
+  int seen;
+  int invalid;
+  int exact;
+  double legacy;
+} ModParaIntRecord;
+
+static void RecordModParaInt(ModParaIntRecord *record, FILE *fp,
+                             const char *line, const char *valueText,
+                             const double legacy) {
+  long long raw;
+  int offset = 0;
+  record->seen = 1;
+  record->invalid = 0;
+  record->legacy = legacy;
+  if (strchr(line, '\n') == NULL && !feof(fp)) {
+    int ch;
+    record->invalid = 1;
+    /* A continuation is part of this value, never another keyword. */
+    while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
+  }
+  if (sscanf(line, "%*s %*s %n", &offset) < 0 ||
+      !LineTailIsWhitespace(line, offset) ||
+      ParseStrictLongLong(valueText, &raw) != 0 || raw < INT_MIN ||
+      raw > INT_MAX) {
+    record->invalid = 1;
+  } else {
+    record->exact = (int)raw;
+  }
+}
+
+static int StoreModParaInt(const ModParaIntRecord *record,
+                           const int grandCanonical, const char *name,
+                           int *target) {
+  if (!record->seen) return 0;
+  if (grandCanonical) {
+    if (record->invalid) {
+      fprintf(stderr, "Error: %s must be an exact integer in int range.\n",
+              name);
+      return 1;
+    }
+    *target = record->exact;
+    return 0;
+  }
+  /* Valid canonical input keeps the legacy cast; reject only values whose
+   * conversion to int would be undefined. */
+  if (!isfinite(record->legacy) || record->legacy < (double)INT_MIN ||
+      record->legacy > (double)INT_MAX) {
+    fprintf(stderr, "Error: %s must be a finite value in int range.\n", name);
+    return 1;
+  }
+  *target = (int)record->legacy;
+  return 0;
+}
+
 static int ReadAnomalousCount(FILE *fp, int *result,
                               const char *expectedName,
                               const char *defname) {
@@ -1175,10 +1233,47 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                 "Error: NGrandCanonical=1 does not support BackFlow.\n");
         info = 1;
       }
-      if (bufInt[IdxSPGaussLeg] != 1 || bufInt[IdxNQPOptTrans] > 1) {
-        fprintf(stderr,
-                "Error: NGrandCanonical=1 initially requires "
-                "NSPGaussLeg=1, NQPOptTrans<=1.\n");
+      {
+        const int gcG = bufInt[IdxSPGaussLeg];
+        /* Under the admitted G>1 scope abs(NMPTrans)=NQPOptTrans=1, so
+         * NQPFull=NQPFix=G and setmemory.c allocates NQPFull+NQPFix+5*G
+         * complex entries in int arithmetic; check 7G before any int
+         * product or sum is formed.  The later CheckedIntProduct3 guard on
+         * NQPFix/NQPFull stays in place. */
+        if (gcG <= 0) {
+          fprintf(stderr, "Error: GC NSPGaussLeg must be positive.\n");
+          info = 1;
+        } else if (!GCSpinQuadratureFitsInt(gcG)) {
+          fprintf(stderr,
+                  "Error: GC NSPGaussLeg workspace exceeds int range.\n");
+          info = 1;
+        } else if (gcG > 1) {
+          if (iFlgOrbitalGeneral != 0) {
+            fprintf(stderr, "Error: GC spin projection requires "
+                            "anti-parallel pairing.\n");
+            info = 1;
+          }
+          if (bufInt[IdxSPStot] != 0) {
+            fprintf(stderr,
+                    "Error: GC spin projection requires NSPStot=0.\n");
+            info = 1;
+          }
+          if (bufInt[IdxMPTrans] != 1 && bufInt[IdxMPTrans] != -1) {
+            fprintf(stderr, "Error: GC spin projection currently requires "
+                            "abs(NMPTrans)=1.\n");
+            info = 1;
+          }
+          /* SpinJastrow exp(sum v m_i m_j) is not a spin scalar and would
+           * break the projected S=0 state, even from zero coefficients. */
+          if (bufInt[IdxNSpinJast] > 0) {
+            fprintf(stderr, "Error: GC spin projection does not support "
+                            "SpinJastrow.\n");
+            info = 1;
+          }
+        }
+      }
+      if (bufInt[IdxNQPOptTrans] > 1) {
+        fprintf(stderr, "Error: GC requires NQPOptTrans<=1.\n");
         info = 1;
       }
       if (FlagOptTrans > 0) {
@@ -3429,6 +3524,8 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
       cFileNameListFile[KWOrbitalParallel][0] == '\0';
   int sawTwoSz = 0, invalidTwoSz = 0, exactTwoSz = 0;
   double legacyTwoSz = 0.0;
+  ModParaIntRecord spinGauss = {0, 0, 0, 0.0};
+  ModParaIntRecord spinStot = {0, 0, 0, 0.0};
   fprintf(stdout, "Start: Read ModPara File .\n");
   for (iKWidx = 0; iKWidx < KWIdxInt_end; iKWidx++) {
     strcpy(defname, cFileNameListFile[iKWidx]);
@@ -3530,9 +3627,9 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
                 bufInt[Idx2Sz] = (int)dtmp;
               }
             } else if (CheckWords(ctmp, "NSPGaussLeg") == 0) {
-              bufInt[IdxSPGaussLeg] = (int) dtmp;
+              RecordModParaInt(&spinGauss, fp, ctmp2, valueText, dtmp);
             } else if (CheckWords(ctmp, "NSPStot") == 0) {
-              bufInt[IdxSPStot] = (int) dtmp;
+              RecordModParaInt(&spinStot, fp, ctmp2, valueText, dtmp);
             } else if (CheckWords(ctmp, "NMPTrans") == 0) {
               long long rawNMPTrans;
               int offset = 0;
@@ -3622,6 +3719,13 @@ int GetInfoFromModPara(int *bufInt, double *bufDouble) {
               /* Preserve the canonical reader's existing conversion. */
               bufInt[Idx2Sz] = (int)legacyTwoSz;
             }
+          }
+          if (StoreModParaInt(&spinGauss, bufInt[IdxNGrandCanonical] == 1,
+                              "NSPGaussLeg", &bufInt[IdxSPGaussLeg]) != 0 ||
+              StoreModParaInt(&spinStot, bufInt[IdxNGrandCanonical] == 1,
+                              "NSPStot", &bufInt[IdxSPStot]) != 0) {
+            fclose(fp);
+            return ReadDefFileError(defname);
           }
           if (bufInt[IdxRndSeed] < 0) {
             bufInt[IdxRndSeed] = (int) time(NULL);
