@@ -1,3 +1,12 @@
+---
+date: 2026-10-16
+datetime: 2026-10-16 13:12 JST
+model: OpenAI GPT-6 Codex
+summary: |
+  Four-site grand-canonical momentum-projection example.
+  Clarify exact-zero vacuum/full boundaries for momentum-only projection.
+---
+
 # Grand-canonical momentum projection
 
 This expert-mode sample is a four-site periodic ring with anti-parallel
@@ -6,9 +15,13 @@ weights `(1, -1, 1, -1)/4`, and `NMPTrans=4` selects all four translations.
 The pair function itself is not translation invariant, so the projection is
 nontrivial.
 
-The `K=pi` vacuum has exactly zero projected amplitude.  Keep
-`NGCInitNelec=4` (or another nonzero even value); an initial configuration
-with zero projected amplitude stops with a diagnostic.
+The translation weights sum exactly to zero, so both the vacuum and the
+fully occupied configuration have exactly zero projected amplitude. This
+also applies with `NSPGaussLeg=1` (momentum projection without spin projection).
+Keep `NGCInitNelec=4`, or another even value with `0 < NGCInitNelec < 8`;
+starting at either boundary stops with a diagnostic after one attempt.
+Small nonzero weight sums are not treated as zero, and exact cancellation
+at intermediate particle numbers is not guaranteed.
 
 From this directory, run with the path to a built executable:
 

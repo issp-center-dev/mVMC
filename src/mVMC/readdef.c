@@ -1238,11 +1238,13 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         const long long gcR = bufInt[IdxMPTrans] < 0
                                   ? -(long long)bufInt[IdxMPTrans]
                                   : (long long)bufInt[IdxMPTrans];
-        /* Check the complete QP block before any int products or offsets. */
+        /* Check the complete QP block before any int products or offsets.
+         * Invalid NMPTrans is diagnosed above, independently of workspace. */
         if (gcG <= 0) {
           fprintf(stderr, "Error: GC NSPGaussLeg must be positive.\n");
           info = 1;
-        } else if (gcR > INT_MAX || !GCProjectionWorkspaceFitsInt(gcG, (int)gcR)) {
+        } else if (gcR > 0 && gcR <= INT_MAX &&
+                   !GCProjectionWorkspaceFitsInt(gcG, (int)gcR)) {
           fprintf(stderr,
                   "Error: GC NSPGaussLeg workspace exceeds int range.\n");
           info = 1;

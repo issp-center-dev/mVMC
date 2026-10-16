@@ -633,7 +633,7 @@ Keywords and parameters
    ``GC component stats: ...`` reports how often each path was used. A
    measurement sample that cannot be evaluated now stops every rank instead
    of being skipped, and an initial configuration whose projected amplitude
-   is zero is reported with a request to raise ``NGCInitNelec`` or to check
+   is zero is reported with a request to change ``NGCInitNelec`` or to check
    the ``TransSym`` weights. Acceptance is decided in the log domain for both
    pairing forms, so a finite but large amplitude ratio is accepted rather
    than rejected by an overflowing weight.
@@ -644,10 +644,8 @@ Keywords and parameters
    the total momentum :math:`K`. Because the component for a translation
    :math:`R` evaluates the pair function at the translated sites, the
    projected state satisfies
-   :math:`\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle`. For
-   :math:`K\ne0` the vacuum has zero projected amplitude, so give
-   ``NGCInitNelec>=2``; an initial configuration with zero amplitude stops
-   with a diagnostic. A pair function that is not translation invariant
+   :math:`\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle`.
+   A pair function that is not translation invariant
    makes the projection nontrivial. Configurations whose translated
    components vanish are handled as Pfaffian-only components (a direct
    Pfaffian per candidate), which is correct but slower than the inverse
@@ -656,6 +654,17 @@ Keywords and parameters
    amplitude. Thus, with pair-creation terms and an exact node such as the
    :math:`K\ne0` vacuum, it is smaller than
    :math:`\|H\Psi\|^2/\|\Psi\|^2` by the nodal contribution.
+
+   If the sum of the parsed ``TransSym`` weights is exactly zero, the vacuum
+   and fully occupied configurations have exactly zero projected amplitude.
+   This applies both to momentum projection alone (``NSPGaussLeg=1``) and
+   to combined spin/momentum projection. Choose an even particle number
+   with ``0 < NGCInitNelec < 2*Nsite`` in that case; starting at either
+   forbidden boundary produces an explicit error after one attempt.
+   Small nonzero weight sums are not treated as zero. This exact-zero
+   guarantee does not extend to cancellation nodes at intermediate particle
+   numbers. It does not change the finite-quadrature weights or renormalize
+   particle-number sectors.
 
    With anti-parallel pairing, ``NSPGaussLeg=G>=2`` and ``NSPStot=0``
    project the trial state onto total spin :math:`S=0` with the
@@ -672,8 +681,8 @@ Keywords and parameters
    :math:`e^{-i\beta S^y}`, :math:`x` runs over the
    :math:`N_\uparrow=N_\downarrow` configurations of every even particle
    number, and :math:`P_{\rm ch}` collects the spin-scalar correlation
-   factors such as Gutzwiller and Jastrow. ``NSPGaussLeg=1`` keeps the
-   unprojected state (:math:`\beta=0`, weight 1). The same weights are used
+   factors such as Gutzwiller and Jastrow. ``NSPGaussLeg=1`` omits the
+   spin projection (:math:`\beta=0`, weight 1). The same weights are used
    in all particle-number sectors: the vacuum amplitude is
    :math:`\sum_g a_g`, which tends to 1 only for large :math:`G`, and the
    sectors are not renormalized separately. A finite :math:`G` approximates
@@ -691,15 +700,6 @@ Keywords and parameters
    :math:`S=0`. General pairing and nonzero ``NSPStot`` are not supported
    with the spin projection. The existing prohibition on ``OptTrans`` in
    GC mode also remains in effect.
-
-   If the sum of the parsed ``TransSym`` weights is exactly zero, the vacuum
-   and fully occupied configurations have exactly zero projected amplitude.
-   Choose ``0 < NGCInitNelec < 2*Nsite`` in that case; starting at either
-   forbidden boundary produces an explicit error after one attempt.
-   Small nonzero weight sums are not treated as zero. This exact-zero
-   guarantee does not extend to cancellation nodes at intermediate particle
-   numbers. It does not change the finite-quadrature weights or renormalize
-   particle-number sectors.
 
    The Hamiltonian needs to conserve only :math:`S^z`; it does not have to be
    :math:`SU(2)` symmetric. Each measured operator whose total :math:`S^z`

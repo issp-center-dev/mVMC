@@ -621,21 +621,29 @@ ModParaファイル (modpara.def)
    toolchain では同等の strict floating-point option が必要です。計算終了時に
    ``GC component stats: ...`` の1行で各経路の使用回数を出力します。評価できない
    測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
-   ``NGCInitNelec`` の増加または ``TransSym`` の重みの確認を求める診断で停止します。
+   ``NGCInitNelec`` の変更または ``TransSym`` の重みの確認を求める診断で停止します。
 
    運動量射影は canonical 計算と同様に、``TransSym`` の先頭
    ``abs(NMPTrans)`` 個のpatternと複素重みを使います。並進 :math:`R` に
    :math:`e^{-iKR}/N_{\rm T}` を与えると全運動量 :math:`K` を選択し、各成分が
    並進先siteのpair関数を評価する規約では
    :math:`\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle` となります。
-   :math:`K\ne0` では真空の射影振幅が0なので ``NGCInitNelec>=2`` を指定して
-   ください。振幅0の初期配置は診断を出して停止します。並進不変でないpair関数を
+   並進不変でないpair関数を
    使うと射影は非自明になり、並進成分が0になる配置は Pfaffian-only 成分として
    候補ごとに完全な Pfaffian を評価します。これは正しい処理ですが、逆行列更新より
    遅くなります。``zvo_out`` の :math:`\langle H^2\rangle` は振幅非零の
    配置上の :math:`|E_{\rm loc}|^2` のsample平均です。そのためpair生成項と
    :math:`K\ne0` の真空のような節がある場合、節の寄与だけ
    :math:`\|H\Psi\|^2/\|\Psi\|^2` より小さくなります。
+
+   読み込んだ ``TransSym`` 重みの和が厳密に0の場合、真空と完全充填配置の
+   射影振幅は厳密に0になります。これは運動量射影のみ（``NSPGaussLeg=1``）でも、
+   スピン射影と併用する場合でも適用されます。この場合は
+   ``0 < NGCInitNelec < 2*Nsite`` を満たす偶数を指定してください。
+   禁止された境界配置から始めると1回で明示errorになります。
+   小さい非零の重み和を0とみなすことはありません。この厳密零の保証は、
+   中間粒子数で打ち消しにより生じる節には拡張されません。有限点数の射影重みと
+   粒子数sectorの規格化は変更しません。
 
    反平行pairでは ``NSPGaussLeg=G>=2`` と ``NSPStot=0`` を指定すると、
    canonical計算と同じ :math:`\beta\in[0,\pi]` のGauss-Legendre求積で
@@ -650,7 +658,7 @@ ModParaファイル (modpara.def)
    ここで :math:`A(\beta)` は :math:`e^{-i\beta S^y}` で回転したpair行列、
    :math:`x` は全偶数粒子数の :math:`N_\uparrow=N_\downarrow` 配置、
    :math:`P_{\rm ch}` はGutzwiller、Jastrow等のスピンscalarな相関因子です。
-   ``NSPGaussLeg=1`` は射影しない状態（:math:`\beta=0`、重み1）です。
+   ``NSPGaussLeg=1`` はスピン射影しない状態（:math:`\beta=0`、重み1）です。
    全粒子数sectorで同じ重みを使います。真空の振幅は :math:`\sum_g a_g` で、
    :math:`G` が大きい極限でのみ1に近づき、sectorごとの再規格化は行いません。
    有限の :math:`G` は厳密な射影の近似で、最小点数は課していないため、
@@ -666,13 +674,6 @@ ModParaファイル (modpara.def)
    壊すため、``NSPGaussLeg>=2`` では ``SpinJastrow`` をエラーにします。
    一般pairと0でない ``NSPStot`` はスピン射影と併用できず、GC modeでの
    ``OptTrans`` の禁止も引き続き適用されます。
-
-   読み込んだ ``TransSym`` 重みの和が厳密に0の場合、真空と完全充填配置の
-   射影振幅は厳密に0になります。この場合は ``0 < NGCInitNelec < 2*Nsite``
-   を指定してください。禁止された境界配置から始めると1回で明示errorになります。
-   小さい非零の重み和を0とみなすことはありません。この厳密零の保証は、
-   中間粒子数で打ち消しにより生じる節には拡張されません。有限点数の射影重みと
-   粒子数sectorの規格化は変更しません。
 
    Hamiltonianは :math:`S^z` を保存すればよく、:math:`SU(2)` 対称である
    必要はありません。測定演算子は演算子全体の :math:`S^z` 変化が0でなければ
