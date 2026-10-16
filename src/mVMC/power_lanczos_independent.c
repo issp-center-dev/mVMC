@@ -317,6 +317,7 @@ MVMCKrylovStatus mvmc_power_lanczos_independent_model_create(
     owned->model.down_electron_count = (size_t)down_electron_count;
     owned->model.pure_spin = 0;
     owned->model.hermitian = 1;
+    owned->model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
     owned->model.terms = owned->terms;
     owned->model.term_count = term_count;
     owned->model.operators = owned->operators;
@@ -533,6 +534,7 @@ MVMCKrylovStatus mvmc_power_lanczos_independent_stream_apply_view(
     neighbor = (uint64_t *)malloc(word_count * sizeof(*neighbor));
     if (neighbor == NULL) return MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE;
     memset(&scratch_model, 0, sizeof(scratch_model));
+    scratch_model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
     scratch_model.operators = operators;
     memset(&term, 0, sizeof(term));
     term.operator_offset = 0;

@@ -233,11 +233,35 @@ static MVMCKrylovStatus validate_configuration(
       return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
     }
   }
-  if (up_count != model->up_electron_count ||
-      down_count != model->down_electron_count) {
-    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  switch (model->domain) {
+    case MVMC_KRYLOV_DOMAIN_FIXED:
+      if (up_count != model->up_electron_count ||
+          down_count != model->down_electron_count) {
+        return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+      }
+      break;
+    case MVMC_KRYLOV_DOMAIN_GC_BALANCED:
+      if (up_count != down_count) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+      break;
+    case MVMC_KRYLOV_DOMAIN_GC_EVEN:
+      if ((up_count + down_count) % 2 != 0) {
+        return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+      }
+      break;
+    default:
+      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
   return MVMC_KRYLOV_STATUS_OK;
+}
+
+static int valid_domain_counts(const MVMCKrylovFockModel *model) {
+  if (model->domain == MVMC_KRYLOV_DOMAIN_FIXED) return 1;
+  if (model->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED &&
+      model->domain != MVMC_KRYLOV_DOMAIN_GC_EVEN) {
+    return 0;
+  }
+  return model->up_electron_count == 0 && model->down_electron_count == 0 &&
+         model->pure_spin == 0;
 }
 
 static MVMCKrylovStatus validate_model(const MVMCKrylovFockModel *model) {
@@ -249,6 +273,7 @@ static MVMCKrylovStatus validate_model(const MVMCKrylovFockModel *model) {
       (model->pure_spin &&
        (model->up_electron_count + model->down_electron_count !=
         model->site_count)) ||
+      !valid_domain_counts(model) ||
       (model->term_count != 0 && model->terms == NULL) ||
       (model->operator_count != 0 && model->operators == NULL)) {
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;

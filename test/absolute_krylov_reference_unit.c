@@ -138,6 +138,7 @@ static MVMCKrylovFockModel ElectronicModel(
   model.up_electron_count = up_count;
   model.down_electron_count = down_count;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   model.terms = terms;
   model.term_count = term_count;
   model.operators = operators;

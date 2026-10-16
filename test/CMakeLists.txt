@@ -1154,6 +1154,47 @@ if(MPI_FOUND)
         PROCESSORS 2)
 endif()
 
+add_executable(gc_krylov_domain_unit
+    gc_krylov_domain_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(gc_krylov_domain_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(gc_krylov_domain_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(gc_krylov_domain_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(gc_krylov_domain_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(gc_krylov_domain_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(gc_krylov_domain_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_krylov_domain_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCLanczos_Domain_Unit
+    COMMAND gc_krylov_domain_unit)
+if(MPI_FOUND)
+    add_test(NAME GCLanczos_Domain_Unit_np2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:gc_krylov_domain_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(GCLanczos_Domain_Unit_np2_mpi PROPERTIES
+        PROCESSORS 2)
+endif()
+
 add_executable(classic_krylov_model_unit
     classic_krylov_model_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c)

@@ -26,8 +26,9 @@ struct MVMCClassicKrylovModelWorkspace {
   size_t allocated_bytes;
 };
 
+/* values[12] carries rank 0's configuration domain. */
 typedef struct {
-  int values[12];
+  int values[13];
 } RawMetadata;
 
 typedef struct {
@@ -62,19 +63,33 @@ static int valid_complex(double complex value) {
   return isfinite(creal(value)) && isfinite(cimag(value));
 }
 
+static int valid_domain_counts(const MVMCClassicKrylovRawModel *raw,
+                               MVMCKrylovConfigurationDomain domain) {
+  switch (domain) {
+    case MVMC_KRYLOV_DOMAIN_FIXED:
+      return raw->up_electron_count > 0 &&
+             raw->up_electron_count == raw->down_electron_count &&
+             raw->up_electron_count <= raw->site_count &&
+             (raw->pure_spin == 0 || raw->pure_spin == 1) &&
+             (!raw->pure_spin ||
+              raw->up_electron_count + raw->down_electron_count ==
+                  raw->site_count);
+    case MVMC_KRYLOV_DOMAIN_GC_BALANCED:
+    case MVMC_KRYLOV_DOMAIN_GC_EVEN:
+      return raw->up_electron_count == 0 && raw->down_electron_count == 0 &&
+             raw->pure_spin == 0;
+  }
+  return 0;
+}
+
 static MVMCKrylovStatus validate_root_raw(
-    const MVMCClassicKrylovRawModel *raw) {
+    const MVMCClassicKrylovRawModel *raw,
+    MVMCKrylovConfigurationDomain domain) {
   int spin_changing_transfer = 0;
   int index;
 
   if (raw == NULL || raw->site_count <= 0 ||
-      raw->site_count > INT_MAX / 2 || raw->up_electron_count <= 0 ||
-      raw->up_electron_count != raw->down_electron_count ||
-      raw->up_electron_count > raw->site_count ||
-      (raw->pure_spin != 0 && raw->pure_spin != 1) ||
-      (raw->pure_spin &&
-       raw->up_electron_count + raw->down_electron_count !=
-           raw->site_count) ||
+      raw->site_count > INT_MAX / 2 || !valid_domain_counts(raw, domain) ||
       raw->transfer_count < 0 || raw->coulomb_intra_count < 0 ||
       raw->coulomb_inter_count < 0 || raw->hund_count < 0 ||
       raw->exchange_count < 0 || raw->pair_hopping_count < 0 ||
@@ -132,7 +147,9 @@ static MVMCKrylovStatus validate_root_raw(
 }
 
 static void metadata_from_raw(const MVMCClassicKrylovRawModel *raw,
+                              MVMCKrylovConfigurationDomain domain,
                               RawMetadata *metadata) {
+  metadata->values[12] = (int)domain;
   metadata->values[0] = raw->site_count;
   metadata->values[1] = raw->up_electron_count;
   metadata->values[2] = raw->down_electron_count;
@@ -513,6 +530,7 @@ static int append_density(MVMCClassicKrylovModelWorkspace *workspace,
 }
 
 static MVMCKrylovStatus build_model(MVMCClassicKrylovRawModel *raw,
+                                    MVMCKrylovConfigurationDomain domain,
                                     MVMCClassicKrylovModelWorkspace **output) {
   MVMCClassicKrylovModelWorkspace *workspace = NULL;
   MVMCKrylovStatus status;
@@ -695,6 +713,7 @@ static MVMCKrylovStatus build_model(MVMCClassicKrylovRawModel *raw,
   workspace->model.up_electron_count = (size_t)raw->up_electron_count;
   workspace->model.down_electron_count = (size_t)raw->down_electron_count;
   workspace->model.pure_spin = raw->pure_spin;
+  workspace->model.domain = domain;
   workspace->model.hermitian = 1;
   workspace->model.terms = workspace->terms;
   workspace->model.term_count = term_count;
@@ -715,6 +734,15 @@ MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_from_root(
     const MVMCClassicKrylovRawModel *raw,
     MVMCClassicPfaffianCommunicator communicator,
     MVMCClassicKrylovModelWorkspace **workspace) {
+  return mvmc_classic_krylov_model_workspace_create_domain_from_root(
+      raw, MVMC_KRYLOV_DOMAIN_FIXED, communicator, workspace);
+}
+
+MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_domain_from_root(
+    const MVMCClassicKrylovRawModel *raw,
+    MVMCKrylovConfigurationDomain domain,
+    MVMCClassicPfaffianCommunicator communicator,
+    MVMCClassicKrylovModelWorkspace **workspace) {
   MVMCClassicKrylovRawModel local_raw;
   MVMCClassicKrylovModelWorkspace *created = NULL;
   RawMetadata metadata;
@@ -726,6 +754,8 @@ MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_from_root(
   int local_status;
   int global_status;
   int broadcast_ok = 1;
+  int domain_mismatch;
+  int any_mismatch;
 
   if (workspace == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   *workspace = NULL;
@@ -740,8 +770,10 @@ MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_from_root(
   (void)communicator;
 #endif
   if (rank == 0) {
-    status = validate_root_raw(raw);
-    if (status == MVMC_KRYLOV_STATUS_OK) metadata_from_raw(raw, &metadata);
+    status = validate_root_raw(raw, domain);
+    if (status == MVMC_KRYLOV_STATUS_OK) {
+      metadata_from_raw(raw, domain, &metadata);
+    }
   }
   local_status = (int)status;
 #ifdef _mpi_use
@@ -753,6 +785,16 @@ MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_from_root(
 #endif
   status = (MVMCKrylovStatus)local_status;
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  domain_mismatch = metadata.values[12] != (int)domain;
+#ifdef _mpi_use
+  if (MPI_Allreduce(&domain_mismatch, &any_mismatch, 1, MPI_INT, MPI_MAX,
+                    communicator) != MPI_SUCCESS) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+#else
+  any_mismatch = domain_mismatch;
+#endif
+  if (any_mismatch) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   local_ready = allocate_raw_copies(&metadata, &copies);
 #ifdef _mpi_use
   if (MPI_Allreduce(&local_ready, &all_ready, 1, MPI_INT, MPI_MIN,
@@ -796,7 +838,7 @@ MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_from_root(
     return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
   }
   raw_from_metadata(&metadata, &local_raw, &copies);
-  status = build_model(&local_raw, &created);
+  status = build_model(&local_raw, domain, &created);
   local_status = (int)status;
 #ifdef _mpi_use
   if (MPI_Allreduce(&local_status, &global_status, 1, MPI_INT, MPI_MAX,
