@@ -889,6 +889,248 @@ static void test_value_only_api(void) {
   mvmc_absolute_pfaffian_real_value_workspace_destroy(real_workspace);
 }
 
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+/* Block-diagonal 2x2 blocks [[0,b_k],[-b_k,0]]: Pf = prod_k b_k. */
+static double complex capacity_block(int block, double scale) {
+  return scale * ((double)(block + 1) / 3.0 + (0.5 - 0.125 * block) * I);
+}
+
+static void fill_block_diagonal(double complex *matrix, int n, int lda,
+                                double scale, double complex *pfaffian) {
+  int row, column;
+  *pfaffian = 1.0;
+  for (column = 0; column < n; ++column) {
+    for (row = 0; row < lda; ++row) matrix[row + column * lda] = 0.0;
+  }
+  for (row = 0; row < n; row += 2) {
+    const double complex value = capacity_block(row / 2, scale);
+    matrix[row + (row + 1) * lda] = value;
+    matrix[(row + 1) + row * lda] = -value;
+    *pfaffian *= value;
+  }
+}
+
+static void fill_dense(double complex *matrix, int n) {
+  int row, column;
+  for (column = 0; column < n; ++column) {
+    matrix[column + column * n] = 0.0;
+    for (row = 0; row < column; ++row) {
+      const double complex value =
+          (double)(row + 2 * column + 1) / 7.0 +
+          (double)(3 * row - column) / 11.0 * I;
+      matrix[row + column * n] = value;
+      matrix[column + row * n] = -value;
+    }
+  }
+}
+
+static int same_classification(
+    const MVMCAbsolutePfaffianScaledValueResult *left,
+    const MVMCAbsolutePfaffianScaledValueResult *right) {
+  return left->factor_state == right->factor_state &&
+         left->factor_info == right->factor_info &&
+         left->value.state == right->value.state;
+}
+
+static int close_scaled(const MVMCScaledComplex *value, double complex phase,
+                        double log_abs) {
+  return value->state == MVMC_SCALED_COMPLEX_FINITE_NONZERO &&
+         cabs(value->phase - phase) <= 3e-12 &&
+         fabs(value->log_abs - log_abs) <= 3e-11 * fmax(1.0, fabs(log_abs));
+}
+
+static void test_capacity_scaled_value(void) {
+  MVMCAbsolutePfaffianComplexCapacityWorkspace *workspace = NULL;
+  MVMCAbsolutePfaffianScaledValueResult value;
+  MVMCAbsolutePfaffianScaledValueResult fixed;
+  double complex matrix[10 * 10];
+  double complex expected;
+  const int order[5] = {8, 0, 2, 4, 8};
+  size_t bytes;
+  int index;
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  size_t allocations;
+#endif
+
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_create(8, NULL) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity create requires an output pointer");
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_create(
+            0, &workspace) == MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            workspace == NULL,
+        "capacity create rejects max_n=0");
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_create(
+            -2, &workspace) == MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity create rejects negative max_n");
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_create(
+            7, &workspace) == MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity create rejects odd max_n");
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_create(
+            INT_MAX - 1, &workspace) ==
+                MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT &&
+            workspace == NULL,
+        "capacity create rejects matrix size overflow before allocation");
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_bytes(NULL) == 0,
+        "capacity bytes of NULL");
+
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_create(
+            8, &workspace) == MVMC_PFAFFIAN_STATUS_OK &&
+            workspace != NULL,
+        "capacity create max_n=8");
+  if (workspace == NULL) return;
+  bytes = mvmc_absolute_pfaffian_complex_capacity_workspace_bytes(workspace);
+  CHECK(bytes >= 8 * 8 * sizeof(double complex), "capacity bytes cover 8x8");
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  allocations = mvmc_absolute_pfaffian_testing_capacity_allocations();
+  CHECK(allocations > 0, "capacity create allocation counter");
+#endif
+
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, NULL, 0, 0, 0.0, &value) == MVMC_PFAFFIAN_STATUS_OK,
+        "empty Pfaffian evaluates");
+  CHECK(value.value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO &&
+            value.value.log_abs == 0.0 && creal(value.value.phase) == 1.0 &&
+            cimag(value.value.phase) == 0.0 &&
+            value.factor_state == MVMC_PFAFFIAN_VALUE_WELL_PIVOTED &&
+            value.factor_info == 0,
+        "empty Pfaffian is exactly one");
+  CHECK(value.matrix_scale == 0.0 && isfinite(value.scaled_min_pivot) &&
+            value.scaled_min_pivot > 0.0,
+        "empty Pfaffian keeps finite pivot diagnostics for QP aggregation");
+
+  for (index = 0; index < 5; ++index) {
+    const int n = order[index];
+    fill_block_diagonal(matrix, n, 10, 1.0, &expected);
+    CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+              workspace, n == 0 ? NULL : matrix, n, 10, 0.0, &value) ==
+              MVMC_PFAFFIAN_STATUS_OK,
+          "alternating capacity evaluation");
+    CHECK(close_scaled(&value.value, expected / cabs(expected),
+                       log(cabs(expected))),
+          "block-diagonal Pfaffian is the block product");
+    if (n > 0) {
+      CHECK(mvmc_absolute_pfaffian_complex_scaled_value(
+                matrix, n, 10, 0.0, &fixed) == MVMC_PFAFFIAN_STATUS_OK &&
+                same_classification(&value, &fixed) &&
+                close_scaled(&value.value, fixed.value.phase,
+                             fixed.value.log_abs),
+            "capacity matches the fixed-dimension API");
+    }
+  }
+
+  fill_dense(matrix, 4);
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 4, 4, 0.0, &value) == MVMC_PFAFFIAN_STATUS_OK &&
+            mvmc_absolute_pfaffian_complex_scaled_value(
+                matrix, 4, 4, 0.0, &fixed) == MVMC_PFAFFIAN_STATUS_OK &&
+            same_classification(&value, &fixed) &&
+            close_scaled(&value.value, fixed.value.phase,
+                         fixed.value.log_abs),
+        "dense 4x4 capacity matches the fixed API");
+  {
+    /* Pf of a dense 4x4: a01 a23 - a02 a13 + a03 a12. */
+    const double complex dense = matrix[0 + 1 * 4] * matrix[2 + 3 * 4] -
+                                 matrix[0 + 2 * 4] * matrix[1 + 3 * 4] +
+                                 matrix[0 + 3 * 4] * matrix[1 + 2 * 4];
+    CHECK(close_scaled(&value.value, dense / cabs(dense), log(cabs(dense))),
+          "dense 4x4 Pfaffian expansion");
+  }
+
+  {
+    const double scales[2] = {ldexp(1.0, 300), ldexp(1.0, -300)};
+    int s;
+    for (s = 0; s < 2; ++s) {
+      double log_expected = 0.0;
+      double complex phase = 1.0;
+      int block;
+      fill_block_diagonal(matrix, 8, 10, scales[s], &expected);
+      for (block = 0; block < 4; ++block) {
+        const double complex unit = capacity_block(block, 1.0);
+        log_expected += log(cabs(unit)) + log(scales[s]);
+        phase *= unit / cabs(unit);
+      }
+      CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+                workspace, matrix, 8, 10, 0.0, &value) ==
+                    MVMC_PFAFFIAN_STATUS_OK &&
+                close_scaled(&value.value, phase, log_expected),
+            "capacity keeps phase/log at 2^+-300 scale");
+    }
+  }
+
+  memset(matrix, 0, sizeof(matrix));
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 2, 2, 0.0, &value) == MVMC_PFAFFIAN_STATUS_OK &&
+            mvmc_absolute_pfaffian_complex_scaled_value(
+                matrix, 2, 2, 0.0, &fixed) == MVMC_PFAFFIAN_STATUS_OK &&
+            same_classification(&value, &fixed) &&
+            value.value.state != MVMC_SCALED_COMPLEX_FINITE_NONZERO,
+        "singular capacity classification matches the fixed API");
+  fill_block_diagonal(matrix, 4, 4, 1.0, &expected);
+  matrix[2 + 3 * 4] = NAN;
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 4, 4, 0.0, &value) == MVMC_PFAFFIAN_STATUS_OK &&
+            value.factor_state == MVMC_PFAFFIAN_VALUE_NONFINITE &&
+            value.value.state == MVMC_SCALED_COMPLEX_NONFINITE,
+        "nonfinite capacity input is classified, not hidden");
+
+  fill_block_diagonal(matrix, 8, 10, 1.0, &expected);
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 10, 10, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects n > max_n");
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 3, 10, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects odd n");
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, -2, 10, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects negative n");
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 4, 2, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects lda < n");
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, NULL, 4, 4, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects NULL matrix for n > 0");
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 4, 4, NAN, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects nonfinite tolerance");
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            NULL, matrix, 4, 4, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects NULL workspace");
+  CHECK(mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+            workspace, matrix, 4, 4, 0.0, NULL) ==
+            MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+        "capacity rejects NULL result");
+  CHECK(mvmc_absolute_pfaffian_complex_capacity_workspace_bytes(workspace) ==
+            bytes,
+        "capacity workspace bytes stay fixed");
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  CHECK(mvmc_absolute_pfaffian_testing_capacity_allocations() == allocations,
+        "capacity evaluation performs no heap allocation");
+#endif
+  mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(workspace);
+  mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(NULL);
+
+  {
+    /* The fixed-dimension value API keeps its exact-dimension contract. */
+    MVMCAbsolutePfaffianComplexValueWorkspace *fixed_workspace = NULL;
+    fill_block_diagonal(matrix, 2, 2, 1.0, &expected);
+    CHECK(mvmc_absolute_pfaffian_complex_value_workspace_create(
+              4, &fixed_workspace) == MVMC_PFAFFIAN_STATUS_OK &&
+              mvmc_absolute_pfaffian_complex_scaled_value_with_workspace(
+                  fixed_workspace, matrix, 2, 2, 0.0, &fixed) ==
+                  MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT,
+          "fixed workspace still rejects a different dimension");
+    mvmc_absolute_pfaffian_complex_value_workspace_destroy(fixed_workspace);
+  }
+}
+#endif
+
 int main(int argc, char **argv) {
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
@@ -917,6 +1159,9 @@ int main(int argc, char **argv) {
   test_projected_amplitude();
   test_rank_local_projected_amplitude();
   test_value_only_api();
+#if defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+  test_capacity_scaled_value();
+#endif
 
   if (failure_count != 0) {
     fprintf(stderr, "%d absolute Pfaffian checks failed\n", failure_count);

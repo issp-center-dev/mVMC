@@ -413,6 +413,10 @@ add_test(NAME PowerLanczosIndependent_Unit
 add_executable(absolute_pfaffian_unit
     absolute_pfaffian_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+# The capacity scaled-value checks need the bounded-engine scaled API and the
+# Testing-only allocation counter.
+target_compile_definitions(absolute_pfaffian_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE MVMC_ENABLE_FAULT_INJECTION)
 target_include_directories(absolute_pfaffian_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
