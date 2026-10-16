@@ -2,6 +2,8 @@
 """GC first-step stabilized Lanczos checks.
 
 modes:
+  proposal: exact Fraction cross-check of the symmetric GC proposals
+            enumerated by gc_krylov_proposal_unit --dump.
   oracle  : enumeration probe (production GC bridge, bounded engine,
             measurement, GEVP) against the independent Fock oracle
             (grandcanonical_lanczos_oracle) for F2/G2/F4, the six
@@ -495,9 +497,161 @@ def oracle_mode(args):
     return 0
 
 
+# --- proposal: exact Fraction oracle of the symmetric GC proposals --------
+from collections import defaultdict
+from fractions import Fraction
+
+
+def enumerate_draws(draw_function):
+    """All bounded draw sequences of draw_function(choose) -> mask."""
+    result = defaultdict(Fraction)
+    path = []
+    while True:
+        used = []
+
+        def choose(bound):
+            position = len(used)
+            used.append(bound)
+            if position >= len(path):
+                path.append(0)
+            return path[position]
+
+        mask = draw_function(choose)
+        del path[len(used):]
+        probability = Fraction(1)
+        for bound in used:
+            probability /= bound
+        result[mask] += probability
+        position = len(used)
+        while position > 0:
+            path[position - 1] += 1
+            if path[position - 1] < used[position - 1]:
+                del path[position:]
+                break
+            position -= 1
+        if position == 0:
+            return result
+
+
+def even_uniform(nsite, choose):
+    mask, parity = 0, 0
+    for orbital in range(2 * nsite - 1):
+        if choose(2):
+            mask |= 1 << orbital
+            parity ^= 1
+    return mask | (parity << (2 * nsite - 1))
+
+
+def balanced_uniform(nsite, choose):
+    """Plan's independent oracle: L of the labels U_i, Dbar_i."""
+    remaining = nsite
+    selected = []
+    for label in range(2 * nsite):
+        take = choose(2 * nsite - label) < remaining
+        selected.append(take)
+        remaining -= int(take)
+    up = sum(int(selected[i]) << i for i in range(nsite))
+    down = sum(int(not selected[nsite + i]) << (nsite + i)
+               for i in range(nsite))
+    return up | down
+
+
+def subset(count, k, choose, offset=0):
+    mask, remaining = 0, k
+    for item in range(count):
+        if choose(count - item) < remaining:
+            mask |= 1 << (item + offset)
+            remaining -= 1
+    return mask
+
+
+def initial(domain, nsite, n, choose):
+    if domain == 2:
+        return subset(2 * nsite, n, choose)
+    return subset(nsite, n // 2, choose) | subset(nsite, n // 2, choose, nsite)
+
+
+def local(domain, nsite, x, choose):
+    def ordered_pair(count):
+        a = choose(count)
+        b = choose(count - 1)
+        return a, b if b < a else b + 1
+    if domain == 2:
+        a, b = ordered_pair(2 * nsite)
+        return x ^ (1 << a) ^ (1 << b)
+    if choose(2) == 0:
+        i, j = choose(nsite), choose(nsite)
+        if ((x >> i) & 1) == ((x >> (j + nsite)) & 1):
+            return x ^ (1 << i) ^ (1 << (j + nsite))
+        return x
+    spin = choose(2)
+    if nsite < 2:
+        return x
+    a, b = ordered_pair(nsite)
+    a, b = a + spin * nsite, b + spin * nsite
+    if ((x >> a) & 1) != ((x >> b) & 1):
+        return x ^ (1 << a) ^ (1 << b)
+    return x
+
+
+def proposal_mode(args):
+    dump = pathlib.Path(args.workdir) / "proposal-dump.txt"
+    dump.parent.mkdir(parents=True, exist_ok=True)
+    done = subprocess.run([args.unit, "--dump", str(dump)],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, timeout=120)
+    if done.returncode != 0:
+        print(done.stdout)
+        print("GCLanczos proposal: unit failed")
+        return 1
+    actual = defaultdict(dict)
+    for line in dump.read_text().splitlines():
+        kind, domain, nsite, extra, x, y, num, den = line.split()
+        actual[(kind, int(domain), int(nsite), int(extra), int(x))][int(y)] = \
+            Fraction(int(num), int(den))
+    failures = 0
+    rows = 0
+    for (kind, domain, nsite, extra, x), row in sorted(actual.items()):
+        if kind == "UNIFORM":
+            expected = enumerate_draws(
+                lambda c: (even_uniform if domain == 2 else balanced_uniform)(
+                    nsite, c))
+        elif kind == "INITIAL":
+            expected = enumerate_draws(
+                lambda c: initial(domain, nsite, extra, c))
+        else:
+            expected = enumerate_draws(lambda c: local(domain, nsite, x, c))
+        expected = dict((k, v) for k, v in expected.items() if v != 0)
+        if expected != row:
+            failures += 1
+            print("FAIL %s domain=%d L=%d extra=%d x=%d" %
+                  (kind, domain, nsite, extra, x))
+        if sum(row.values()) != 1:
+            failures += 1
+            print("FAIL row sum %s domain=%d L=%d x=%d" %
+                  (kind, domain, nsite, x))
+        rows += 1
+    # Exact symmetry of the local kernels from the dump itself.
+    for (kind, domain, nsite, extra, x), row in actual.items():
+        if kind != "LOCAL":
+            continue
+        for y, value in row.items():
+            reverse = actual.get(("LOCAL", domain, nsite, 0, y), {}).get(x)
+            if reverse != value:
+                failures += 1
+                print("FAIL symmetry domain=%d L=%d %d<->%d" %
+                      (domain, nsite, x, y))
+    if failures or rows == 0:
+        print("GCLanczos proposal: %d failure(s), %d rows" % (failures, rows))
+        return 1
+    print("GCLanczos proposal: PASS (%d kernels, Fraction exact)" % rows)
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("oracle",))
+    parser.add_argument("mode", choices=("oracle", "proposal"))
+    parser.add_argument("--unit")
     parser.add_argument("--probe")
     parser.add_argument("--vmc")
     parser.add_argument("--case")
@@ -508,6 +662,10 @@ def main():
         if not args.probe:
             parser.error("oracle mode requires --probe")
         return oracle_mode(args)
+    if args.mode == "proposal":
+        if not args.unit:
+            parser.error("proposal mode requires --unit")
+        return proposal_mode(args)
     return 2
 
 

@@ -2745,3 +2745,6 @@ endfunction()
 add_gc_lanczos_test(GCLanczos_Oracle oracle
     --probe $<TARGET_FILE:gc_krylov_probe>
     --workdir work/GCLanczos_Oracle)
+add_gc_lanczos_test(GCLanczos_Proposal_Oracle proposal
+    --unit $<TARGET_FILE:gc_krylov_proposal_unit>
+    --workdir work/GCLanczos_Proposal_Oracle)

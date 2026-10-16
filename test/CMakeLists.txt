@@ -1182,7 +1182,8 @@ set(MVMC_GC_LANCZOS_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_amplitude.c
-    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gc_bridge.c)
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gc_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c)
 
 function(mvmc_gc_lanczos_target target)
     target_include_directories(${target} PRIVATE
@@ -1221,6 +1222,20 @@ if(MPI_FOUND)
             PROCESSORS ${np} TIMEOUT 120)
     endforeach()
 endif()
+
+add_executable(gc_krylov_proposal_unit gc_krylov_proposal_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)
+target_compile_definitions(gc_krylov_proposal_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(gc_krylov_proposal_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(gc_krylov_proposal_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(gc_krylov_proposal_unit m)
+add_test(NAME GCLanczos_Proposal_Unit COMMAND gc_krylov_proposal_unit)
 
 # Testing-only enumeration probe for the GC Lanczos oracle.
 add_executable(gc_krylov_probe gc_krylov_probe.c
