@@ -953,9 +953,15 @@ Keywords and parameters
    error bound stops the run without a result row and writes
    ``GC Lanczos failure: stage=... chain=... N=... status=...
    amplitude_state=...`` to standard error; exactly zero candidates are
-   rejected as usual. An input with nodes, for example a singular or nearly
-   singular pair table, can therefore stop even when ordinary grand-canonical
-   sampling of the same input completes. Standard output also prints
+   rejected as usual. An input with nodes, for example a pair table that is
+   nearly singular or singular only up to rounding, can therefore stop even
+   when ordinary grand-canonical sampling of the same input completes. This
+   includes momentum projection with :math:`K\ne0`: the vacuum and fully
+   occupied amplitudes vanish exactly only when the ``TransSym`` weights sum
+   to exactly zero (see ``NGrandCanonical``); otherwise they are numerical
+   zeros and the run stops when such a configuration is proposed, which is
+   likely for small systems.
+   Standard output also prints
    ``GC Lanczos energy check: E_coeff=... E_final=...``, which compares the
    energy of the coefficient chain with the final energy.
    :math:`E_{\rm coeff}` is selected from the same samples as the

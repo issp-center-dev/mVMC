@@ -899,8 +899,12 @@ ModParaファイル (modpara.def)
    範囲で零と区別できない場合は、結果行を出力せずにrunを終了し、標準エラーへ
    ``GC Lanczos failure: stage=... chain=... N=... status=...
    amplitude_state=...`` を出力します。exactに零の候補は従来どおり棄却します。
-   このため、特異または特異に近いpair表のように節を持つ入力では、同じ入力の
+   このため、特異に近いpair表や丸め誤差の範囲でだけ特異なpair表のように節を持つ入力では、同じ入力の
    通常のgrand-canonical samplingが完走する場合でも終了することがあります。
+   :math:`K\ne0` の運動量射影もこれに当たります。真空と完全充填の振幅がexactに
+   零になるのは ``TransSym`` の重みの和がexactに零の場合だけで（``NGrandCanonical``
+   を参照）、それ以外は数値的な零になり、その配置が提案された時点でrunが終了します。
+   小さい系ではその可能性が高くなります。
    標準出力には係数chainのenergyと最終energyを比べる
    ``GC Lanczos energy check: E_coeff=... E_final=...`` も出力します。
    :math:`E_{\rm coeff}` は係数と同じsampleから選んだ値であり、合否の基準には

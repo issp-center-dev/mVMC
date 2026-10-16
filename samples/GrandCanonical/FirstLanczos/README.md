@@ -74,6 +74,10 @@ The run stops without writing a result row when a configuration proposed
 after the start of the final chain has `Phi` that cannot be distinguished
 from zero within its floating-point error (`GC Lanczos failure: ...
 amplitude_state=numeric_zero` on standard error). Inputs with nodes, for
-example an exactly or nearly singular pair table, can therefore stop even
-when ordinary grand-canonical sampling of the same input completes. The
-first configuration of the final chain is redrawn at most 1024 times.
+example a pair table that is nearly singular or singular only up to
+rounding, can therefore stop even
+when ordinary grand-canonical sampling of the same input completes. So can
+momentum projection with nonzero total momentum, unless the `TransSym`
+weights sum to exactly zero: otherwise the vacuum and fully occupied
+amplitudes are only numerically zero. The first configuration of the final
+chain is redrawn at most 1024 times.
