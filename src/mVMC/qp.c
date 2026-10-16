@@ -33,6 +33,10 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "legendrepoly.h"
 #include "workspace.h"
 #include "gauleg.h"
+#include "gc_exact_sum.h"
+
+/* Set once from the distributed input coefficients; read-only during a run. */
+static int GCTransWeightSumExactlyZero = 0;
 
 /* calculate SPGLCos, SPGLSin and QPFullWeight */
 void InitQPWeight() {
@@ -40,6 +44,15 @@ void InitQPWeight() {
   double *beta;
   double *weight;
   double w;
+
+  GCTransWeightSumExactlyZero = 0;
+  if (FlagGrandCanonical &&
+      (GCExactComplexSumSelfTest() != 0 ||
+       GCExactComplexSumIsZero(ParaQPTrans, NMPTrans,
+                               &GCTransWeightSumExactlyZero) != 0)) {
+    fprintf(stderr, "Error: GC translation-weight exact-sum initialization failed.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
 
   RequestWorkSpaceDouble(2*NSPGaussLeg);
   beta   = GetWorkSpaceDouble(NSPGaussLeg);
@@ -166,6 +179,26 @@ double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, c
     ip = ip2;
   }
   return ip;
+}
+
+/* Vacuum and full filling are translation invariant. If the input character
+ * sum is exactly zero, remove only finite roundoff left by the existing QP
+ * sum. Keep its reduction order, one collective, and nonfinite propagation. */
+double complex CalculateIPGC_fcmp(double complex *const pfM, const int newN,
+                                  const int qpStart, const int qpEnd,
+                                  MPI_Comm comm) {
+  const double complex ip = CalculateIP_fcmp(pfM, qpStart, qpEnd, comm);
+  if (FlagGrandCanonical && GCTransWeightSumExactlyZero &&
+      (newN == 0 || newN == Nsite2) &&
+      isfinite(creal(ip)) && isfinite(cimag(ip)))
+    return 0.0 + 0.0 * I;
+  return ip;
+}
+
+double complex CalculateLogIPGC_fcmp(double complex *const pfM, const int newN,
+                                     const int qpStart, const int qpEnd,
+                                     MPI_Comm comm) {
+  return clog(CalculateIPGC_fcmp(pfM, newN, qpStart, qpEnd, comm));
 }
 
 void UpdateQPWeight() {

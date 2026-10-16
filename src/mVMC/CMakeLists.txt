@@ -11,7 +11,7 @@ include_directories("${STDFACE_DIR}/src")
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
-        vmcmain.c absolute_pfaffian.c classic_pfaffian_matrix.c
+        vmcmain.c gc_exact_sum.c absolute_pfaffian.c classic_pfaffian_matrix.c
         classic_pfaffian_state.c
         classic_pfaffian_collective.c
         classic_krylov_configuration.c classic_krylov_projection.c

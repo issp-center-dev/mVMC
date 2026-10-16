@@ -25,16 +25,10 @@ extern int omp_get_num_threads(void);
 #include "../src/mVMC/pfupdate_gc.c"
 #include "../src/mVMC/gc_antiparallel.c"
 
-double complex CalculateIP_fcmp(double complex *const pfM, const int qpStart,
-                                const int qpEnd, MPI_Comm comm) {
-  double complex result = 0.0;
-  int qpidx;
-  (void)comm;
-  for (qpidx = qpStart; qpidx < qpEnd; qpidx++) {
-    result += QPFullWeight[qpidx] * pfM[qpidx - qpStart];
-  }
-  return result;
-}
+/* Exercise the production projection path, including the boundary override. */
+#include "../src/mVMC/gauleg.c"
+#include "../src/mVMC/legendrepoly.c"
+#include "../src/mVMC/qp.c"
 
 #include "../src/mVMC/locgrn_gc.c"
 
@@ -1529,6 +1523,71 @@ static void isolate_orbital_zero_in_qp1(void) {
   }
 }
 
+static void test_boundary_green(void) {
+  double complex translation[2] = {0.5, -0.5};
+  GuardedScratch guarded;
+  int control, ncur, order, swap;
+  int nonzeroControls = 0;
+  NSPGaussLeg = 1; NMPTrans = NQPFix = NQPFull = 2;
+  NSPStot = 0; FlagOptTrans = 0;
+  ParaQPTrans = translation;
+  QPFullWeight = realloc(QPFullWeight, 9 * sizeof *QPFullWeight);
+  CHECK(QPFullWeight != NULL, "boundary weights allocation");
+  if (!QPFullWeight) exit(EXIT_FAILURE);
+  QPFixWeight = QPFullWeight + 2; SPGLCos = QPFixWeight + 2;
+  SPGLSin = SPGLCos + 1; SPGLCosSin = SPGLSin + 1;
+  SPGLCosCos = SPGLCosSin + 1; SPGLSinSin = SPGLCosCos + 1;
+  initialize_scratch(&guarded);
+  for (control = 0; control < 2; ++control) {
+    translation[1] = control ? -0.25 : -0.5;
+    InitQPWeight();
+    if (!control) QPFullWeight[1] = nextafter(QPFullWeight[1], 0.0);
+    for (ncur = 2; ncur <= 6; ncur += 4) {
+      const int sorted[6] = {0, 4, 1, 5, 2, 6};
+      for (order = 0; order < 3; ++order) {
+        int eleIdx[ORBITALS], eleCfg[ORBITALS], eleNum[ORBITALS], projCnt[1];
+        int sortedIdx[ORBITALS], i, j, k, count = 0;
+        double complex ip, sortedOverlap;
+        AntiSnapshot before;
+        for (k = 0; k < ORBITALS; ++k) eleIdx[k] = -1;
+        permute_base(sorted, eleIdx, ncur, order);
+        build_state(eleIdx, ncur, eleCfg, eleNum, projCnt);
+        for (k = 0; k < ORBITALS; ++k) if (eleNum[k]) sortedIdx[count++] = k;
+        CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, QPS) == GC_MALL_OK,
+              "boundary Green rebuild");
+        ip = CalculateIPGC_fcmp(PfM, ncur, 0, QPS, MPI_COMM_SELF);
+        sortedOverlap = overlap_for_sorted_state(sortedIdx, ncur);
+        CHECK(isfinite(cabs(ip)) && cabs(ip) > 1e-12, "boundary Green current");
+        anti_snapshot(&before, eleIdx, eleCfg, eleNum, projCnt);
+        i = ncur == 2 ? 0 : 3; j = ncur == 2 ? 4 : 7;
+        for (swap = 0; swap < 2; ++swap) {
+          const int a = swap ? j : i, b = swap ? i : j;
+          const double complex raw = brute_anomalous_param(
+              ncur == 6, a, b, eleIdx, ncur, sortedOverlap, projCnt);
+          const double complex actual = ncur == 6
+              ? GreenFuncPairAddGC(a, b, ip, ncur, eleIdx, eleCfg, eleNum,
+                                   projCnt, &guarded.scratch)
+              : GreenFuncPairRemoveGC(a, b, ip, ncur, eleIdx, eleCfg, eleNum,
+                                      projCnt, &guarded.scratch);
+          if (control) {
+            CHECK(finite_close_green(actual, raw, 2e-10 * (1.0 + cabs(raw))),
+                  "nonzero-W pair sign/order n=%d order=%d swap=%d", ncur, order, swap);
+            if (cabs(raw) > 1e-10) ++nonzeroControls;
+          } else {
+            CHECK(creal(actual) == 0.0 && cimag(actual) == 0.0,
+                  "forbidden boundary Green n=%d order=%d swap=%d", ncur, order, swap);
+          }
+          CHECK(anti_unchanged(&before, eleIdx, eleCfg, eleNum, projCnt),
+                "boundary Green changed current state");
+        }
+      }
+    }
+  }
+  CHECK(nonzeroControls == 12, "missing nonzero pair sign controls: %d", nonzeroControls);
+  check_scratch_guards(&guarded); free_scratch(&guarded);
+  ParaQPTrans = NULL;
+}
+
 static void free_fixture(void) {
   GCComponentRelease();
   FreeWorkSpaceAll();
@@ -1542,17 +1601,20 @@ static void free_fixture(void) {
 int main(int argc, char **argv) {
   const int antiparallel =
       argc == 2 && strcmp(argv[1], "--antiparallel") == 0;
+  const int boundary = argc == 2 && strcmp(argv[1], "--boundary") == 0;
   const int spin = argc == 2 && strcmp(argv[1], "--spin") == 0;
   const int multiqp = argc == 2 && strcmp(argv[1], "--multiqp") == 0;
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
 #endif
-  if (argc > 1 && !antiparallel && !spin && !multiqp) {
+  if (argc > 1 && !antiparallel && !spin && !multiqp && !boundary) {
     fprintf(stderr, "unknown option %s\n", argv[1]);
     return EXIT_FAILURE;
   }
   initialize_fixture();
-  if (antiparallel) {
+  if (boundary) {
+    test_boundary_green();
+  } else if (antiparallel) {
     test_antiparallel_green(0);
   } else if (spin) {
     test_antiparallel_green(1);

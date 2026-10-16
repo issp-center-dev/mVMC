@@ -36,6 +36,34 @@ if(LAPACK_FOUND)
     add_test(NAME BLAS_DGEMM_Canary COMMAND blas_dgemm_canary)
 endif()
 
+add_executable(gc_exact_sum_unit gc_exact_sum_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c)
+target_include_directories(gc_exact_sum_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_exact_sum_unit m)
+add_test(NAME GC_ExactSum_Unit COMMAND gc_exact_sum_unit)
+
+add_executable(gc_projection_unit gc_projection_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c)
+target_include_directories(gc_projection_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_projection_unit m)
+if(MPI_FOUND)
+    target_link_libraries(gc_projection_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GC_Projection_Unit COMMAND gc_projection_unit)
+if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+    foreach(np 2 3 9)
+        add_test(NAME GC_Projection_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_projection_unit>
+                ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GC_Projection_Unit_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_MCA_rmaps_base_oversubscribe=1"
+            PROCESSORS ${np} TIMEOUT 120)
+    endforeach()
+endif()
+
 add_executable(gc_size_unit gc_size_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/gc_size.c)
 target_include_directories(gc_size_unit PRIVATE
@@ -121,6 +149,7 @@ endif()
 add_test(NAME GCPfUpdate_Unit COMMAND gc_pfupdate_unit)
 
 add_executable(gc_sampler_unit gc_sampler_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
     ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
 target_include_directories(gc_sampler_unit PRIVATE
@@ -239,6 +268,7 @@ set_tests_properties(GC_SP_SlaterDiff_OMP4 PROPERTIES
     PROCESSORS 4 TIMEOUT 120)
 
 add_executable(gc_green_unit gc_green_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_compile_definitions(gc_green_unit PRIVATE MVMC_ENABLE_FAULT_INJECTION)
 target_include_directories(gc_green_unit PRIVATE
@@ -267,6 +297,17 @@ add_test(NAME GCGreen_Unit_OMP4 COMMAND gc_green_unit)
 set_tests_properties(GCGreen_Unit_OMP4 PROPERTIES
     ENVIRONMENT
       "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4")
+
+set(gc_boundary_mpi_args)
+if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+    list(APPEND gc_boundary_mpi_args --mpiexec ${MPIEXEC_EXECUTABLE})
+endif()
+add_test(NAME GC_Boundary_Integration
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_boundary.py
+        $<TARGET_FILE:gc_sampler_unit> $<TARGET_FILE:gc_green_unit>
+        ${gc_boundary_mpi_args})
+set_tests_properties(GC_Boundary_Integration PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 240 PROCESSORS 3)
 
 add_executable(nbody_operator_unit
     nbody_operator_unit.c

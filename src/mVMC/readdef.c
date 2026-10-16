@@ -1235,15 +1235,14 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
       {
         const int gcG = bufInt[IdxSPGaussLeg];
-        /* Under the admitted G>1 scope abs(NMPTrans)=NQPOptTrans=1, so
-         * NQPFull=NQPFix=G and setmemory.c allocates NQPFull+NQPFix+5*G
-         * complex entries in int arithmetic; check 7G before any int
-         * product or sum is formed.  The later CheckedIntProduct3 guard on
-         * NQPFix/NQPFull stays in place. */
+        const long long gcR = bufInt[IdxMPTrans] < 0
+                                  ? -(long long)bufInt[IdxMPTrans]
+                                  : (long long)bufInt[IdxMPTrans];
+        /* Check the complete QP block before any int products or offsets. */
         if (gcG <= 0) {
           fprintf(stderr, "Error: GC NSPGaussLeg must be positive.\n");
           info = 1;
-        } else if (!GCSpinQuadratureFitsInt(gcG)) {
+        } else if (gcR > INT_MAX || !GCProjectionWorkspaceFitsInt(gcG, (int)gcR)) {
           fprintf(stderr,
                   "Error: GC NSPGaussLeg workspace exceeds int range.\n");
           info = 1;

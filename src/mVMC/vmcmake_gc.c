@@ -232,7 +232,7 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
     return 0;
   }
 
-  logIpNew = CalculateLogIP_fcmp(pfMNew, qpStart, qpEnd, comm);
+  logIpNew = CalculateLogIPGC_fcmp(pfMNew, ncurProposal, qpStart, qpEnd, comm);
   x = LogProjRatio(projCntNew, eleProjCnt);
   if (GCAntiAcceptLog(*logIpOld, logIpNew, x, proposalRatio, acceptDraw,
                       &accepted) != 0) {
@@ -270,7 +270,7 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
     if (NProj > 0)
       memcpy(eleProjCnt, projCntNew, (size_t)NProj * sizeof(*eleProjCnt));
     Ncur = ncurProposal;
-    *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+    *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
     return 1;
   }
 
@@ -432,7 +432,7 @@ static void GCDebugCheckFastState(const int *eleIdx,
   free(fastState);
   free(fastPf);
   free(fastInv);
-  *logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+  *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
   GCRequireRebuiltAmplitude(*logIpOld, "debug", comm);
 }
 
@@ -593,7 +593,7 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }
-    logIp = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+    logIp = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
     if (isfinite(creal(logIp)) && isfinite(cimag(logIp))) return 0;
     if (!(creal(logIp) == -INFINITY && isfinite(cimag(logIp)))) {
       if (rank == 0) {
@@ -605,7 +605,7 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
     }
     if (rank == 0)
       GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
-    if (Ncur == 0) {
+    if (Ncur == 0 || Ncur == Nsite2) {
       attempt = 1;
       break;
     }
@@ -613,7 +613,7 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
   if (rank == 0) {
     fprintf(stderr,
             "Error: GC initial configuration has zero projected amplitude "
-            "after %d attempt(s) (%s, Ncur=%d). Increase NGCInitNelec or "
+            "after %d attempt(s) (%s, Ncur=%d). Change NGCInitNelec or "
             "check the TransSym weights.\n",
             attempt, GCAntiMode() ? "anti-parallel mode" : "general mode",
             Ncur);
@@ -711,7 +711,7 @@ void VMCMakeSampleGC(MPI_Comm comm) {
       MPI_Abort(comm, EXIT_FAILURE);
     }
   }
-  logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+  logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
   if (!isfinite(creal(logIpOld)) || !isfinite(cimag(logIpOld))) {
     if (!(creal(logIpOld) == -INFINITY && isfinite(cimag(logIpOld)))) {
       if (rank == 0)
@@ -722,7 +722,7 @@ void VMCMakeSampleGC(MPI_Comm comm) {
     }
     (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
                               TmpEleProjCnt, qpStart, qpEnd, comm);
-    logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+    logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
     BurnFlag = 0;
   }
 
@@ -740,7 +740,7 @@ void VMCMakeSampleGC(MPI_Comm comm) {
           fprintf(stderr, "Error: periodic GC sampler rebuild failed.\n");
           MPI_Abort(comm, EXIT_FAILURE);
         }
-        logIpOld = CalculateLogIP_fcmp(PfM, qpStart, qpEnd, comm);
+        logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
         GCRequireRebuiltAmplitude(logIpOld, "periodic", comm);
         nAccept = 0;
       }
