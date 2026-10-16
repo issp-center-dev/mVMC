@@ -954,15 +954,17 @@ def parse_summary(label, stdout, chains, nsite):
 
 
 def oracle_reference(case):
+    """(basis, Psi, H, ||H||_2, E of the exact GEVP minimum)."""
     basis, psi = gl.reference_wave(case)
     h = gl.hamiltonian(case, basis)
     norm = float(np.max(np.abs(np.linalg.eigvalsh(h))))
-    return basis, psi, h, norm
+    gevp = gl.gevp(*gl.krylov(psi, h)[1:])
+    return basis, psi, h, norm, gevp["energy"] if gevp else math.nan
 
 
 def oracle_observables(reference, c):
     """E, variance and N probabilities of Phi = c0 Psi + c1 H Psi."""
-    basis, psi, h, unused = reference
+    basis, psi, h = reference[:3]
     phi = c[0] * psi + c[1] * (h @ psi)
     weight = np.abs(phi) ** 2
     total = float(np.sum(weight))
@@ -1008,14 +1010,18 @@ def statistical_gates(label, result, summary, reference, samples, chains):
     for entry in summary["bootstrap"]:
         require(entry[0] >= 1 and entry[4] == 0,
                 "%s: bootstrap %r" % (label, entry))
+    # Diagnostic only (no gate): E_oracle(c) - E_GEVP >= 0 measures how far
+    # the frozen coefficients are from the exact optimum.
     print("  %-28s E=%.10f oracle=%.10f |d|/se=%.2f se=%.4g var=%.6f "
-          "oracle=%.6f tau=%.2f ESS=%.0f E_coeff-E=%.3g" % (
+          "oracle=%.6f tau=%.2f ESS=%.0f E_coeff-E=%.3g "
+          "E_oracle(c)-E_GEVP=%.3g" % (
               label, result["energy"], energy,
               abs(result["energy"] - energy) / max(result["energy_se"],
                                                    1e-300),
               result["energy_se"], result["variance"], variance,
               result["tau_int"], result["effective_samples"],
-              summary["ecoeff"].real - result["energy"]))
+              summary["ecoeff"].real - result["energy"],
+              energy - reference[4]))
     return probability
 
 
@@ -1419,8 +1425,9 @@ def failure_mode(args):
         ("bootstrap_numeric", "f2", "bootstrap_numeric", None),
         ("bootstrap_exhausted", "f2", "bootstrap_exhausted",
          ["GC Lanczos failure: stage=final-bootstrap",
-          "attempts=1024 exact_zero=0 numeric_zero=1024 local_energy=0 "
-          "exhausted=1", "amplitude_state=numeric_zero"]),
+          # 1024 attempts per chain, all numeric zero.
+          "attempts={total} exact_zero=0 numeric_zero={total} "
+          "local_energy=0 exhausted=1", "amplitude_state=numeric_zero"]),
         ("final_numeric", "f2", "final_numeric",
          ["GC Lanczos failure: stage=final-sample",
           "amplitude_state=numeric_zero"]),
@@ -1428,19 +1435,27 @@ def failure_mode(args):
          ["unknown MVMC_GC_LANCZOS_TEST_FAULT value"]),
     ]
     if args.np > 1:
+        # Rank 1 fails at the first evaluation (coefficient start): inside
+        # the only chain (QP split), and as the second of two chains, where
+        # the other chain must stop at the same collective.
         items += [
             ("allocation_rank1", "f2_combined", "allocation:rank=1",
              ["stabilized power-Lanczos failed: allocation failure"]),
-            # The first evaluation (coefficient start) fails on rank 1;
-            # candidate diagnostics cover the final-chain stages only.
             ("nonfinite_rank1", "f2_combined", "nonfinite:rank=1",
-             ["stabilized power-Lanczos failed: nonfinite value"]),
+             ["stabilized power-Lanczos failed: nonfinite value",
+              "GC Lanczos failure: stage=coefficient-initial chain=0"]),
+            ("allocation_rank1_two_chains", "f2", "allocation:rank=1",
+             ["stabilized power-Lanczos failed: allocation failure"]),
+            ("nonfinite_rank1_two_chains", "f2", "nonfinite:rank=1",
+             ["stabilized power-Lanczos failed: nonfinite value",
+              "GC Lanczos failure: stage=coefficient-initial chain=1"]),
         ]
-    nsplit = 1 if args.np == 1 else 2
-    chains = chain_count(args.np, nsplit)
+    default_split = 1 if args.np == 1 else 2
     for name, base, fault, needles in items:
         if args.case and args.case != name:
             continue
+        nsplit = 1 if name.endswith("_two_chains") else default_split
+        chains = chain_count(args.np, nsplit)
         try:
             case = e2e_case(base)
             work = pathlib.Path(args.workdir) / ("%s_np%d" % (name, args.np))
@@ -1458,6 +1473,7 @@ def failure_mode(args):
                 print("PASS %-20s numeric-zero candidate redrawn %r" % (
                     name, retried))
             else:
+                needles = [n.format(total=1024 * chains) for n in needles]
                 require_failure(name, done, work, needles)
                 require("GC_LANCZOS_SUMMARY" not in done.stdout,
                         "%s: summary printed on failure" % name)
@@ -1477,7 +1493,13 @@ def failure_mode(args):
 
 
 def classify_singular(args):
-    """Real classification of the singular F fixture (no forced fault)."""
+    """Real classification of the singular F fixture (no forced fault).
+
+    F=[[1,1],[1,1]] has det F = 0 exactly, so Phi vanishes exactly at full
+    filling.  The candidates must be rejected as exact zeros (the run then
+    completes without visiting N=4); a numeric-zero classification would
+    stop the run and is reported as a failure.
+    """
     case = e2e_case("singular")
     work = pathlib.Path(args.workdir) / ("singular_np%d" % args.np)
     nsplit = 1 if args.np == 1 else 2
@@ -1486,20 +1508,18 @@ def classify_singular(args):
     done = run_vmc(args.vmc, work, args.np,
                    env={"MVMC_GC_LANCZOS_TEST_SUMMARY": "1"})
     chains = chain_count(args.np, nsplit)
-    bootstrap = re.search(r"^GC Lanczos bootstrap: .*$", done.stdout, re.M)
-    if done.returncode == 0:
-        result = require_success("singular", done, work, STAT_SAMPLES,
-                                 chains)
-        summary = parse_summary("singular", done.stdout, chains, case["L"])
-        print("PASS singular F: completed, E=%.10f se=%.3g sectors=%s; %s" % (
-            result["energy"], result["energy_se"], summary["sectors"],
-            bootstrap.group(0) if bootstrap else "no bootstrap line"))
-    else:
-        require_failure("singular", done, work,
-                        ["GC Lanczos failure: stage="])
-        failure = re.search(r"^GC Lanczos failure: .*$",
-                            done.stdout + done.stderr, re.M)
-        print("PASS singular F: terminated, %s" % failure.group(0))
+    failure = re.search(r"^GC Lanczos failure: .*$",
+                        done.stdout + done.stderr, re.M)
+    require(done.returncode == 0, "singular F: run stopped (%s)" % (
+        failure.group(0) if failure else "exit %d" % done.returncode))
+    result = require_success("singular", done, work, STAT_SAMPLES, chains)
+    summary = parse_summary("singular", done.stdout, chains, case["L"])
+    require(summary["sectors"][2 * case["L"]] == 0,
+            "singular F: full filling sampled %r" % summary["sectors"])
+    statistical_gates("singular", result, summary, oracle_reference(case),
+                      STAT_SAMPLES, chains)
+    print("PASS singular F: full-filling candidates rejected as exact "
+          "zeros, run completed, sectors=%s" % summary["sectors"])
 
 
 # --- public sample ----------------------------------------------------------
@@ -1523,12 +1543,11 @@ def sample_mode(args):
         reference = oracle_reference(case)
         statistical_gates("sample", result, summary, reference,
                           STAT_SAMPLES, 1)
-        basis, psi, h, unused = reference
-        gevp = gl.gevp(*gl.krylov(psi, h)[1:])
         print("PASS sample E=%.10f +/- %.3g variance=%.6f (oracle GEVP "
               "E=%.10f, exact ground state %.10f)" % (
                   result["energy"], result["energy_se"], result["variance"],
-                  gevp["energy"], float(np.min(np.linalg.eigvalsh(h)))))
+                  reference[4],
+                  float(np.min(np.linalg.eigvalsh(reference[2])))))
     except CheckFailure as error:
         print("FAIL %s" % error)
         return 1

@@ -547,10 +547,11 @@ static MVMCKrylovStatus gc_final_bootstrap(
   MVMCKrylovFinalDiagnostic diagnostic;
   size_t attempt;
   gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_FINAL_BOOTSTRAP;
-  memset(&diagnostic, 0, sizeof(diagnostic));
   for (attempt = 0; attempt < MVMC_POWER_LANCZOS_BOOTSTRAP_ATTEMPTS;
        ++attempt) {
     MVMCKrylovBootstrapReason reason = MVMC_KRYLOV_BOOTSTRAP_NO_RETRY;
+    /* A failed draw must not report the previous candidate. */
+    memset(&diagnostic, 0, sizeof(diagnostic));
     status = gc_draw_start(gc, rng, words, word_count, attempt % 2 == 0);
     if (status != MVMC_KRYLOV_STATUS_OK) break;
     ++gc->bootstrap_attempts;
@@ -1192,6 +1193,10 @@ static MVMCKrylovStatus stabilized_core(
         workspace, &guide, words, word_count, amplitude,
         amplitude_context, &coefficient_snapshot);
   }
+  gc_record_failure(gc, status, words, word_count, NULL);
+  /* The start is chain-local; the pilot below has world collectives, so
+   * every chain must enter it or none. */
+  status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
   pilot_warm_up = input->warm_up < 256 ? input->warm_up : 256;
   pilot_sample_count =
       input->sample_count < 256 ? input->sample_count : 256;
