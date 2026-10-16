@@ -68,7 +68,9 @@ When ``NGrandCanonical=1``, this fixed-name file contains three columns:
 :math:`\langle N^2\rangle-\langle N\rangle^2`. Parameter optimization writes
 one line per SR step; physical calculation writes one line per bin. The name
 does not use ``CDataFileHead`` or ``NDataIdxStart``. Starting another run in
-the same directory replaces the previous ``zvo_gc.dat``.
+the same directory replaces the previous ``zvo_gc.dat``. The file is not
+written when ``NLanczosMode=1`` (first-step Lanczos with grand-canonical
+sampling).
 
 Output file for variational parameters (\*\*\*\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -605,6 +607,13 @@ residual of the generalized eigenproblem. It contains no Green's functions or
 per-sample trace. For multiple independent chains, ``effective_samples`` is
 the sum of the per-chain effective sample counts, and ``tau_int`` is the
 equivalent value ``total_samples/(2*effective_samples)``.
+
+With ``NGrandCanonical=1`` (first step only) the file has the same header
+with ``order=1`` and the same 11 fields. Energy and variance are those of the
+input :math:`H`, including :math:`-\mu N`, over all particle numbers; no
+particle-number fields are added. When the run stops, for example on a
+numerically zero candidate in the final chain, no result row is written and
+the reason is given on standard error.
 
 When ``LsTrans`` or ``LsInterAll`` selects an independent :math:`H'`, the
 first header instead contains ``independent_power_lanczos`` and

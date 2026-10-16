@@ -1303,7 +1303,9 @@ add_gc_invalid_test(GC_Invalid_TwoSz "requires 2Sz=-1" 2Sz=0)
 add_gc_invalid_test(GC_Invalid_ExUpdatePath "requires NExUpdatePath=0" NExUpdatePath=1)
 add_gc_invalid_test(GC_Invalid_UpdateWeight "does not support the UpdateWeight input" gc_updateweight)
 add_gc_invalid_test(GC_Invalid_SRCG "supports dense SR only" NSRCG=1)
-add_gc_invalid_test(GC_Invalid_Lanczos "does not support Lanczos" NLanczosMode=1)
+# GC accepts only the first-step stabilized estimator; the legacy one is rejected.
+add_gc_invalid_test(GC_Invalid_Lanczos
+    "supports Lanczos only as the first-step stabilized estimator" NLanczosMode=1)
 add_gc_invalid_test(GC_Invalid_RBM "does not support RBM" gc_rbm)
 add_gc_invalid_test(GC_Invalid_BackFlow "does not support BackFlow" gc_backflow)
 add_gc_invalid_test(GC_Invalid_FlagRange "must be 0 or 1" NGrandCanonical=2)
@@ -2748,3 +2750,29 @@ add_gc_lanczos_test(GCLanczos_Oracle oracle
 add_gc_lanczos_test(GCLanczos_Proposal_Oracle proposal
     --unit $<TARGET_FILE:gc_krylov_proposal_unit>
     --workdir work/GCLanczos_Proposal_Oracle)
+# Expert input -> vmc.out -> xxx_pl_out (11 columns); the matrices of input
+# mutations, fixed-seed statistics and faults are looped inside the runner.
+add_gc_lanczos_test(GCLanczos_Input input --vmc $<TARGET_FILE:vmc.out>
+    --workdir work/GCLanczos_Input)
+add_gc_lanczos_test(GCLanczos_Production production
+    --vmc $<TARGET_FILE:vmc.out> --workdir work/GCLanczos_Production)
+add_gc_lanczos_test(GCLanczos_Failure failure --vmc $<TARGET_FILE:vmc.out>
+    --workdir work/GCLanczos_Failure)
+add_gc_lanczos_test(GCLanczos_Sample sample --vmc $<TARGET_FILE:vmc.out>
+    --sample ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/FirstLanczos
+    --workdir work/GCLanczos_Sample)
+if(MPI_FOUND)
+    foreach(case Input:input:2 Failure:failure:2 Production:mpi:2
+                 Production:mpi:3)
+        string(REPLACE ":" ";" fields ${case})
+        list(GET fields 0 label)
+        list(GET fields 1 mode)
+        list(GET fields 2 np)
+        add_gc_lanczos_test(GCLanczos_${label}_np${np}_mpi ${mode} --np ${np}
+            --vmc $<TARGET_FILE:vmc.out>
+            --workdir work/GCLanczos_${label}_np${np})
+        set_tests_properties(GCLanczos_${label}_np${np}_mpi PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+            PROCESSORS ${np})
+    endforeach()
+endif()

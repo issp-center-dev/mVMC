@@ -2,13 +2,22 @@
 """GC first-step stabilized Lanczos checks.
 
 modes:
-  proposal: exact Fraction cross-check of the symmetric GC proposals
-            enumerated by gc_krylov_proposal_unit --dump.
-  oracle  : enumeration probe (production GC bridge, bounded engine,
-            measurement, GEVP) against the independent Fock oracle
-            (grandcanonical_lanczos_oracle) for F2/G2/F4, the six
-            pairing/projection combinations x PBC/APBC, boundary, node,
-            singular, rank and 2^+-300 scale fixtures.
+  proposal  : exact Fraction cross-check of the symmetric GC proposals
+              enumerated by gc_krylov_proposal_unit --dump.
+  oracle    : enumeration probe (production GC bridge, bounded engine,
+              measurement, GEVP) against the independent Fock oracle
+              (grandcanonical_lanczos_oracle) for F2/G2/F4, the six
+              pairing/projection combinations x PBC/APBC, boundary, node,
+              singular, rank and 2^+-300 scale fixtures.
+  input     : expert-input mutations (non-zero exit, named diagnostic, no
+              result row) and accepted inputs, serial or --np 2.
+  production: F2/G2/F2+spin+momentum expert inputs through vmc.out, seeds
+              17/29/43/71, compared with the oracle for the frozen c.
+  mpi       : --np 2 (QP partition == serial, two chains) or --np 3
+              (chains 2+1 with an empty QP rank == two single-rank chains).
+  failure   : MVMC_GC_LANCZOS_TEST_FAULT contracts and the real singular-F
+              classification.
+  sample    : samples/GrandCanonical/FirstLanczos, copied to --workdir.
 
 Tolerances are the frozen plan values (fixture-policy):
   q        : |a - r| <= 3e-12 + 3e-11 |r| on one common scale
@@ -648,15 +657,896 @@ def proposal_mode(args):
     return 0
 
 
+# --- E2E: expert input -> vmc.out -> xxx_pl_out (11 columns) -------------
+import re
+import shutil
+
+SERIAL_TIMEOUT = 120
+MPI_TIMEOUT = 180
+STAT_TIMEOUT = 600
+STAT_SEEDS = (17, 29, 43, 71)
+STAT_SAMPLES = 8192
+STAT_WARMUP = 512
+PL_COLUMNS = ("energy energy_se variance variance_se energy_imag "
+              "variance_imag tau_int effective_samples retained_rank "
+              "condition gevp_residual").split()
+PL_HEADER = re.compile(
+    r"^# stabilized_power_lanczos version=2 order=1 chains=(\d+) "
+    r"samples_per_chain=(\d+) coefficient_samples=(\d+) "
+    r"final_samples=(\d+) blocks=(\d+)$")
+SUMMARY = re.compile(
+    r"^GC_LANCZOS_SUMMARY v1 c0=(\S+),(\S+) c1=(\S+),(\S+) "
+    r"ecoeff=(\S+),(\S+) chains=(\d+) bootstrap=(\S+) sectors=(\S+)$",
+    re.M)
+BAR = "=" * 45 + "\n"
+STAT_CASES = ("f2", "g2", "f2_combined")
+
+
+def e2e_case(name):
+    rows = model_rows(2, [(0, 1)], "pbc", V=0.125, J=0.0625)
+    if name == "f2":
+        return fixture("F2", 2, "antiparallel", F2, rows=rows)
+    if name == "g2":
+        return fixture("G2", 2, "general", general_matrix(F2), rows=rows)
+    if name == "f2_combined":
+        return fixture("F2_combined", 2, "antiparallel", F2, "pbc",
+                       momentum(2, 0), gauss=2, rows=rows)
+    if name == "singular":
+        return fixture("Singular", 2, "antiparallel", SINGULAR, rows=rows)
+    if name == "sample":
+        # samples/GrandCanonical/FirstLanczos: F2 without V and Hund.
+        return fixture("Sample", 2, "antiparallel", F2,
+                       rows=model_rows(2, [(0, 1)], "pbc"))
+    if name == "f2_diagonal":
+        # t=0: q_k(x) = E(x)^k Psi(x), so every sampled S/K/T is real
+        # symmetric and the GEVP input gate holds for any sample count.
+        return fixture("F2_diagonal", 2, "antiparallel", F2,
+                       rows=model_rows(2, [(0, 1)], "pbc", t=0.0, V=0.125,
+                                       J=0.0625))
+    raise CheckFailure("unknown E2E case %s" % name)
+
+
+def chain_count(nproc, nsplit):
+    return max(1, (nproc + nsplit - 1) // nsplit)
+
+
+def block_count(samples):
+    count = 16 if samples >= 32 else samples // 2
+    while count >= 4 and samples % count:
+        count -= 1
+    return count if count >= 4 else 0
+
+
+def def_block(keyword, count, rows, complex_type=None):
+    second = ("ComplexType %d\n" % complex_type
+              if complex_type is not None else BAR)
+    return BAR + "%s %d\n" % (keyword, count) + second + BAR + BAR + \
+        "".join(rows)
+
+
+def e2e_modpara(case, seed, samples, warmup, nsplit, init_nelec):
+    general = case["pairing"] == "general"
+    return [
+        ("NVMCCalMode", 1), ("NLanczosMode", 1), ("NLanczosStep", 1),
+        ("NLanczosEstimatorMode", 1), None,
+        ("NDataIdxStart", 1), ("NDataQtySmp", 1), None,
+        ("Nsite", case["L"]), ("Ne", case["L"] // 2),
+        ("2Sz", -1 if general else 0),
+        ("NSPGaussLeg", case["gauss"]), ("NSPStot", 0),
+        ("NMPTrans", len(case["translations"])),
+        ("NSROptItrStep", 1), ("NSROptItrSmp", 1),
+        ("DSROptRedCut", "0.000000000001"), ("DSROptStaDel", "0.01"),
+        ("DSROptStepDt", "0.002"),
+        ("NVMCWarmUp", warmup), ("NVMCInterval", 1),
+        ("NVMCSample", samples), ("NExUpdatePath", 0), ("RndSeed", seed),
+        ("NSplitSize", nsplit), ("NStore", 1), ("NSRCG", 0),
+        ("NGrandCanonical", 1), ("NGCInitNelec", init_nelec)]
+
+
+def write_modpara(path, entries, overrides):
+    keys = set(entry[0] for entry in entries if entry is not None)
+    lines = ["--------------------", "Model_Parameters   0",
+             "--------------------", "VMC_Cal_Parameters",
+             "--------------------", "CDataFileHead  zvo",
+             "CParaFileHead  zqp", "--------------------"]
+    for entry in entries:
+        if entry is None:
+            lines.append("--------------------")
+            continue
+        key, value = entry
+        value = overrides.get(key, value)
+        if value is not None:
+            lines.append("%-22s %s" % (key, value))
+    for key, value in overrides.items():
+        if key not in keys and value is not None:
+            lines.append("%-22s %s" % (key, value))
+    pathlib.Path(path).write_text("\n".join(lines) + "\n")
+
+
+def write_e2e_input(case, workdir, seed=17, samples=STAT_SAMPLES,
+                    warmup=STAT_WARMUP, nsplit=1, init_nelec=2,
+                    overrides=None):
+    """Expert input for one fixture; returns the namelist entries."""
+    work = pathlib.Path(workdir)
+    if work.exists():
+        shutil.rmtree(str(work))
+    work.mkdir(parents=True)
+    nsite = case["L"]
+    write_modpara(work / "modpara.def",
+                  e2e_modpara(case, seed, samples, warmup, nsplit,
+                              init_nelec), overrides or {})
+    names = [("ModPara", "modpara.def"), ("LocSpin", "locspn.def")]
+    (work / "locspn.def").write_text(def_block(
+        "NlocalSpin", 0, ["%d 0\n" % s for s in range(nsite)]))
+    rows = ["%d %d %d %d %s %s\n" % (i, si, j, sj, fmt(complex(v).real),
+                                      fmt(complex(v).imag))
+            for i, si, j, sj, v in case["trans"]]
+    (work / "trans.def").write_text(def_block("NTransfer", len(rows), rows))
+    names.append(("Trans", "trans.def"))
+    if case.get("intra"):
+        (work / "coulombintra.def").write_text(def_block(
+            "NCoulombIntra", len(case["intra"]),
+            ["%d %s\n" % (s, fmt(v)) for s, v in case["intra"]]))
+        names.append(("CoulombIntra", "coulombintra.def"))
+    if case.get("inter"):
+        (work / "coulombinter.def").write_text(def_block(
+            "NCoulombInter", len(case["inter"]),
+            ["%d %d %s\n" % (i, j, fmt(v)) for i, j, v in case["inter"]]))
+        names.append(("CoulombInter", "coulombinter.def"))
+    if case.get("hund"):
+        (work / "hund.def").write_text(def_block(
+            "NHund", len(case["hund"]),
+            ["%d %d %s\n" % (i, j, fmt(v)) for i, j, v in case["hund"]]))
+        names.append(("Hund", "hund.def"))
+    if case["pairing"] == "antiparallel":
+        pairs = [(i, j) for i in range(nsite) for j in range(nsite)]
+        rows = ["%d %d %d\n" % (i, j, k) for k, (i, j) in enumerate(pairs)]
+        values = [complex(case["F"][i][j]) for i, j in pairs]
+        name = ("OrbitalAntiParallel", "orbitalidx.def")
+    else:
+        pairs = [(a, b) for a in range(2 * nsite)
+                 for b in range(a + 1, 2 * nsite)]
+        rows = ["%d %d %d %d %d 1\n" % (a % nsite, a // nsite, b % nsite,
+                                         b // nsite, k)
+                for k, (a, b) in enumerate(pairs)]
+        # OrbitalGeneral builds SlaterElm_IJ = f_IJ - f_JI = 2 f_IJ.
+        values = [complex(case["A"][a][b]) / 2 for a, b in pairs]
+        name = ("OrbitalGeneral", "orbitalidxgen.def")
+    rows += ["%d 1\n" % k for k in range(len(pairs))]
+    (work / name[1]).write_text(def_block("NOrbitalIdx", len(pairs), rows,
+                                          complex_type=1))
+    names.append(name)
+    steps = [r for r, _ in case["translations"]]
+    if steps != list(range(len(steps))):
+        raise CheckFailure("E2E translations must be 0..R-1")
+    mappings = gl.chain_mappings(nsite, case["boundary"], steps)
+    rows = ["%d %s %s\n" % (r, fmt(complex(w).real), fmt(complex(w).imag))
+            for r, w in case["translations"]]
+    rows += ["%d %d %d %d\n" % ((r, s) + mappings[(r, s)])
+             for r in steps for s in range(nsite)]
+    (work / "qptransidx.def").write_text(def_block("NQPTrans", len(steps),
+                                                   rows))
+    names.append(("TransSym", "qptransidx.def"))
+    initial = [0.0] * 6
+    for value in values:
+        initial += [value.real, value.imag, 0.0]
+    (work / "initial.def").write_text(
+        " ".join(fmt(v) for v in initial) + "\n")
+    write_namelist(work, names)
+    return names
+
+
+def write_namelist(work, names):
+    (pathlib.Path(work) / "namelist.def").write_text(
+        "".join("%16s  %s\n" % (key, path) for key, path in names))
+
+
+def mpi_prefix(nproc):
+    launcher = os.environ.get("MVMC_MPIEXEC") or shutil.which("mpiexec") \
+        or shutil.which("mpirun")
+    if not launcher:
+        raise CheckFailure("MPI launcher not found")
+    flag = os.environ.get("MVMC_MPIEXEC_NUMPROC_FLAG") or "-np"
+    return [launcher, flag, str(nproc)]
+
+
+def run_vmc(vmc, workdir, nproc=1, env=None, timeout=None, options=()):
+    command = [os.path.abspath(vmc)] + list(options) + [
+        "-e", "namelist.def", "initial.def"]
+    if nproc > 1:
+        command = mpi_prefix(nproc) + command
+    if timeout is None:
+        timeout = MPI_TIMEOUT if nproc > 1 else SERIAL_TIMEOUT
+    environment = dict(os.environ, OMP_NUM_THREADS="1",
+                       OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1",
+                       VECLIB_MAXIMUM_THREADS="1")
+    environment.pop("MVMC_GC_LANCZOS_TEST_SUMMARY", None)
+    environment.pop("MVMC_GC_LANCZOS_TEST_FAULT", None)
+    environment.update(env or {})
+    try:
+        done = subprocess.run(command, cwd=str(workdir), env=environment,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise CheckFailure("%s: timeout after %d s (never an expected error)"
+                           % (workdir, timeout))
+    work = pathlib.Path(workdir)
+    (work / "stdout.txt").write_text(done.stdout)
+    (work / "stderr.txt").write_text(done.stderr)
+    return done
+
+
+def pl_out_rows(workdir):
+    path = pathlib.Path(workdir) / "output" / "zvo_pl_out_001.dat"
+    if not path.exists():
+        return None, []
+    lines = path.read_text().splitlines()
+    headers = [line for line in lines if line.startswith("#")]
+    rows = [line.split() for line in lines
+            if line.strip() and not line.startswith("#")]
+    return headers, rows
+
+
+def require_success(label, done, workdir, samples, chains):
+    """Exit 0 and exactly one finite 11-column row with a valid header."""
+    require(done.returncode == 0, "%s: exit %d\n%s%s" % (
+        label, done.returncode, done.stdout[-3000:], done.stderr[-3000:]))
+    headers, rows = pl_out_rows(workdir)
+    require(headers is not None, "%s: no pl_out file" % label)
+    require(len(headers) == 2, "%s: header lines %r" % (label, headers))
+    match = PL_HEADER.match(headers[0])
+    require(match is not None, "%s: header %r" % (label, headers[0]))
+    total = samples * chains
+    expected = (chains, samples, total, total, block_count(total))
+    require(tuple(int(v) for v in match.groups()) == expected,
+            "%s: header %r, expected %r" % (label, headers[0], expected))
+    require(headers[1] == "# " + " ".join(PL_COLUMNS),
+            "%s: column order %r" % (label, headers[1]))
+    require(len(rows) == 1 and len(rows[0]) == 11,
+            "%s: data rows %r" % (label, rows))
+    values = [float(v) for v in rows[0]]
+    require(all(math.isfinite(v) for v in values),
+            "%s: nonfinite row %r" % (label, rows[0]))
+    result = dict(zip(PL_COLUMNS, values))
+    require(result["retained_rank"] in (1.0, 2.0),
+            "%s: retained_rank %r" % (label, result["retained_rank"]))
+    require(result["energy_se"] >= 0 and result["variance_se"] >= 0 and
+            result["condition"] >= 1 and result["gevp_residual"] >= 0,
+            "%s: invalid diagnostics %r" % (label, result))
+    require(0 < result["effective_samples"] <= total and
+            result["tau_int"] >= 1,
+            "%s: ESS/tau %r" % (label, result))
+    return result
+
+
+def require_failure(label, done, workdir, needles):
+    output = done.stdout + done.stderr
+    require(done.returncode != 0, "%s: unexpectedly succeeded\n%s" % (
+        label, output[-3000:]))
+    for needle in needles:
+        require(needle in output, "%s: missing diagnostic %r\n%s" % (
+            label, needle, output[-3000:]))
+    unused, rows = pl_out_rows(workdir)
+    require(not rows, "%s: %d result rows written on failure" % (
+        label, len(rows)))
+
+
+def parse_summary(label, stdout, chains, nsite):
+    found = SUMMARY.findall(stdout)
+    require(len(found) == 1, "%s: %d summary records" % (label, len(found)))
+    fields = found[0]
+    c = np.array([complex(float(fields[0]), float(fields[1])),
+                  complex(float(fields[2]), float(fields[3]))])
+    ecoeff = complex(float(fields[4]), float(fields[5]))
+    require(int(fields[6]) == chains, "%s: summary chains %s" % (
+        label, fields[6]))
+    bootstrap = [tuple(int(v) for v in item.split(":"))
+                 for item in fields[7].split(";")]
+    require(len(bootstrap) == min(chains, 16), "%s: bootstrap %r" % (
+        label, fields[7]))
+    sectors = [int(v) for v in fields[8].split(",")]
+    require(len(sectors) == 2 * nsite + 1, "%s: sectors %r" % (
+        label, sectors))
+    require(np.all(np.isfinite(c)) and np.any(c != 0),
+            "%s: coefficients %r" % (label, c))
+    return {"c": c, "ecoeff": ecoeff, "bootstrap": bootstrap,
+            "sectors": sectors}
+
+
+def oracle_reference(case):
+    basis, psi = gl.reference_wave(case)
+    h = gl.hamiltonian(case, basis)
+    norm = float(np.max(np.abs(np.linalg.eigvalsh(h))))
+    return basis, psi, h, norm
+
+
+def oracle_observables(reference, c):
+    """E, variance and N probabilities of Phi = c0 Psi + c1 H Psi."""
+    basis, psi, h, unused = reference
+    phi = c[0] * psi + c[1] * (h @ psi)
+    weight = np.abs(phi) ** 2
+    total = float(np.sum(weight))
+    require(total > 0, "oracle Phi vanishes")
+    hphi = h @ phi
+    energy = (np.vdot(phi, hphi) / total).real
+    second = (np.vdot(hphi, hphi) / total).real
+    probability = {}
+    for mask, value in zip(basis, weight):
+        n = gl.popcount(mask)
+        probability[n] = probability.get(n, 0.0) + value / total
+    return energy, second - energy * energy, probability
+
+
+def statistical_gates(label, result, summary, reference, samples, chains):
+    """Per-run gates of fixture-policy; returns the oracle probabilities."""
+    norm = reference[3]
+    energy, variance, probability = oracle_observables(reference,
+                                                       summary["c"])
+    scale = max(1.0, norm)
+    checks = [
+        ("energy", abs(result["energy"] - energy),
+         8 * result["energy_se"] + 2e-10 * (1 + abs(energy))),
+        ("energy_se", result["energy_se"], 0.03 * scale),
+        ("variance", abs(result["variance"] - variance),
+         8 * result["variance_se"] + 0.02 * scale ** 2),
+        ("variance_se", result["variance_se"], 0.05 * scale ** 2),
+    ]
+    for name, value, bound in checks:
+        require(value <= bound, "%s: %s %.6g > %.6g (oracle E=%.12g var=%.12g)"
+                % (label, name, value, bound, energy, variance))
+    require(result["effective_samples"] >= 128,
+            "%s: ESS %.6g < 128" % (label, result["effective_samples"]))
+    require(sum(summary["sectors"]) == samples * chains,
+            "%s: sector counts %r" % (label, summary["sectors"]))
+    for n, count in enumerate(summary["sectors"]):
+        if count:
+            require(n % 2 == 0 and probability.get(n, 0.0) > 0,
+                    "%s: visited forbidden sector N=%d" % (label, n))
+        if probability.get(n, 0.0) >= 0.05:
+            require(count > 0, "%s: sector N=%d (p=%.3f) not visited" % (
+                label, n, probability[n]))
+    for entry in summary["bootstrap"]:
+        require(entry[0] >= 1 and entry[4] == 0,
+                "%s: bootstrap %r" % (label, entry))
+    print("  %-28s E=%.10f oracle=%.10f |d|/se=%.2f se=%.4g var=%.6f "
+          "oracle=%.6f tau=%.2f ESS=%.0f E_coeff-E=%.3g" % (
+              label, result["energy"], energy,
+              abs(result["energy"] - energy) / max(result["energy_se"],
+                                                   1e-300),
+              result["energy_se"], result["variance"], variance,
+              result["tau_int"], result["effective_samples"],
+              summary["ecoeff"].real - result["energy"]))
+    return probability
+
+
+def stat_run(args, case_name, seed, nproc=1, nsplit=1, tag=""):
+    case = e2e_case(case_name)
+    label = "%s_seed%d_np%d_split%d%s" % (case_name, seed, nproc, nsplit, tag)
+    work = pathlib.Path(args.workdir) / label
+    write_e2e_input(case, work, seed=seed, nsplit=nsplit)
+    done = run_vmc(args.vmc, work, nproc,
+                   env={"MVMC_GC_LANCZOS_TEST_SUMMARY": "1"},
+                   timeout=STAT_TIMEOUT)
+    chains = chain_count(nproc, nsplit)
+    result = require_success(label, done, work, STAT_SAMPLES, chains)
+    summary = parse_summary(label, done.stdout, chains, case["L"])
+    return label, case, result, summary, chains
+
+
+def production_mode(args):
+    failures = 0
+    for case_name in STAT_CASES:
+        if args.case and args.case != case_name:
+            continue
+        reference = oracle_reference(e2e_case(case_name))
+        pooled = None
+        oracle_mean = {}
+        try:
+            for seed in STAT_SEEDS:
+                label, case, result, summary, chains = stat_run(
+                    args, case_name, seed)
+                probability = statistical_gates(
+                    label, result, summary, reference, STAT_SAMPLES, chains)
+                counts = np.array(summary["sectors"], dtype=float)
+                pooled = counts if pooled is None else pooled + counts
+                for n, p in probability.items():
+                    oracle_mean[n] = oracle_mean.get(n, 0.0) + \
+                        p / len(STAT_SEEDS)
+            frequency = pooled / np.sum(pooled)
+            for n in range(len(frequency)):
+                diff = abs(frequency[n] - oracle_mean.get(n, 0.0))
+                require(diff <= 0.06, "%s: pooled N=%d frequency %.4f vs "
+                        "oracle %.4f" % (case_name, n, frequency[n],
+                                         oracle_mean.get(n, 0.0)))
+            print("PASS %-12s ||H||=%.5f pooled N freq=%s oracle=%s" % (
+                case_name, reference[3],
+                ",".join("%.4f" % f for f in frequency),
+                ",".join("%.4f" % oracle_mean.get(n, 0.0)
+                         for n in range(len(frequency)))))
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
+    print("GCLanczos production: %s" % ("PASS" if not failures else
+                                        "%d failure(s)" % failures))
+    return 1 if failures else 0
+
+
+def deterministic_match(label, first, second):
+    """Same chain seeds, only the QP partition changed."""
+    (r1, s1), (r2, s2) = first, second
+    for key in PL_COLUMNS:
+        a, b = r1[key], r2[key]
+        require(abs(a - b) <= 2e-10 * (1 + abs(b)),
+                "%s: %s %.17g vs %.17g" % (label, key, a, b))
+    for index in range(2):
+        a, b = s1["c"][index], s2["c"][index]
+        require(abs(a - b) <= 2e-10 * (1 + abs(b)),
+                "%s: c%d %r vs %r" % (label, index, a, b))
+    require(s1["sectors"] == s2["sectors"] and
+            s1["bootstrap"] == s2["bootstrap"],
+            "%s: counts differ %r/%r vs %r/%r" % (
+                label, s1["sectors"], s1["bootstrap"], s2["sectors"],
+                s2["bootstrap"]))
+
+
+def mpi_mode(args):
+    require(args.np in (2, 3), "mpi mode requires --np 2 or 3")
+    failures = 0
+    seed = STAT_SEEDS[0]
+    try:
+        if args.np == 2:
+            # QP partition of one chain against the serial run.
+            serial = stat_run(args, "f2_combined", seed)
+            split = stat_run(args, "f2_combined", seed, nproc=2, nsplit=2)
+            require(split[4] == 1, "np2 split: chains %d" % split[4])
+            deterministic_match("f2_combined QP split np2",
+                                (split[2], split[3]), (serial[2], serial[3]))
+            print("PASS f2_combined QP partition (np2, 1 chain) == serial")
+            # Two independent chains share one coefficient.
+            for case_name in ("f2", "g2"):
+                label, case, result, summary, chains = stat_run(
+                    args, case_name, seed, nproc=2, nsplit=1)
+                require(chains == 2, "%s: chains %d" % (label, chains))
+                statistical_gates(label, result, summary,
+                                  oracle_reference(case), STAT_SAMPLES,
+                                  chains)
+                print("PASS %s two chains (np2)" % case_name)
+        else:
+            # Chains of size 2 + 1; F2 has one QP, so one rank is empty.
+            reference = stat_run(args, "f2", seed, nproc=2, nsplit=1,
+                                 tag="_ref")
+            uneven = stat_run(args, "f2", seed, nproc=3, nsplit=2)
+            require(uneven[4] == 2, "np3: chains %d" % uneven[4])
+            statistical_gates(uneven[0], uneven[2], uneven[3],
+                              oracle_reference(uneven[1]), STAT_SAMPLES, 2)
+            deterministic_match("f2 np3 (2+1, empty QP) vs np2 (1+1)",
+                                (uneven[2], uneven[3]),
+                                (reference[2], reference[3]))
+            print("PASS f2 uneven chains 2+1 with an empty QP rank (np3)")
+            combined_ref = stat_run(args, "f2_combined", seed, nproc=2,
+                                    nsplit=1, tag="_ref")
+            combined = stat_run(args, "f2_combined", seed, nproc=3,
+                                nsplit=2)
+            deterministic_match("f2_combined np3 (2+1) vs np2 (1+1)",
+                                (combined[2], combined[3]),
+                                (combined_ref[2], combined_ref[3]))
+            print("PASS f2_combined uneven chains 2+1 (np3)")
+    except CheckFailure as error:
+        failures += 1
+        print("FAIL %s" % error)
+    print("GCLanczos mpi np%d: %s" % (args.np, "PASS" if not failures else
+                                      "%d failure(s)" % failures))
+    return 1 if failures else 0
+
+
+# --- input mutations -------------------------------------------------------
+def add_file(work, keyword, name, text):
+    work = pathlib.Path(work)
+    (work / name).write_text(text)
+    with open(str(work / "namelist.def"), "a") as stream:
+        stream.write("%16s  %s\n" % (keyword, name))
+
+
+def edit_rows(work, name, function):
+    path = pathlib.Path(work) / name
+    lines = path.read_text().splitlines(True)
+    path.write_text("".join(function(lines)))
+
+
+def set_count(lines, count):
+    keyword = lines[1].split()[0]
+    return lines[:1] + ["%s %d\n" % (keyword, count)] + lines[2:]
+
+
+def append_trans(work, rows):
+    edit_rows(work, "trans.def", lambda lines: set_count(
+        lines, len(lines) - 5 + len(rows)) + rows)
+
+
+def nonhermitian(work):
+    def change(lines):
+        body = lines[5:]
+        fields = body[1].split()
+        fields[4] = fmt(0.5 * float(fields[4]))
+        body[1] = " ".join(fields) + "\n"
+        return lines[:5] + body
+    edit_rows(work, "trans.def", change)
+
+
+SPIN_JASTROW = def_block("NSpinJastrowIdx", 1,
+                         ["0 1 0\n", "1 0 0\n", "0 1\n"], complex_type=0)
+LATTICE = BAR.replace("=", "-") + "NLattice 2 1 1 1\n" + \
+    BAR.replace("=", "-") + "i_x_y_z_orb\n" + BAR.replace("=", "-") + \
+    "0 0 0 0 0\n1 1 0 0 0\n"
+TWIST = BAR.replace("=", "-") + "NTwist 1\n" + BAR.replace("=", "-") + \
+    "idx_site_s_x_y_z\n" + BAR.replace("=", "-") + \
+    "".join("0 %d %d 0.0 0.0 0.0\n" % (site, spin)
+            for site in range(2) for spin in range(2))
+OPTTRANS = BAR + "NQPOptTrans 1\n" + BAR + BAR + BAR + "0 1.0\n" + \
+    "".join("0 %d %d\n" % (site, site) for site in range(2))
+FIRST_STEP = "supports Lanczos only as the first-step stabilized estimator"
+TERMS = "Lanczos supports only Trans, CoulombIntra, CoulombInter and Hund"
+GREEN = "Lanczos does not measure Green functions"
+
+# name: (base case, mutation(work), diagnostics)
+INVALID_INPUTS = {
+    "legacy": ("f2", {"NLanczosEstimatorMode": 0}, [FIRST_STEP]),
+    "step2": ("f2", {"NLanczosStep": 2}, [FIRST_STEP]),
+    "mode2": ("f2", {"NLanczosMode": 2}, [FIRST_STEP]),
+    "calmode0": ("f2", {"NVMCCalMode": 0}, [FIRST_STEP]),
+    "reweight": ("f2", {"reweight": 1}, ["Lanczos requires reweight=0"]),
+    "spinflip_transfer": ("g2", lambda w: append_trans(w, [
+        "0 0 1 1 %s 0.0\n" % fmt(0.1), "1 1 0 0 %s 0.0\n" % fmt(0.1)]),
+        ["Lanczos supports only spin-conserving Trans"]),
+    "pair_hopping": ("f2", lambda w: add_file(
+        w, "PairHop", "pairhop.def", def_block("NPairHop", 1,
+                                               ["0 1 0.1\n"])), [TERMS]),
+    "exchange": ("f2", lambda w: add_file(
+        w, "Exchange", "exchange.def", def_block("NExchange", 1,
+                                                 ["0 1 0.1\n"])), [TERMS]),
+    "interall": ("f2", lambda w: add_file(
+        w, "InterAll", "interall.def", def_block(
+            "NInterAll", 1, ["0 0 0 0 1 0 1 0 0.1 0.0\n"])), [TERMS]),
+    "nbody_interall": ("f2", lambda w: add_file(
+        w, "NBodyInterAll", "nbodyinterall.def", def_block(
+            "NNBodyInterAll", 1, ["1 0 0 0 0 0.1 0\n"])), [TERMS]),
+    "anomalous_term": ("f2", lambda w: add_file(
+        w, "AnomalousTerm", "anomalousterm.def", def_block(
+            "NAnomalousTerm", 2, ["1 0 0 0 1 0.35 -0.20\n",
+                                  "0 0 1 0 0 0.35 0.20\n"])), [TERMS]),
+    "onebodyg": ("f2", lambda w: add_file(
+        w, "OneBodyG", "greenone.def", def_block(
+            "NCisAjs", 1, ["0 0 0 0\n"])), [GREEN]),
+    "twobodyg": ("f2", lambda w: add_file(
+        w, "TwoBodyG", "greentwo.def", def_block(
+            "NCisAjsCktAltDC", 1, ["0 0 0 0 1 0 1 0\n"])), [GREEN]),
+    "twobodygex": ("f2", lambda w: add_file(
+        w, "TwoBodyGEx", "greentwoex.def", def_block(
+            "NCisAjsCktAlt", 1, ["0 0 1 0 1 1 0 1\n"])), [GREEN]),
+    "nbodyg": ("f2", lambda w: add_file(
+        w, "NBodyG", "nbodyg.def", def_block(
+            "NNBodyG", 1, ["1 0 0 0 0\n"])), [GREEN]),
+    "anomalousg": ("f2", lambda w: add_file(
+        w, "AnomalousG", "anomalousg.def", def_block(
+            "NAnomalousG", 1, ["1 0 0 0 1\n"])), [GREEN]),
+    "independent_h": ("f2", lambda w: add_file(
+        w, "LsTrans", "lstrans.def", def_block(
+            "NLsTransfer", 1, ["0 0 0 0 -0.30 0.0\n"])),
+        ["Lanczos does not support an independent operator"]),
+    "general_spin_projection": ("g2", {"NSPGaussLeg": 2},
+                                ["GC spin projection requires anti-parallel"]),
+    "spin_jastrow_projection": ("f2", ({"NSPGaussLeg": 2}, lambda w: add_file(
+        w, "SpinJastrow", "spinjastrow.def", SPIN_JASTROW)),
+        ["spin projection does not support SpinJastrow"]),
+    "opttrans": ("f2", lambda w: add_file(w, "OptTrans", "opttrans.def",
+                                          OPTTRANS),
+                 ["does not support OptTrans"]),
+    "twist": ("f2", lambda w: (
+        add_file(w, "Lattice", "lattice.def", LATTICE),
+        add_file(w, "Twist", "twist.def", TWIST)),
+        ["Lanczos does not support Twist"]),
+    "backflow": ("f2", lambda w: (
+        add_file(w, "BF", "bf.def", "====================\n"
+                 "NBackFlowIdx 1\n====================\n"),
+        add_file(w, "BFRange", "rangebf.def", "====================\n"
+                 "Nrange 1 1\n====================\n")),
+        ["does not support BackFlow"]),
+    "rbm": ("f2", lambda w: add_file(
+        w, "GeneralRBM_HiddenLayer", "rbm.def",
+        BAR + "NRBM_HiddenLayerIdx 1\nComplexType          1\n" + BAR),
+        ["does not support RBM"]),
+    "locspin": ("f2", lambda w: edit_rows(w, "locspn.def", lambda lines: (
+        lines[:1] + ["NlocalSpin 1\n"] + lines[2:5] + ["0 1\n"] +
+        lines[6:])), ["does not support LocSpin"]),
+    "real_only": ("f2", lambda w: edit_rows(
+        w, "orbitalidx.def", lambda lines: lines[:2] +
+        ["ComplexType 0\n"] + lines[3:]),
+        ["requires complex variational parameters"]),
+    "update_path": ("f2", {"NExUpdatePath": 1}, ["requires NExUpdatePath=0"]),
+    "negative_site": ("f2", {"Nsite": -2}, ["Nsite must be positive"]),
+    "negative_qp": ("f2", {"NSPGaussLeg": -1},
+                    ["GC NSPGaussLeg must be positive"]),
+    "negative_sample": ("f2", {"NVMCSample": -16},
+                        ["NVMCSample must be non-negative"]),
+    "sample9_chain2": ("f2", {"NVMCSample": 9},
+                       ["requires NVMCSample >= 8 and a divisor"]),
+    "initial_n_negative": ("f2", {"NGCInitNelec": -2},
+                           ["0 <= NGCInitNelec <= 2*Nsite"]),
+    "initial_n_too_large": ("f2", {"NGCInitNelec": 5},
+                            ["0 <= NGCInitNelec <= 2*Nsite"]),
+    "size_overflow": ("f2", {"NSPGaussLeg": 2147483647},
+                      ["GC NSPGaussLeg workspace exceeds int range"]),
+    "nonhermitian": ("f2", nonhermitian,
+                     ["Lanczos requires a Hermitian Trans input"]),
+}
+
+
+# OptTrans is enabled by the -o option, as in the existing GC tests.
+OPTIONS = {"opttrans": ("-o",)}
+
+
+def split_mutation(mutation):
+    """A mutation is modpara overrides, a file edit, or (overrides, edit)."""
+    if isinstance(mutation, tuple):
+        return mutation
+    if isinstance(mutation, dict):
+        return mutation, None
+    return {}, mutation
+
+
+def input_case(args, name, base, mutation, samples=64, warmup=8):
+    case = e2e_case(base)
+    work = pathlib.Path(args.workdir) / ("%s_np%d" % (name, args.np))
+    overrides, edit = split_mutation(mutation)
+    write_e2e_input(case, work, samples=samples, warmup=warmup,
+                    overrides=overrides)
+    if edit is not None:
+        edit(work)
+    return case, work
+
+
+def positive_inputs(args):
+    """Accepted inputs: (name, base, overrides/mutation, samples, check).
+
+    A sampled K is Hermitian only in expectation, and the existing GEVP
+    input gate rejects a large anti-Hermitian part of a few-sample estimate
+    (canonical runs behave the same).  Small sample counts therefore use the
+    diagonal-H fixture; the other accepted inputs use 8192 samples.
+    """
+    chains = args.np
+    items = []
+    for samples in (8, 16, 32):
+        items.append(("samples%d" % samples, "f2_diagonal", None, samples,
+                      None))
+    items.append(("init_odd_rounded", "f2", {"NGCInitNelec": 3},
+                  STAT_SAMPLES, "initial GC particle number is 2"))
+    items.append(("zero_element_green", "f2", lambda w: (
+        add_file(w, "OneBodyG", "greenone.def",
+                 def_block("NCisAjs", 0, [])),
+        add_file(w, "TwoBodyG", "greentwo.def",
+                 def_block("NCisAjsCktAltDC", 0, []))), STAT_SAMPLES, None))
+    items.append(("general_g2", "g2", None, STAT_SAMPLES, None))
+    return chains, items
+
+
+def input_mode(args):
+    names = tuple(INVALID_INPUTS)
+    require(len(set(names)) == len(names) == 34, "mutation inventory")
+    failures = 0
+    for name, (base, mutation, needles) in INVALID_INPUTS.items():
+        if args.case and args.case != name:
+            continue
+        try:
+            unused, work = input_case(args, name, base, mutation)
+            done = run_vmc(args.vmc, work, args.np,
+                           options=OPTIONS.get(name, ()))
+            require_failure(name, done, work, needles)
+            print("PASS invalid %-24s %s" % (name, needles[0]))
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
+    chains, items = positive_inputs(args)
+    for name, base, mutation, samples, needle in items:
+        if args.case and args.case != name:
+            continue
+        try:
+            unused, work = input_case(args, name, base, mutation or {},
+                                      samples=samples)
+            done = run_vmc(args.vmc, work, args.np)
+            require_success(name, done, work, samples, chains)
+            if needle:
+                require(needle in done.stdout, "%s: missing %r" % (
+                    name, needle))
+            print("PASS accepted %-23s chains=%d samples=%d" % (
+                name, chains, samples))
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
+    for name, function in (("normal_gc", check_normal_gc),
+                           ("canonical_green", check_canonical_green)):
+        if args.case and args.case != name:
+            continue
+        try:
+            function(args, name)
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
+    print("GCLanczos input np%d: %s" % (args.np, "PASS" if not failures else
+                                        "%d failure(s)" % failures))
+    return 1 if failures else 0
+
+
+def check_normal_gc(args, name):
+    """NLanczosMode=0 keeps the ordinary GC sampler (no pl_out)."""
+    unused, work = input_case(args, name, "f2", {"NLanczosMode": 0,
+                                                 "NLanczosStep": None,
+                                                 "NLanczosEstimatorMode":
+                                                 None})
+    done = run_vmc(args.vmc, work, args.np)
+    require(done.returncode == 0, "%s: exit %d\n%s" % (
+        name, done.returncode, done.stderr[-3000:]))
+    headers, rows = pl_out_rows(work)
+    require(headers is None, "%s: pl_out written by normal GC" % name)
+    out = work / "output" / "zvo_out_001.dat"
+    require(out.exists() and out.read_text().split(),
+            "%s: no physical output" % name)
+    gc = work / "zvo_gc.dat"
+    require(gc.exists() and gc.read_text().split(),
+            "%s: no zvo_gc.dat record" % name)
+    print("PASS accepted %-23s ordinary GC sampler" % name)
+
+
+def check_canonical_green(args, name):
+    """Canonical stabilized still accepts (and skips) OneBodyG/TwoBodyG."""
+    unused, work = input_case(args, name, "f2", lambda w: (
+        add_file(w, "OneBodyG", "greenone.def",
+                 def_block("NCisAjs", 1, ["0 0 0 0\n"])),
+        add_file(w, "TwoBodyG", "greentwo.def",
+                 def_block("NCisAjsCktAltDC", 1, ["0 0 0 0 1 0 1 0\n"]))))
+    write_modpara(work / "modpara.def",
+                  e2e_modpara(e2e_case("f2"), 17, STAT_SAMPLES, 8, 1, 2),
+                  {"NGrandCanonical": None, "NGCInitNelec": None,
+                   "Ncond": 2})
+    done = run_vmc(args.vmc, work, args.np)
+    require_success(name, done, work, STAT_SAMPLES, args.np)
+    print("PASS accepted %-23s canonical Green input unchanged" % name)
+
+
+# --- failure contracts ------------------------------------------------------
+def failure_mode(args):
+    failures = 0
+    items = [
+        ("bootstrap_numeric", "f2", "bootstrap_numeric", None),
+        ("bootstrap_exhausted", "f2", "bootstrap_exhausted",
+         ["GC Lanczos failure: stage=final-bootstrap",
+          "attempts=1024 exact_zero=0 numeric_zero=1024 local_energy=0 "
+          "exhausted=1", "amplitude_state=numeric_zero"]),
+        ("final_numeric", "f2", "final_numeric",
+         ["GC Lanczos failure: stage=final-sample",
+          "amplitude_state=numeric_zero"]),
+        ("unknown_fault", "f2", "no_such_fault",
+         ["unknown MVMC_GC_LANCZOS_TEST_FAULT value"]),
+    ]
+    if args.np > 1:
+        items += [
+            ("allocation_rank1", "f2_combined", "allocation:rank=1",
+             ["stabilized power-Lanczos failed: allocation failure"]),
+            # The first evaluation (coefficient start) fails on rank 1;
+            # candidate diagnostics cover the final-chain stages only.
+            ("nonfinite_rank1", "f2_combined", "nonfinite:rank=1",
+             ["stabilized power-Lanczos failed: nonfinite value"]),
+        ]
+    nsplit = 1 if args.np == 1 else 2
+    chains = chain_count(args.np, nsplit)
+    for name, base, fault, needles in items:
+        if args.case and args.case != name:
+            continue
+        try:
+            case = e2e_case(base)
+            work = pathlib.Path(args.workdir) / ("%s_np%d" % (name, args.np))
+            write_e2e_input(case, work, samples=STAT_SAMPLES, warmup=8,
+                            nsplit=nsplit)
+            done = run_vmc(args.vmc, work, args.np, env={
+                "MVMC_GC_LANCZOS_TEST_FAULT": fault,
+                "MVMC_GC_LANCZOS_TEST_SUMMARY": "1"})
+            if needles is None:
+                require_success(name, done, work, STAT_SAMPLES, chains)
+                summary = parse_summary(name, done.stdout, chains, case["L"])
+                retried = summary["bootstrap"][0]
+                require(retried[2] >= 1 and retried[4] == 0,
+                        "%s: bootstrap %r" % (name, retried))
+                print("PASS %-20s numeric-zero candidate redrawn %r" % (
+                    name, retried))
+            else:
+                require_failure(name, done, work, needles)
+                require("GC_LANCZOS_SUMMARY" not in done.stdout,
+                        "%s: summary printed on failure" % name)
+                print("PASS %-20s %s" % (name, needles[0]))
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
+    if not args.case or args.case == "singular":
+        try:
+            classify_singular(args)
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
+    print("GCLanczos failure np%d: %s" % (args.np, "PASS" if not failures else
+                                          "%d failure(s)" % failures))
+    return 1 if failures else 0
+
+
+def classify_singular(args):
+    """Real classification of the singular F fixture (no forced fault)."""
+    case = e2e_case("singular")
+    work = pathlib.Path(args.workdir) / ("singular_np%d" % args.np)
+    nsplit = 1 if args.np == 1 else 2
+    write_e2e_input(case, work, samples=STAT_SAMPLES, warmup=8,
+                    nsplit=nsplit)
+    done = run_vmc(args.vmc, work, args.np,
+                   env={"MVMC_GC_LANCZOS_TEST_SUMMARY": "1"})
+    chains = chain_count(args.np, nsplit)
+    bootstrap = re.search(r"^GC Lanczos bootstrap: .*$", done.stdout, re.M)
+    if done.returncode == 0:
+        result = require_success("singular", done, work, STAT_SAMPLES,
+                                 chains)
+        summary = parse_summary("singular", done.stdout, chains, case["L"])
+        print("PASS singular F: completed, E=%.10f se=%.3g sectors=%s; %s" % (
+            result["energy"], result["energy_se"], summary["sectors"],
+            bootstrap.group(0) if bootstrap else "no bootstrap line"))
+    else:
+        require_failure("singular", done, work,
+                        ["GC Lanczos failure: stage="])
+        failure = re.search(r"^GC Lanczos failure: .*$",
+                            done.stdout + done.stderr, re.M)
+        print("PASS singular F: terminated, %s" % failure.group(0))
+
+
+# --- public sample ----------------------------------------------------------
+def sample_mode(args):
+    source = pathlib.Path(args.sample)
+    work = pathlib.Path(args.workdir)
+    if work.exists():
+        shutil.rmtree(str(work))
+    shutil.copytree(str(source), str(work))
+    try:
+        done = run_vmc(args.vmc, work, 1, timeout=STAT_TIMEOUT,
+                       env={"MVMC_GC_LANCZOS_TEST_SUMMARY": "1"})
+        result = require_success("sample", done, work, STAT_SAMPLES, 1)
+        require("Stabilized power-Lanczos (grand canonical): E=" in
+                done.stdout, "sample: missing stdout energy line")
+        require(not (work / "zvo_gc.dat").exists(),
+                "sample: GC Lanczos must not create zvo_gc.dat")
+        # The README describes the same H and pair function as the oracle.
+        case = e2e_case("sample")
+        summary = parse_summary("sample", done.stdout, 1, case["L"])
+        reference = oracle_reference(case)
+        statistical_gates("sample", result, summary, reference,
+                          STAT_SAMPLES, 1)
+        basis, psi, h, unused = reference
+        gevp = gl.gevp(*gl.krylov(psi, h)[1:])
+        print("PASS sample E=%.10f +/- %.3g variance=%.6f (oracle GEVP "
+              "E=%.10f, exact ground state %.10f)" % (
+                  result["energy"], result["energy_se"], result["variance"],
+                  gevp["energy"], float(np.min(np.linalg.eigvalsh(h)))))
+    except CheckFailure as error:
+        print("FAIL %s" % error)
+        return 1
+    print("GCLanczos sample: PASS")
+    return 0
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("oracle", "proposal"))
+    parser.add_argument("mode", choices=("oracle", "proposal", "input",
+                                         "production", "mpi", "failure",
+                                         "sample"))
     parser.add_argument("--unit")
     parser.add_argument("--probe")
     parser.add_argument("--vmc")
     parser.add_argument("--case")
     parser.add_argument("--np", type=int, default=1)
     parser.add_argument("--workdir", default="work/GCLanczos")
+    parser.add_argument("--sample")
     args = parser.parse_args()
     if args.mode == "oracle":
         if not args.probe:
@@ -666,7 +1556,19 @@ def main():
         if not args.unit:
             parser.error("proposal mode requires --unit")
         return proposal_mode(args)
-    return 2
+    if not args.vmc:
+        parser.error("%s mode requires --vmc" % args.mode)
+    if args.mode == "sample":
+        if not args.sample:
+            parser.error("sample mode requires --sample")
+        return sample_mode(args)
+    modes = {"input": input_mode, "production": production_mode,
+             "mpi": mpi_mode, "failure": failure_mode}
+    try:
+        return modes[args.mode](args)
+    except CheckFailure as error:
+        print("FAIL %s" % error)
+        return 1
 
 
 if __name__ == "__main__":

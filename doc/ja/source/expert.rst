@@ -607,8 +607,10 @@ ModParaファイル (modpara.def)
    ``NExUpdatePath=0``、0でなく
    ``abs(NMPTrans) <= NQPTrans`` を満たす ``NMPTrans``、
    ``NQPOptTrans<=1`` が必要です。一般pairは ``NSPGaussLeg=1`` が必要で、
-   反平行pairでは後述のスピン射影も使用できます。RBM、BackFlow、Lanczos、
-   OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
+   反平行pairでは後述のスピン射影も使用できます。RBM、BackFlow、
+   OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。Lanczosは
+   1 stepの数値安定化estimatorとしてのみ使用できます（``NLanczosEstimatorMode``
+   を参照）。
 
    各量子数射影成分は、逆行列を持つ成分か、Pfaffian が 0 または absolute
    Pfaffian backend の scale-aware な判定で特異・準特異と分類された
@@ -841,7 +843,8 @@ ModParaファイル (modpara.def)
    energy/variance estimatorを使用します。[1] はexpert modeで明示的に指定し、
    ``NVMCCalMode=1``、``NLanczosMode=1``、``NLanczosStep=1`` または ``2``
    を必要とします。係数決定用chainと最終energy用chainは独立です。
-   FSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
+   canonical計算ではFSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
+   grand-canonical計算については後述します。
    出力は ``xxx_pl_out_yyy.dat`` のみです。``NVMCSample`` は8以上かつ、
    各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
    16の倍数を推奨します。
@@ -864,6 +867,44 @@ ModParaファイル (modpara.def)
    ``InterAll`` の行だけで構成してください。FSZ、BackFlow、RBM、reweight、
    native model coupling、special update、Green関数測定は対象外です。
    ``NQPFull`` はruntime入力値であり、本機能では固定しません。
+
+   ``NGrandCanonical=1`` では、このestimatorは1 stepに限り使用できます。
+   ``NLanczosMode=1``、``NLanczosStep=1``、``NLanczosEstimatorMode=1``、
+   ``NVMCCalMode=1``、``NExUpdatePath=0``、``reweight=0`` が必要で、従来の
+   estimatorを含むそれ以外のLanczos設定は入力読込み時に拒否します。補正状態は
+   :math:`|\Phi\rangle=(c_0+c_1\hat H)|\Psi_{\rm GC}\rangle` で、全粒子数に
+   共通の1組の係数を使います。粒子数sectorごとの再射影や規格化はしません。
+   ``NGrandCanonical`` の両pair形式を、複素パラメータ、grand-canonical計算の
+   相関因子と射影（反平行pairではスピン射影と運動量射影、一般pairでは運動量射影）
+   とともに使用できます。Hamiltonianはspinを保存するHermiteな ``Trans`` 行、
+   ``CoulombIntra``、``CoulombInter``、``Hund`` のみです。``PairHop``、
+   ``Exchange``、``InterAll``、``NBodyInterAll``、``AnomalousTerm``、
+   ``LsTrans``/``LsInterAll``、``Twist`` と、``NGrandCanonical`` で対象外の機能は
+   拒否します。energyはこの :math:`H` の期待値で、``Trans`` に書いた
+   :math:`-\mu N` を含みます。粒子数observableは追加せず、``zvo_gc.dat`` も
+   出力しません。canonical計算ではこのmodeで ``OneBodyG`` と ``TwoBodyG`` の
+   指定を受理したうえで評価しませんが、grand-canonical計算では指定した出力が
+   黙って欠けることを防ぐため、要素を1件以上含む ``OneBodyG``、``TwoBodyG``、
+   ``TwoBodyGEx``、``NBodyG``、``AnomalousG`` を拒否します。要素0件のfileは
+   受理します。
+
+   上記のsample数の条件は、各chainの ``NVMCSample`` と各stageの総sample数
+   ``NVMCSample * chain数`` の両方に適用します。例えば ``NVMCSample=9`` は
+   chainが2本でも拒否し、16の倍数は両方を満たします。配置は粒子数を変える
+   対称な提案（確率15/16の局所移動と、確率1/16の全許可配置からの一様な選択）で
+   作り、遷移規則は振幅が零かどうかに依存しません。最終chainの最初の配置だけは、
+   :math:`\Phi` がexactまたは数値的に零、あるいは局所energyを作れない場合に
+   最大1024回まで引き直し、その試行を標準出力の ``GC Lanczos bootstrap: ...``
+   に表示します。それ以降に提案された配置の :math:`\Phi` が浮動小数点誤差の
+   範囲で零と区別できない場合は、結果行を出力せずにrunを終了し、標準エラーへ
+   ``GC Lanczos failure: stage=... chain=... N=... status=...
+   amplitude_state=...`` を出力します。exactに零の候補は従来どおり棄却します。
+   このため、特異または特異に近いpair表のように節を持つ入力では、同じ入力の
+   通常のgrand-canonical samplingが完走する場合でも終了することがあります。
+   標準出力には係数chainのenergyと最終energyを比べる
+   ``GC Lanczos energy check: E_coeff=... E_final=...`` も出力します。
+   :math:`E_{\rm coeff}` は係数と同じsampleから選んだ値であり、合否の基準には
+   しません。入力例は ``samples/GrandCanonical/FirstLanczos`` にあります。
 
 -  ``NLanczosSupportMode``
 
