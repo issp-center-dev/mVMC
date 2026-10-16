@@ -1124,6 +1124,10 @@ add_executable(power_lanczos_stabilized_unit
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gc_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
 target_include_directories(power_lanczos_stabilized_unit PRIVATE
@@ -1236,6 +1240,25 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 target_link_libraries(gc_krylov_proposal_unit m)
 add_test(NAME GCLanczos_Proposal_Unit COMMAND gc_krylov_proposal_unit)
+
+add_executable(gc_lanczos_driver_unit gc_lanczos_driver_unit.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
+mvmc_gc_lanczos_target(gc_lanczos_driver_unit)
+add_test(NAME GCLanczos_Driver_Unit COMMAND gc_lanczos_driver_unit)
+set_tests_properties(GCLanczos_Driver_Unit PROPERTIES TIMEOUT 300)
+if(MPI_FOUND)
+    foreach(np 2 3)
+        add_test(NAME GCLanczos_Driver_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS}
+                    $<TARGET_FILE:gc_lanczos_driver_unit>
+                    ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCLanczos_Driver_Unit_np${np}_mpi PROPERTIES
+            PROCESSORS ${np} TIMEOUT 300)
+    endforeach()
+endif()
 
 # Testing-only enumeration probe for the GC Lanczos oracle.
 add_executable(gc_krylov_probe gc_krylov_probe.c
