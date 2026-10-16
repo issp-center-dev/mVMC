@@ -1257,11 +1257,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                     "Error: GC spin projection requires NSPStot=0.\n");
             info = 1;
           }
-          if (bufInt[IdxMPTrans] != 1 && bufInt[IdxMPTrans] != -1) {
-            fprintf(stderr, "Error: GC spin projection currently requires "
-                            "abs(NMPTrans)=1.\n");
-            info = 1;
-          }
           /* SpinJastrow exp(sum v m_i m_j) is not a spin scalar and would
            * break the projected S=0 state, even from zero coefficients. */
           if (bufInt[IdxNSpinJast] > 0) {

@@ -680,12 +680,26 @@ Keywords and parameters
    the exact projection; no minimum number of points is imposed, so check
    convergence by increasing ``NSPGaussLeg``. In GC mode ``NSPGaussLeg`` and
    ``NSPStot`` must be single base-10 integers in the C ``int`` range, as
-   for ``2Sz``. The spin projection currently requires ``abs(NMPTrans)=1``
-   (it is not yet combined with momentum projection), and ``SpinJastrow`` is
-   rejected for ``NSPGaussLeg>=2`` because
+   for ``2Sz``. Spin and momentum projection can be combined: for
+   :math:`R=|\mathrm{NMPTrans}|` translations with input weights :math:`w_r`,
+   the sum becomes :math:`\sum_{r,g}w_r a_g\,{\rm Pf}[A_r(\beta_g)|_x]`.
+   This supports both periodic and antiperiodic boundary conditions with the
+   corresponding signed ``TransSym`` rows. The workspace requires
+   :math:`2GR+5G` to fit in a C ``int``; oversized input is rejected before
+   allocation. ``SpinJastrow`` is rejected for ``NSPGaussLeg>=2`` because
    :math:`\exp(\sum_{ij}v_{ij}m_im_j)` is not a spin scalar and would break
    :math:`S=0`. General pairing and nonzero ``NSPStot`` are not supported
-   with the spin projection.
+   with the spin projection. The existing prohibition on ``OptTrans`` in
+   GC mode also remains in effect.
+
+   If the sum of the parsed ``TransSym`` weights is exactly zero, the vacuum
+   and fully occupied configurations have exactly zero projected amplitude.
+   Choose ``0 < NGCInitNelec < 2*Nsite`` in that case; starting at either
+   forbidden boundary produces an explicit error after one attempt.
+   Small nonzero weight sums are not treated as zero. This exact-zero
+   guarantee does not extend to cancellation nodes at intermediate particle
+   numbers. It does not change the finite-quadrature weights or renormalize
+   particle-number sectors.
 
    The Hamiltonian needs to conserve only :math:`S^z`; it does not have to be
    :math:`SU(2)` symmetric. Each measured operator whose total :math:`S^z`

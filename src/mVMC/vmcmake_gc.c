@@ -344,7 +344,8 @@ static FILE *GCOpenStateDump(void) {
 
 static void GCWriteStateDump(FILE *fp, const char *label, const int sample,
                              const int *eleIdx, const int *eleCfg,
-                             const int *eleNum, const int *eleProjCnt) {
+                             const int *eleNum, const int *eleProjCnt,
+                             const double complex *logIp) {
   int i;
   if (fp == NULL) return;
   fprintf(fp, "%s %d %d", label, sample, Ncur);
@@ -355,6 +356,16 @@ static void GCWriteStateDump(FILE *fp, const char *label, const int sample,
   for (i = 0; i < Nsite2; i++) fprintf(fp, " %d", eleNum[i]);
   fprintf(fp, " |");
   for (i = 0; i < NProj; i++) fprintf(fp, " %d", eleProjCnt[i]);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  /* Optional lossless sampler value, without another projection/reduction. */
+  if (logIp != NULL) {
+    const char *dumpAmplitude = getenv("MVMC_GC_STATE_AMPLITUDE");
+    if (dumpAmplitude != NULL && strcmp(dumpAmplitude, "1") == 0)
+      fprintf(fp, " | LOGIP %a %a", creal(*logIp), cimag(*logIp));
+  }
+#else
+  (void)logIp;
+#endif
   fprintf(fp, "\n");
 }
 
@@ -697,7 +708,7 @@ void VMCMakeSampleGC(MPI_Comm comm) {
     int rebuildStatus;
     copyFromBurnSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
     GCWriteStateDump(stateDump, "RESTORE", -1, TmpEleIdx, TmpEleCfg,
-                     TmpEleNum, TmpEleProjCnt);
+                     TmpEleNum, TmpEleProjCnt, NULL);
     if (GCAntiMode()) {
       GCAntiRequireConfig(TmpEleIdx, TmpEleCfg, TmpEleNum, "restored", comm);
     }
@@ -754,12 +765,12 @@ void VMCMakeSampleGC(MPI_Comm comm) {
       saveEleConfigGC(sample, logIpOld, TmpEleIdx, TmpEleCfg, TmpEleNum,
                       TmpEleProjCnt, Ncur);
       GCWriteStateDump(stateDump, "SAMPLE", sample, TmpEleIdx, TmpEleCfg,
-                       TmpEleNum, TmpEleProjCnt);
+                       TmpEleNum, TmpEleProjCnt, &logIpOld);
     }
   }
   copyToBurnSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt);
   GCWriteStateDump(stateDump, "STORE", -1, TmpEleIdx, TmpEleCfg,
-                   TmpEleNum, TmpEleProjCnt);
+                   TmpEleNum, TmpEleProjCnt, NULL);
   BurnFlag = 1;
   if (stateDump != NULL) fclose(stateDump);
   ReleaseWorkSpaceInt();

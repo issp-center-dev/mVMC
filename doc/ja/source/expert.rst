@@ -656,11 +656,23 @@ ModParaファイル (modpara.def)
    有限の :math:`G` は厳密な射影の近似で、最小点数は課していないため、
    ``NSPGaussLeg`` を増やして収束を確認してください。GC modeでは
    ``NSPGaussLeg`` と ``NSPStot`` も ``2Sz`` と同様にCの ``int`` 範囲の
-   10進整数1個に限ります。スピン射影は現時点で ``abs(NMPTrans)=1`` を
-   必要とし（運動量射影との併用は未対応）、:math:`\exp(\sum_{ij}v_{ij}m_im_j)`
-   はスピンscalarでなく :math:`S=0` を壊すため、``NSPGaussLeg>=2`` では
-   ``SpinJastrow`` をエラーにします。一般pairと0でない ``NSPStot`` は
-   スピン射影と併用できません。
+   10進整数1個に限ります。スピン射影と運動量射影は併用できます。
+   :math:`R=|\mathrm{NMPTrans}|` 個の並進と入力重み :math:`w_r` に対して、
+   和は :math:`\sum_{r,g}w_r a_g\,{\rm Pf}[A_r(\beta_g)|_x]` になります。
+   対応する符号付き ``TransSym`` を使い、周期・反周期境界条件の両方に対応します。
+   workspaceの :math:`2GR+5G` はCの ``int`` 範囲に収まる必要があり、
+   過大な入力はメモリ確保前にエラーにします。
+   :math:`\exp(\sum_{ij}v_{ij}m_im_j)` はスピンscalarでなく :math:`S=0` を
+   壊すため、``NSPGaussLeg>=2`` では ``SpinJastrow`` をエラーにします。
+   一般pairと0でない ``NSPStot`` はスピン射影と併用できず、GC modeでの
+   ``OptTrans`` の禁止も引き続き適用されます。
+
+   読み込んだ ``TransSym`` 重みの和が厳密に0の場合、真空と完全充填配置の
+   射影振幅は厳密に0になります。この場合は ``0 < NGCInitNelec < 2*Nsite``
+   を指定してください。禁止された境界配置から始めると1回で明示errorになります。
+   小さい非零の重み和を0とみなすことはありません。この厳密零の保証は、
+   中間粒子数で打ち消しにより生じる節には拡張されません。有限点数の射影重みと
+   粒子数sectorの規格化は変更しません。
 
    Hamiltonianは :math:`S^z` を保存すればよく、:math:`SU(2)` 対称である
    必要はありません。測定演算子は演算子全体の :math:`S^z` 変化が0でなければ
