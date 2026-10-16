@@ -1158,6 +1158,75 @@ if(MPI_FOUND)
         PROCESSORS 2)
 endif()
 
+# Production sources shared by the GC first-step Lanczos test targets.
+set(MVMC_GC_LANCZOS_CORE_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gc_bridge.c)
+
+function(mvmc_gc_lanczos_target target)
+    target_include_directories(${target} PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+    target_compile_definitions(${target} PRIVATE
+        MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+        MVMC_ENABLE_POWER_LANCZOS_P5_CORE MVMC_ENABLE_FAULT_INJECTION)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic
+            -Werror)
+    endif()
+    target_link_libraries(${target} pfapack ltl2inv ${LAPACK_LIBRARIES} m)
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        target_link_libraries(${target} stdc++)
+    endif()
+    if(Require_BLIS)
+        target_link_libraries(${target} blis pthread)
+    endif()
+    if(MPI_FOUND)
+        target_link_libraries(${target} ${MPI_C_LIBRARIES})
+    endif()
+endfunction()
+
+add_executable(gc_krylov_amplitude_unit gc_krylov_amplitude_unit.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES})
+mvmc_gc_lanczos_target(gc_krylov_amplitude_unit)
+add_test(NAME GCLanczos_Amplitude_Unit COMMAND gc_krylov_amplitude_unit)
+if(MPI_FOUND)
+    foreach(np 2 3)
+        add_test(NAME GCLanczos_Amplitude_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS}
+                    $<TARGET_FILE:gc_krylov_amplitude_unit>
+                    ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCLanczos_Amplitude_Unit_np${np}_mpi PROPERTIES
+            PROCESSORS ${np} TIMEOUT 120)
+    endforeach()
+endif()
+
+# Testing-only enumeration probe for the GC Lanczos oracle.
+add_executable(gc_krylov_probe gc_krylov_probe.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES})
+mvmc_gc_lanczos_target(gc_krylov_probe)
+
 add_executable(gc_krylov_domain_unit
     gc_krylov_domain_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c

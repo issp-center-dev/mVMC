@@ -2730,3 +2730,18 @@ endif()
 add_test(NAME Version_GitHash
     COMMAND ${PYTHON_EXECUTABLE} runtest_git_hash.py
             ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR}/cmake/git_hash.cmake)
+
+# GC first-step stabilized Lanczos.
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/grandcanonical_lanczos_oracle.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_lanczos.py
+    DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+function(add_gc_lanczos_test name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_lanczos.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        TIMEOUT 600)
+endfunction()
+add_gc_lanczos_test(GCLanczos_Oracle oracle
+    --probe $<TARGET_FILE:gc_krylov_probe>
+    --workdir work/GCLanczos_Oracle)
