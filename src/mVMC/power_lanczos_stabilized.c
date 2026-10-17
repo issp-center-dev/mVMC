@@ -251,7 +251,9 @@ typedef struct {
   double complex coefficient_energy;
   uint64_t *sector_samples;
   size_t sector_capacity;
-  int final_sample_steps;
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  int final_sample_seen;
+#endif
 } MVMCPowerLanczosGCRun;
 
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
@@ -488,7 +490,7 @@ static MVMCKrylovStatus final_step_any(
     if (status == MVMC_KRYLOV_STATUS_OK &&
         gc_testing_fault == MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC &&
         gc->stage == MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE &&
-        gc->final_sample_steps == 0 &&
+        !gc->final_sample_seen &&
         mvmc_scaled_complex_make_numeric_zero(
             -30.0, -INFINITY, -INFINITY, 0.0,
             &diagnostic.evaluation.amplitude) == MVMC_PFAFFIAN_STATUS_OK) {
@@ -496,10 +498,10 @@ static MVMCKrylovStatus final_step_any(
       diagnostic.retry_reason = MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO;
       status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
     }
-#endif
     if (gc->stage == MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE) {
-      ++gc->final_sample_steps;
+      gc->final_sample_seen = 1;
     }
+#endif
   }
   gc_record_failure(gc, status, proposal_words, word_count, &diagnostic);
   return status;
