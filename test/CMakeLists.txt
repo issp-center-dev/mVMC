@@ -254,7 +254,7 @@ add_test(NAME GCSlaterDiff_Unit_MultiQP_OMP4
 set_tests_properties(GCSlaterDiff_Unit_MultiQP_OMP4 PROPERTIES
     ENVIRONMENT
       "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4;MVMC_GC_OMP_AUDIT=1"
-    TIMEOUT 120)
+    PROCESSORS 4 TIMEOUT 120)
 add_test(NAME GC_AntiPair_SlaterDiff_Unit
     COMMAND gc_slater_diff_unit --antiparallel)
 add_test(NAME GC_SP_SlaterDiff_Unit COMMAND gc_slater_diff_unit --spin)
