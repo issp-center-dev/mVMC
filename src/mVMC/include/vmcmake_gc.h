@@ -2,7 +2,7 @@
 #define _VMCMAKE_GC_H
 
 #include <complex.h>
-#include <mpi.h>
+#include "mvmc_mpi.h"
 
 enum GCMoveClass { GC_MOVE_HOP, GC_MOVE_ADD, GC_MOVE_REMOVE };
 

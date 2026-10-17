@@ -818,7 +818,8 @@ int main(int argc, char* argv[])
   /* for MPI */
   int rank0=0,size0=1;
   int group1=0,group2=0,rank1=0,rank2=0,size1=1,size2=1;
-  MPI_Comm comm0,comm1,comm2;
+  MPI_Comm comm0 = MPI_COMM_WORLD, comm1 = MPI_COMM_WORLD,
+           comm2 = MPI_COMM_WORLD;
 
   MPI_Init(&argc, &argv);
   NThread = omp_get_max_threads();
@@ -1714,7 +1715,11 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
 
   if(group2==0) { /* rank1==0 */
     /* scatter and broadcast dirName */
+#ifdef _mpi_use
     MPI_Scatter(dirNameList,D_FileNameMax,MPI_CHAR,dirName,D_FileNameMax,MPI_CHAR,0,comm_child2);
+#else
+    memcpy(dirName, dirNameList, D_FileNameMax);
+#endif
 
     /* change current working directory */
     if( chdir(dirName) != 0) {

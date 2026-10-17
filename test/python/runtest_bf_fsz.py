@@ -2161,7 +2161,13 @@ def run_twobody_stale_base_case(rootdir, case_name, mpi_procs=None):
                     print("ERROR: BF-FSZ inverse detail {} values are invalid".format(name))
                     return -1
                 expected_share = rank0 / timer63
-                if abs(share - expected_share) > 2.0e-7:
+                # The timer file rounds all three fields to nine decimals.
+                # For short serial runs, dividing the rounded seconds can
+                # exceed the share tolerance even when the raw ratio is exact.
+                rounding = 0.5e-9
+                share_rounding = rounding * (1.0 + abs(expected_share)) \
+                    / (timer63 - rounding) + rounding
+                if abs(share - expected_share) > max(2.0e-7, share_rounding):
                     print("ERROR: BF-FSZ inverse detail {} share mismatch".format(name))
                     return -1
                 component_sum += rank0
