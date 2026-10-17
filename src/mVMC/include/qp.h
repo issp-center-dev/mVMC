@@ -1,6 +1,8 @@
 #ifndef _QP
 #define _QP
 
+#include "mvmc_mpi.h"
+
 void InitQPWeight();
 
 double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);

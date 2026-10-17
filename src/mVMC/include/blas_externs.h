@@ -165,7 +165,9 @@ extern void	M_PDPOSV(const char* uplo, const int* n, const int* nrhs,
 
 
 // blacs
+#ifdef _mpi_use
 extern int Csys2blacs_handle(MPI_Comm comm);
+#endif
 extern int Cblacs_gridinit(int *ictxt, char *order, int nprow, int npcol);
 extern int Cblacs_gridexit(int ictxt);
 extern int Cblacs_gridinfo(int ictxt, int *nprow, int *npcol, int *myprow, int *mypcol);

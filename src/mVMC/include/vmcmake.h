@@ -1,7 +1,7 @@
 #ifndef _VMCMAKE
 #define _VMCMAKE
 #include <complex.h>
-#include <mpi.h>
+#include "mvmc_mpi.h"
 
 void VMCMakeSample(MPI_Comm comm);
 void initSampleWithLocalSpin(int *eleIdx, int *eleCfg, int *eleSpn);
