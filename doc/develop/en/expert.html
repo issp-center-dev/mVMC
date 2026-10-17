@@ -624,7 +624,7 @@ strict floating-point option. At the end of a run one line
 <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">component</span> <span class="pre">stats:</span> <span class="pre">...</span></code> reports how often each path was used. A
 measurement sample that cannot be evaluated now stops every rank instead
 of being skipped, and an initial configuration whose projected amplitude
-is zero is reported with a request to raise <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> or to check
+is zero is reported with a request to change <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> or to check
 the <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> weights. Acceptance is decided in the log domain for both
 pairing forms, so a finite but large amplitude ratio is accepted rather
 than rejected by an overflowing weight.</p>
@@ -634,10 +634,8 @@ translation by <span class="math notranslate nohighlight">\(R\)</span> the weigh
 the total momentum <span class="math notranslate nohighlight">\(K\)</span>. Because the component for a translation
 <span class="math notranslate nohighlight">\(R\)</span> evaluates the pair function at the translated sites, the
 projected state satisfies
-<span class="math notranslate nohighlight">\(\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle\)</span>. For
-<span class="math notranslate nohighlight">\(K\ne0\)</span> the vacuum has zero projected amplitude, so give
-<code class="docutils literal notranslate"><span class="pre">NGCInitNelec&gt;=2</span></code>; an initial configuration with zero amplitude stops
-with a diagnostic. A pair function that is not translation invariant
+<span class="math notranslate nohighlight">\(\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle\)</span>.
+A pair function that is not translation invariant
 makes the projection nontrivial. Configurations whose translated
 components vanish are handled as Pfaffian-only components (a direct
 Pfaffian per candidate), which is correct but slower than the inverse
@@ -646,6 +644,16 @@ average of <span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span>
 amplitude. Thus, with pair-creation terms and an exact node such as the
 <span class="math notranslate nohighlight">\(K\ne0\)</span> vacuum, it is smaller than
 <span class="math notranslate nohighlight">\(\|H\Psi\|^2/\|\Psi\|^2\)</span> by the nodal contribution.</p>
+<p>If the sum of the parsed <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> weights is exactly zero, the vacuum
+and fully occupied configurations have exactly zero projected amplitude.
+This applies both to momentum projection alone (<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>) and
+to combined spin/momentum projection. Choose an even particle number
+with <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">NGCInitNelec</span> <span class="pre">&lt;</span> <span class="pre">2*Nsite</span></code> in that case; starting at either
+forbidden boundary produces an explicit error after one attempt.
+Small nonzero weight sums are not treated as zero. This exact-zero
+guarantee does not extend to cancellation nodes at intermediate particle
+numbers. It does not change the finite-quadrature weights or renormalize
+particle-number sectors.</p>
 <p>With anti-parallel pairing, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=G&gt;=2</span></code> and <code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code>
 project the trial state onto total spin <span class="math notranslate nohighlight">\(S=0\)</span> with the
 Gauss-Legendre quadrature in <span class="math notranslate nohighlight">\(\beta\in[0,\pi]\)</span> used in canonical
@@ -658,20 +666,25 @@ a_g=\tfrac12\sin\beta_g\,w_g,\]</div>
 <span class="math notranslate nohighlight">\(e^{-i\beta S^y}\)</span>, <span class="math notranslate nohighlight">\(x\)</span> runs over the
 <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> configurations of every even particle
 number, and <span class="math notranslate nohighlight">\(P_{\rm ch}\)</span> collects the spin-scalar correlation
-factors such as Gutzwiller and Jastrow. <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> keeps the
-unprojected state (<span class="math notranslate nohighlight">\(\beta=0\)</span>, weight 1). The same weights are used
+factors such as Gutzwiller and Jastrow. <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> omits the
+spin projection (<span class="math notranslate nohighlight">\(\beta=0\)</span>, weight 1). The same weights are used
 in all particle-number sectors: the vacuum amplitude is
 <span class="math notranslate nohighlight">\(\sum_g a_g\)</span>, which tends to 1 only for large <span class="math notranslate nohighlight">\(G\)</span>, and the
 sectors are not renormalized separately. A finite <span class="math notranslate nohighlight">\(G\)</span> approximates
 the exact projection; no minimum number of points is imposed, so check
 convergence by increasing <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code>. In GC mode <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> and
 <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> must be single base-10 integers in the C <code class="docutils literal notranslate"><span class="pre">int</span></code> range, as
-for <code class="docutils literal notranslate"><span class="pre">2Sz</span></code>. The spin projection currently requires <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)=1</span></code>
-(it is not yet combined with momentum projection), and <code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> is
-rejected for <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> because
+for <code class="docutils literal notranslate"><span class="pre">2Sz</span></code>. Spin and momentum projection can be combined: for
+<span class="math notranslate nohighlight">\(R=|\mathrm{NMPTrans}|\)</span> translations with input weights <span class="math notranslate nohighlight">\(w_r\)</span>,
+the sum becomes <span class="math notranslate nohighlight">\(\sum_{r,g}w_r a_g\,{\rm Pf}[A_r(\beta_g)|_x]\)</span>.
+This supports both periodic and antiperiodic boundary conditions with the
+corresponding signed <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> rows. The workspace requires
+<span class="math notranslate nohighlight">\(2GR+5G\)</span> to fit in a C <code class="docutils literal notranslate"><span class="pre">int</span></code>; oversized input is rejected before
+allocation. <code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> is rejected for <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> because
 <span class="math notranslate nohighlight">\(\exp(\sum_{ij}v_{ij}m_im_j)\)</span> is not a spin scalar and would break
 <span class="math notranslate nohighlight">\(S=0\)</span>. General pairing and nonzero <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> are not supported
-with the spin projection.</p>
+with the spin projection. The existing prohibition on <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> in
+GC mode also remains in effect.</p>
 <p>The Hamiltonian needs to conserve only <span class="math notranslate nohighlight">\(S^z\)</span>; it does not have to be
 <span class="math notranslate nohighlight">\(SU(2)\)</span> symmetric. Each measured operator whose total <span class="math notranslate nohighlight">\(S^z\)</span>
 change is nonzero has zero expectation value, while a product whose

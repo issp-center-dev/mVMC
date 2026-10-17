@@ -607,20 +607,27 @@ build だけが計算を停止します。CMake が C compiler を GNU または
 toolchain では同等の strict floating-point option が必要です。計算終了時に
 <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">component</span> <span class="pre">stats:</span> <span class="pre">...</span></code> の1行で各経路の使用回数を出力します。評価できない
 測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
-<code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> の増加または <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> の重みの確認を求める診断で停止します。</p>
+<code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> の変更または <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> の重みの確認を求める診断で停止します。</p>
 <p>運動量射影は canonical 計算と同様に、<code class="docutils literal notranslate"><span class="pre">TransSym</span></code> の先頭
 <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)</span></code> 個のpatternと複素重みを使います。並進 <span class="math notranslate nohighlight">\(R\)</span> に
 <span class="math notranslate nohighlight">\(e^{-iKR}/N_{\rm T}\)</span> を与えると全運動量 <span class="math notranslate nohighlight">\(K\)</span> を選択し、各成分が
 並進先siteのpair関数を評価する規約では
 <span class="math notranslate nohighlight">\(\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle\)</span> となります。
-<span class="math notranslate nohighlight">\(K\ne0\)</span> では真空の射影振幅が0なので <code class="docutils literal notranslate"><span class="pre">NGCInitNelec&gt;=2</span></code> を指定して
-ください。振幅0の初期配置は診断を出して停止します。並進不変でないpair関数を
+並進不変でないpair関数を
 使うと射影は非自明になり、並進成分が0になる配置は Pfaffian-only 成分として
 候補ごとに完全な Pfaffian を評価します。これは正しい処理ですが、逆行列更新より
 遅くなります。<code class="docutils literal notranslate"><span class="pre">zvo_out</span></code> の <span class="math notranslate nohighlight">\(\langle H^2\rangle\)</span> は振幅非零の
 配置上の <span class="math notranslate nohighlight">\(|E_{\rm loc}|^2\)</span> のsample平均です。そのためpair生成項と
 <span class="math notranslate nohighlight">\(K\ne0\)</span> の真空のような節がある場合、節の寄与だけ
 <span class="math notranslate nohighlight">\(\|H\Psi\|^2/\|\Psi\|^2\)</span> より小さくなります。</p>
+<p>読み込んだ <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> 重みの和が厳密に0の場合、真空と完全充填配置の
+射影振幅は厳密に0になります。これは運動量射影のみ（<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code>）でも、
+スピン射影と併用する場合でも適用されます。この場合は
+<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">NGCInitNelec</span> <span class="pre">&lt;</span> <span class="pre">2*Nsite</span></code> を満たす偶数を指定してください。
+禁止された境界配置から始めると1回で明示errorになります。
+小さい非零の重み和を0とみなすことはありません。この厳密零の保証は、
+中間粒子数で打ち消しにより生じる節には拡張されません。有限点数の射影重みと
+粒子数sectorの規格化は変更しません。</p>
 <p>反平行pairでは <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=G&gt;=2</span></code> と <code class="docutils literal notranslate"><span class="pre">NSPStot=0</span></code> を指定すると、
 canonical計算と同じ <span class="math notranslate nohighlight">\(\beta\in[0,\pi]\)</span> のGauss-Legendre求積で
 試行状態を全スピン <span class="math notranslate nohighlight">\(S=0\)</span> へ射影します。</p>
@@ -631,17 +638,22 @@ a_g=\tfrac12\sin\beta_g\,w_g\]</div>
 <p>ここで <span class="math notranslate nohighlight">\(A(\beta)\)</span> は <span class="math notranslate nohighlight">\(e^{-i\beta S^y}\)</span> で回転したpair行列、
 <span class="math notranslate nohighlight">\(x\)</span> は全偶数粒子数の <span class="math notranslate nohighlight">\(N_\uparrow=N_\downarrow\)</span> 配置、
 <span class="math notranslate nohighlight">\(P_{\rm ch}\)</span> はGutzwiller、Jastrow等のスピンscalarな相関因子です。
-<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> は射影しない状態（<span class="math notranslate nohighlight">\(\beta=0\)</span>、重み1）です。
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> はスピン射影しない状態（<span class="math notranslate nohighlight">\(\beta=0\)</span>、重み1）です。
 全粒子数sectorで同じ重みを使います。真空の振幅は <span class="math notranslate nohighlight">\(\sum_g a_g\)</span> で、
 <span class="math notranslate nohighlight">\(G\)</span> が大きい極限でのみ1に近づき、sectorごとの再規格化は行いません。
 有限の <span class="math notranslate nohighlight">\(G\)</span> は厳密な射影の近似で、最小点数は課していないため、
 <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> を増やして収束を確認してください。GC modeでは
 <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> と <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> も <code class="docutils literal notranslate"><span class="pre">2Sz</span></code> と同様にCの <code class="docutils literal notranslate"><span class="pre">int</span></code> 範囲の
-10進整数1個に限ります。スピン射影は現時点で <code class="docutils literal notranslate"><span class="pre">abs(NMPTrans)=1</span></code> を
-必要とし（運動量射影との併用は未対応）、<span class="math notranslate nohighlight">\(\exp(\sum_{ij}v_{ij}m_im_j)\)</span>
-はスピンscalarでなく <span class="math notranslate nohighlight">\(S=0\)</span> を壊すため、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> では
-<code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> をエラーにします。一般pairと0でない <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> は
-スピン射影と併用できません。</p>
+10進整数1個に限ります。スピン射影と運動量射影は併用できます。
+<span class="math notranslate nohighlight">\(R=|\mathrm{NMPTrans}|\)</span> 個の並進と入力重み <span class="math notranslate nohighlight">\(w_r\)</span> に対して、
+和は <span class="math notranslate nohighlight">\(\sum_{r,g}w_r a_g\,{\rm Pf}[A_r(\beta_g)|_x]\)</span> になります。
+対応する符号付き <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> を使い、周期・反周期境界条件の両方に対応します。
+workspaceの <span class="math notranslate nohighlight">\(2GR+5G\)</span> はCの <code class="docutils literal notranslate"><span class="pre">int</span></code> 範囲に収まる必要があり、
+過大な入力はメモリ確保前にエラーにします。
+<span class="math notranslate nohighlight">\(\exp(\sum_{ij}v_{ij}m_im_j)\)</span> はスピンscalarでなく <span class="math notranslate nohighlight">\(S=0\)</span> を
+壊すため、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> では <code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> をエラーにします。
+一般pairと0でない <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> はスピン射影と併用できず、GC modeでの
+<code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> の禁止も引き続き適用されます。</p>
 <p>Hamiltonianは <span class="math notranslate nohighlight">\(S^z\)</span> を保存すればよく、<span class="math notranslate nohighlight">\(SU(2)\)</span> 対称である
 必要はありません。測定演算子は演算子全体の <span class="math notranslate nohighlight">\(S^z\)</span> 変化が0でなければ
 期待値0になり、<span class="math notranslate nohighlight">\(S^+_iS^-_j\)</span> のように因子はスピンを反転しても全体で
