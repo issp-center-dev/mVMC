@@ -10,6 +10,7 @@
 
 extern int omp_get_thread_num(void);
 extern int omp_get_max_threads(void);
+extern int omp_get_num_threads(void);
 
 #include "global.h"
 #include "blas_externs.h"
@@ -631,6 +632,75 @@ static void free_antiparallel_fixture(void) {
   rebuild_matrix = refresh_slater_elements;
 }
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+/* A dynamic worksharing loop need not give work to every team member.
+ * Exercise each thread's cofactor scratch and Pfaffian workspace explicitly,
+ * with distinct analytic matrices, independently of that loop's scheduling. */
+static void check_cofactor_thread_caches(const int required) {
+  const int capacity = omp_get_max_threads();
+  GCComponentCache **caches = calloc((size_t)capacity, sizeof(*caches));
+  int team = 0;
+  int errors = 0;
+  int workers = 0;
+  int i, j;
+  CHECK(caches != NULL, "cofactor thread cache allocation");
+  if (caches == NULL) return;
+#pragma omp parallel default(shared)
+  {
+    caches[omp_get_thread_num()] = GCComponentThreadCache();
+#pragma omp single
+    team = omp_get_num_threads();
+  }
+  CHECK(team == required, "cofactor cache team=%d expected=%d", team, required);
+  for (i = 0; i < team; i++) {
+    if (caches[i] == NULL || caches[i]->minor == NULL) {
+      errors++;
+      continue;
+    }
+    for (j = 0; j < i; j++)
+      if (caches[j] != NULL &&
+          (caches[i] == caches[j] || caches[i]->minor == caches[j]->minor))
+        errors++;
+  }
+  CHECK(errors == 0, "cofactor thread caches alias or are missing");
+  if (errors == 0) {
+#pragma omp parallel default(shared) reduction(+:errors,workers)
+    {
+      const int thread = omp_get_thread_num();
+      GCComponentCache *cache = GCComponentThreadCache();
+      GCComponentSlot *slot = NULL;
+      MVMCAbsolutePfaffianValueResult result;
+      const double value = (double)(thread + 1);
+      if (thread >= team || cache != caches[thread] ||
+          GCComponentSlotFor(cache, 6, 0, &slot) != GC_MALL_OK) {
+        errors++;
+      } else {
+        /* Three antisymmetric 2x2 blocks: Pf = value * 2 * 3. */
+        memset(cache->minor, 0, 36U * sizeof(*cache->minor));
+        cache->minor[0 + 1 * 6] = value;
+        cache->minor[1 + 0 * 6] = -value;
+        cache->minor[2 + 3 * 6] = 2.0;
+        cache->minor[3 + 2 * 6] = -2.0;
+        cache->minor[4 + 5 * 6] = 3.0;
+        cache->minor[5 + 4 * 6] = -3.0;
+        if (mvmc_absolute_pfaffian_complex_value_with_workspace(
+                slot->value, cache->minor, 6, 6, 0.0, &result) !=
+                MVMC_PFAFFIAN_STATUS_OK ||
+            !finite_close(result.pfaffian, 6.0 * value, 1.0e-12))
+          errors++;
+        workers++;
+      }
+    }
+    CHECK(errors == 0, "cofactor thread workspace errors=%d", errors);
+    CHECK(workers == required, "cofactor cache workers=%d expected=%d",
+          workers, required);
+    printf("cofactor cache audit: team=%d workers=%d errors=%d\n",
+           team, workers, errors);
+  }
+  free(caches);
+}
+#endif
+
 static void run_cofactor_omp_audit(void) {
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
@@ -675,10 +745,12 @@ static void run_cofactor_omp_audit(void) {
     CHECK(audit.teamMin == required && audit.teamMax == required,
           "cofactor audit team min/max=%d/%d expected=%d", audit.teamMin,
           audit.teamMax, required);
-    CHECK(audit.workers >= 2, "cofactor audit workers=%d", audit.workers);
+    CHECK(audit.workers >= 1 && audit.workers <= required,
+          "cofactor audit workers=%d", audit.workers);
     CHECK(audit.workCount == 64LL * 28LL,
           "cofactor audit work=%lld expected=%lld", audit.workCount,
           64LL * 28LL);
+    check_cofactor_thread_caches(required);
   }
   free_antiparallel_fixture();
 #endif
@@ -1056,8 +1128,8 @@ static void run_spin_pfonly_checks(void) {
 /* Rotated PFONLY cofactors under OpenMP.  F = diag(0,1,2,3) has no
  * antisymmetric part and cc+ss=1, so every rotated component equals
  * [[0,D],[-D,0]] with D = F: Pf = det D = 0 at full filling and the only
- * nonzero cofactor is C[0,4] = 1*2*3 = 6.  The 28 pairs of each call are
- * distributed over the team. */
+ * nonzero cofactor is C[0,4] = 1*2*3 = 6.  Each call schedules 28 pairs
+ * dynamically, without requiring a particular distribution over the team. */
 static void run_spin_cofactor_omp_audit(void) {
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   const char *requiredText = getenv("MVMC_GC_REQUIRE_OMP_THREADS");
@@ -1109,13 +1181,15 @@ static void run_spin_cofactor_omp_audit(void) {
     CHECK(audit.teamMin == required && audit.teamMax == required,
           "spin cofactor audit team min/max=%d/%d expected=%d",
           audit.teamMin, audit.teamMax, required);
-    CHECK(audit.workers >= 2, "spin cofactor audit workers=%d",
+    CHECK(audit.workers >= 1 && audit.workers <= required,
+          "spin cofactor audit workers=%d",
           audit.workers);
     CHECK(audit.workCount == 64LL * 28LL,
           "spin cofactor audit work=%lld expected=%lld", audit.workCount,
           64LL * 28LL);
     printf("spin cofactor audit: team=%d/%d workers=%d work=%lld\n",
            audit.teamMin, audit.teamMax, audit.workers, audit.workCount);
+    check_cofactor_thread_caches(required);
   }
   free_antiparallel_fixture();
 #else
