@@ -1699,6 +1699,43 @@ set_tests_properties(GC_MP_Replay_OMP4_anti_pbc_k2_zero_m0 PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
     PROCESSORS 4)
 
+# Phase 3b: combined spin/momentum projection, deterministic replay only.
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_spin_momentum.py
+    DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/gc_spin_momentum_fixture.json
+    DESTINATION ${CMAKE_BINARY_DIR}/test/python/data)
+function(add_gc_spin_momentum_test name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_spin_momentum.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};OMPI_MCA_rmaps_base_oversubscribe=1"
+        TIMEOUT 600)
+endfunction()
+foreach(bc pbc apbc)
+    foreach(k 0 1)
+        add_gc_spin_momentum_test(GC_SMP_Replay_${bc}_k${k}
+            replay --boundary ${bc} --k-index ${k})
+    endforeach()
+endforeach()
+if(MPI_FOUND)
+    foreach(np 2 3 9)
+        if(np EQUAL 2)
+            set(gc_smp_bc pbc)
+        else()
+            set(gc_smp_bc apbc)
+        endif()
+        add_gc_spin_momentum_test(GC_SMP_np${np}_mpi
+            mpi --boundary ${gc_smp_bc} --np ${np})
+        set_tests_properties(GC_SMP_np${np}_mpi PROPERTIES PROCESSORS ${np})
+    endforeach()
+    add_gc_spin_momentum_test(GC_SMP_Input negative --np 2)
+    set_tests_properties(GC_SMP_Input PROPERTIES PROCESSORS 2)
+else()
+    add_gc_spin_momentum_test(GC_SMP_Input negative --np 1)
+endif()
+add_gc_spin_momentum_test(GC_SMP_OMP4 omp)
+set_tests_properties(GC_SMP_OMP4 PROPERTIES PROCESSORS 4)
+
 # Phase 3a: grand-canonical S=0 spin projection.
 add_test(NAME GC_SP_Oracle
     COMMAND ${PYTHON_EXECUTABLE} grandcanonical_spin_oracle.py --self-test)

@@ -1,3 +1,12 @@
+---
+date: 2026-10-16
+datetime: 2026-10-16 11:33 JST
+model: OpenAI GPT-6 Codex
+summary: |
+  Four-site grand-canonical S=0 spin-projection example.
+  Combined spin/momentum support, boundary zeros, and remaining restrictions.
+---
+
 # Grand-canonical S=0 spin projection
 
 This expert-mode sample is a four-site Hubbard ring in the grand-canonical
@@ -57,11 +66,32 @@ Every sample has `M=0`, so `<Sz^2>=0`.  Operators that change `S^z` as a
 whole (the last row of `greentwo.def`, the same-spin rows of
 `anomalousg.def`) are exactly zero.
 
+## Combined spin and momentum projection
+
+Spin projection also supports `abs(NMPTrans)>1`. Supply the corresponding
+`TransSym` mappings and momentum weights; use signed mappings and a negative
+`NMPTrans` for APBC. The generated sample above still uses one translation.
+With `R=abs(NMPTrans)`, the combined state is
+
+    Psi(x) = P_ch(x) sum_r sum_g w_r a_g Pf[A_r(beta_g)|x].
+
+The same finite-G weights apply to every particle-number sector. If the
+sum of the input translation weights is exactly zero, the vacuum and full
+configuration have exactly zero amplitude. Start with
+`0 < NGCInitNelec < 2*Nsite` in this case; either boundary fails explicitly
+after one initialization attempt. Small nonzero sums are preserved. Exact
+cancellation at intermediate particle numbers is not guaranteed.
+
+`GC_SMP_` tests cover PBC/APBC, momentum 0 and pi/2, G=2/8, measurement and
+SR modes, both `NStoreO` settings, MPI including empty QP ranks, and OMP.
+They compare all sampled amplitudes and observables with an independent
+finite-G oracle. The existing convergence tests remain applicable.
+
 ## Limits
 
 Not supported together with the spin projection: `SpinJastrow` (it is not a
 spin scalar and is rejected for `NSPGaussLeg>=2`), general pairing
-(`OrbitalGeneral`), nonzero `NSPStot`, `abs(NMPTrans)>1`, OptTrans, BackFlow,
+(`OrbitalGeneral`), nonzero `NSPStot`, OptTrans, BackFlow,
 RBM, and Lanczos.
 
 `GC_SP_Sample_m0` and `GC_SP_Sample_m1` check that the generator output

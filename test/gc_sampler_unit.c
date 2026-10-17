@@ -25,23 +25,10 @@ extern int omp_get_max_threads(void);
 #include "../src/mVMC/pfupdate_gc.c"
 #include "../src/mVMC/splitloop.c"
 
-double complex CalculateLogIP_fcmp(double complex *const pfM,
-                                   const int qpStart, const int qpEnd,
-                                   MPI_Comm comm) {
-  double complex ip = 0.0;
-  double complex reduced;
-  int qpidx;
-  int size;
-  MPI_Comm_size(comm, &size);
-  for (qpidx = 0; qpidx < qpEnd - qpStart; qpidx++) {
-    ip += QPFullWeight[qpStart + qpidx] * pfM[qpidx];
-  }
-  if (size > 1) {
-    MPI_Allreduce(&ip, &reduced, 1, MPI_DOUBLE_COMPLEX, MPI_SUM, comm);
-    ip = reduced;
-  }
-  return clog(ip);
-}
+/* Exercise the production projection path, including the boundary override. */
+#include "../src/mVMC/gauleg.c"
+#include "../src/mVMC/legendrepoly.c"
+#include "../src/mVMC/qp.c"
 
 #include "../src/mVMC/gc_antiparallel.c"
 #include "../src/mVMC/vmcmake_gc.c"
@@ -2035,6 +2022,69 @@ static int run_death(const char *mode) {
   return 3;
 }
 
+/* Deliberately nonidentical QP components test the sector contract even when
+ * the old floating-point projection leaves a residual. QP1 is PFONLY. */
+static void enter_boundary_mode(void) {
+  static double complex translation[2] = {0.5, -0.5};
+  enter_multiqp_mode();
+  NSPGaussLeg = 1; NMPTrans = NQPFix = NQPFull = 2;
+  NSPStot = 0; FlagOptTrans = 0;
+  ParaQPTrans = translation;
+  QPFullWeight = realloc(QPFullWeight, 9 * sizeof *QPFullWeight);
+  CHECK(QPFullWeight != NULL, "boundary weights allocation");
+  if (!QPFullWeight) exit(EXIT_FAILURE);
+  QPFixWeight = QPFullWeight + 2; SPGLCos = QPFixWeight + 2;
+  SPGLSin = SPGLCos + 1; SPGLCosSin = SPGLSin + 1;
+  SPGLCosCos = SPGLCosSin + 1; SPGLSinSin = SPGLCosCos + 1;
+  InitQPWeight();
+  /* Mimic a rounded QP product without changing the exact input W. */
+  QPFullWeight[1] = nextafter(QPFullWeight[1], 0.0);
+}
+
+static void test_boundary_rejection(const char *mode) {
+  int eleIdx[ORBITALS], eleCfg[ORBITALS], eleNum[ORBITALS], eleProjCnt[1];
+  int projCntNew[1], start, end, rank, size, add;
+  double complex candidate[MULTI_QP], logIp;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  enter_boundary_mode();
+  init_gen_rand(60013U);
+  SplitLoop(&start, &end, NQPFull, rank, size);
+  if (strcmp(mode, "--boundary-vacuum") == 0 ||
+      strcmp(mode, "--boundary-full") == 0) {
+    Ncur = strcmp(mode, "--boundary-vacuum") == 0 ? 0 : Nsite2;
+    (void)makeInitialSampleGC(eleIdx, eleCfg, eleNum, eleProjCnt,
+                              start, end, MPI_COMM_WORLD);
+    CHECK(0, "forbidden initial boundary did not abort");
+    return;
+  }
+  for (add = 0; add < 2; ++add) {
+    SamplerState before;
+    GCComponentCounters statsBefore, statsAfter;
+    (void)set_state(5U, eleIdx, eleCfg, eleNum, eleProjCnt);
+    CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, start, end) == GC_MALL_OK,
+          "boundary distributed rebuild");
+    logIp = CalculateLogIPGC_fcmp(PfM, Ncur, start, end, MPI_COMM_WORLD);
+    CHECK(isfinite(creal(logIp)), "boundary current is zero");
+    snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp);
+    GCComponentCountersTotal(&statsBefore);
+    CHECK(GCAttemptMove(add ? GC_MOVE_ADD : GC_MOVE_REMOVE,
+                        add ? 1 : 0, add ? 3 : 1, 0.0,
+                        eleIdx, eleCfg, eleNum, eleProjCnt, &logIp,
+                        candidate, projCntNew, start, end,
+                        MPI_COMM_WORLD) == 0,
+          "boundary %s accepted even with draw=0", add ? "add" : "remove");
+    check_snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp,
+                    add ? "boundary add" : "boundary remove");
+    GCComponentCountersTotal(&statsAfter);
+    CHECK(statsAfter.compositeZero - statsBefore.compositeZero == (rank == 0),
+          "boundary composite-zero counter ownership");
+    CHECK(statsAfter.recover == statsBefore.recover &&
+              statsAfter.toPfonly == statsBefore.toPfonly,
+          "rejected boundary changed component transition counters");
+  }
+}
+
 static void cleanup_globals(void) {
   GCComponentRelease();
   FreeWorkSpaceAll();
@@ -2078,7 +2128,9 @@ int main(int argc, char **argv) {
   if (strncmp(mode, "--death-", 8) == 0) {
     return run_death(mode);
   }
-  if (strcmp(mode, "--multiqp") == 0) {
+  if (strncmp(mode, "--boundary", 10) == 0) {
+    test_boundary_rejection(mode);
+  } else if (strcmp(mode, "--multiqp") == 0) {
     enter_multiqp_mode();
     test_multiqp_exact_detailed_balance();
     test_multiqp_production_detailed_balance();

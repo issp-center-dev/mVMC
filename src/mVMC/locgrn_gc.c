@@ -22,8 +22,9 @@ version.
 #ifndef _SRC_LOCGRN_GC
 #define _SRC_LOCGRN_GC
 
-static double complex GCProjectedCandidate(const double complex *pfMNew) {
-  return CalculateIP_fcmp((double complex *)pfMNew, 0, NQPFull,
+static double complex GCProjectedCandidate(const double complex *pfMNew,
+                                            const int newN) {
+  return CalculateIPGC_fcmp((double complex *)pfMNew, newN, 0, NQPFull,
                           MPI_COMM_SELF);
 }
 
@@ -66,7 +67,7 @@ double complex GreenFunc1GC(const int rsi, const int rsj,
   projectionRatio = ProjRatio(scratch->projCntNew, eleProjCnt);
   CalculateNewPfMHopGC(particle, scratch->pfMNew, eleIdx, ncur, 0,
                        NQPFull);
-  candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
+  candidateOverlap = GCProjectedCandidate(scratch->pfMNew, ncur);
 
   eleIdx[particle] = rsj;
   eleCfg[rsi] = -1;
@@ -150,7 +151,7 @@ double complex GreenFunc2GC(const int rsi, const int rsj, const int rsk,
   CalculateNewPfMTwoHopGCWorkspace(
       particleL, particleJ, scratch->pfMNew, eleIdx, ncur, 0, NQPFull,
       scratch->vec, scratch->vec + NsizeMax);
-  candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
+  candidateOverlap = GCProjectedCandidate(scratch->pfMNew, ncur);
 
   eleIdx[particleJ] = rsj;
   eleCfg[rsi] = -1;
@@ -252,7 +253,7 @@ double complex GreenFuncNGC(const int n, int *rsi, int *rsj,
         scratch->smallMat, scratch->pfIWork, scratch->pfWork,
         scratch->pfLWork, scratch->pfRWork);
   }
-  candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
+  candidateOverlap = GCProjectedCandidate(scratch->pfMNew, ncur);
 
   for (k = n - 1; k >= 0; k--) {
     const int source = rsj[k];
@@ -292,7 +293,7 @@ double complex GreenFuncPairAddGC(
   CalculateNewPfMAddGCWorkspace(rsa, rsb, scratch->pfMNew, eleIdx, ncur,
                                 0, NQPFull, scratch->vec,
                                 scratch->vec + NsizeMax);
-  candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
+  candidateOverlap = GCProjectedCandidate(scratch->pfMNew, ncur + 2);
   return conj(projectionRatio * candidateOverlap / ip);
 }
 
@@ -350,7 +351,7 @@ double complex GreenFuncPairRemoveGC(
           PfM[qpidx];
     }
   }
-  candidateOverlap = GCProjectedCandidate(scratch->pfMNew);
+  candidateOverlap = GCProjectedCandidate(scratch->pfMNew, ncur - 2);
   return conj(projectionRatio * candidateOverlap / ip);
 }
 

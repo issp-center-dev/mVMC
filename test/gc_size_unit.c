@@ -18,16 +18,31 @@ static int check_boundaries(void) {
   }
   if (GCCheckedSizeToInt((size_t)INT_MAX, "int max") != INT_MAX) return 1;
   /* 7G workspace bound of the GC spin-projection input gate. */
-  if (!GCSpinQuadratureFitsInt(1)) return 1;
-  if (!GCSpinQuadratureFitsInt(INT_MAX / 7)) return 1;
-  if (GCSpinQuadratureFitsInt(INT_MAX / 7 + 1)) return 1;
-  if (GCSpinQuadratureFitsInt(400000000)) return 1;
-  if (GCSpinQuadratureFitsInt(INT_MAX / 2)) return 1;
-  if (GCSpinQuadratureFitsInt(1073741824)) return 1;
-  if (GCSpinQuadratureFitsInt(INT_MAX)) return 1;
-  if (GCSpinQuadratureFitsInt(0)) return 1;
-  if (GCSpinQuadratureFitsInt(-1)) return 1;
-  if (GCSpinQuadratureFitsInt(INT_MIN)) return 1;
+  if (!GCProjectionWorkspaceFitsInt(1, 1)) return 1;
+  if (!GCProjectionWorkspaceFitsInt(INT_MAX / 7, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(INT_MAX / 7 + 1, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(400000000, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(INT_MAX / 2, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(1073741824, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(INT_MAX, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(0, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(-1, 1)) return 1;
+  if (GCProjectionWorkspaceFitsInt(INT_MIN, 1)) return 1;
+
+  {
+    const int translations[] = {1, 2, 4, 7, 1024, INT_MAX / 2, INT_MAX};
+    size_t i;
+    for (i = 0; i < sizeof translations / sizeof translations[0]; ++i) {
+      const int r = translations[i];
+      const int bound = (int)(INT_MAX / (2LL * r + 5));
+      if (bound > 0 && !GCProjectionWorkspaceFitsInt(bound, r)) return 1;
+      if (GCProjectionWorkspaceFitsInt(bound + 1, r)) return 1;
+      if (GCProjectionWorkspaceFitsInt(INT_MAX, r)) return 1;
+    }
+    if (GCProjectionWorkspaceFitsInt(1, 0) ||
+        GCProjectionWorkspaceFitsInt(1, -1) ||
+        GCProjectionWorkspaceFitsInt(1, INT_MIN)) return 1;
+  }
 
   zeroAllocation = GCCheckedMalloc(0, "logical zero allocation");
   if (zeroAllocation == NULL) return 1;

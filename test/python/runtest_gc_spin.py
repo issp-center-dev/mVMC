@@ -702,7 +702,7 @@ INPUT_CASES = {
     "general": ({"general": True},
                 "spin projection requires anti-parallel pairing"),
     "combined": ({"nmptrans": 2, "translations": 2},
-                 "spin projection currently requires abs(NMPTrans)=1"),
+                 None),
     "spin_jastrow": ({"spin_jastrow": True},
                      "spin projection does not support SpinJastrow"),
     "opttrans": ({"opttrans": True}, "NQPOptTrans<=1"),

@@ -451,6 +451,9 @@ void SetMemory() {
   size_t npara;
   size_t nproj;
   size_t nqp;
+  size_t nfix;
+  size_t ngauss;
+  size_t qpCount;
   size_t nsite2;
   size_t nsizeMax;
   size_t nsample;
@@ -467,6 +470,10 @@ void SetMemory() {
   npara = GCNonnegativeSize(NPara, "NPara");
   nproj = GCNonnegativeSize(NProj, "NProj");
   nqp = GCNonnegativeSize(NQPFull, "NQPFull");
+  nfix = GCNonnegativeSize(NQPFix, "NQPFix");
+  ngauss = GCNonnegativeSize(NSPGaussLeg, "NSPGaussLeg");
+  qpCount = GCCheckedAddSize(GCCheckedAddSize(nqp, nfix),
+                             GCCheckedMulSize(5, ngauss));
   nsite2 = GCNonnegativeSize(Nsite2, "Nsite2");
   nsizeMax = GCNonnegativeSize(NsizeMax, "NsizeMax");
   nsample = GCNonnegativeSize(NVMCSample, "NVMCSample");
@@ -561,13 +568,14 @@ void SetMemory() {
   }
 
   /***** Quantum Projection *****/
-  QPFullWeight = (double complex*)malloc(sizeof(double complex)*(NQPFull+NQPFix+5*NSPGaussLeg));
-  QPFixWeight= QPFullWeight + NQPFull;
-  SPGLCos    = QPFullWeight + NQPFull + NQPFix;
-  SPGLSin    = SPGLCos + NSPGaussLeg;
-  SPGLCosSin = SPGLCos + 2*NSPGaussLeg;
-  SPGLCosCos = SPGLCos + 3*NSPGaussLeg;
-  SPGLSinSin = SPGLCos + 4*NSPGaussLeg;
+  QPFullWeight = (double complex *)GCCheckedMalloc(
+      GCCheckedMulSize(sizeof(double complex), qpCount), "QP weights/spin nodes");
+  QPFixWeight= QPFullWeight + nqp;
+  SPGLCos    = QPFixWeight + nfix;
+  SPGLSin    = SPGLCos + ngauss;
+  SPGLCosSin = SPGLSin + ngauss;
+  SPGLCosCos = SPGLCosSin + ngauss;
+  SPGLSinSin = SPGLCosCos + ngauss;
 
   /***** Stocastic Reconfiguration *****/
   if(NVMCCalMode==0){

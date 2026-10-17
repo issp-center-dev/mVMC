@@ -318,7 +318,7 @@ def fixture_nodes(betas, weights):
     return nodes
 
 
-def read_qp_dump(path):
+def read_qp_dump(path, allow_complex_weights=False):
     """Parse GC_SPIN_QP_V1 rows written with C %a (lossless hex floats)."""
     with open(path) as stream:
         lines = [line.split() for line in stream if line.strip()]
@@ -347,7 +347,7 @@ def read_qp_dump(path):
         values = [float.fromhex(word) for word in row[2:]]
         if not all(math.isfinite(value) for value in values):
             raise ValueError("nonfinite spin qp dump value")
-        if values[4] != 0.0:
+        if not allow_complex_weights and values[4] != 0.0:
             raise ValueError("spin qp dump weight has an imaginary part")
         nodes.append({"q": q, "spidx": spidx, "cs": values[0],
                       "cc": values[1], "ss": values[2],

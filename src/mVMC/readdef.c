@@ -1235,15 +1235,16 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
       }
       {
         const int gcG = bufInt[IdxSPGaussLeg];
-        /* Under the admitted G>1 scope abs(NMPTrans)=NQPOptTrans=1, so
-         * NQPFull=NQPFix=G and setmemory.c allocates NQPFull+NQPFix+5*G
-         * complex entries in int arithmetic; check 7G before any int
-         * product or sum is formed.  The later CheckedIntProduct3 guard on
-         * NQPFix/NQPFull stays in place. */
+        const long long gcR = bufInt[IdxMPTrans] < 0
+                                  ? -(long long)bufInt[IdxMPTrans]
+                                  : (long long)bufInt[IdxMPTrans];
+        /* Check the complete QP block before any int products or offsets.
+         * Invalid NMPTrans is diagnosed above, independently of workspace. */
         if (gcG <= 0) {
           fprintf(stderr, "Error: GC NSPGaussLeg must be positive.\n");
           info = 1;
-        } else if (!GCSpinQuadratureFitsInt(gcG)) {
+        } else if (gcR > 0 && gcR <= INT_MAX &&
+                   !GCProjectionWorkspaceFitsInt(gcG, (int)gcR)) {
           fprintf(stderr,
                   "Error: GC NSPGaussLeg workspace exceeds int range.\n");
           info = 1;
@@ -1256,11 +1257,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
           if (bufInt[IdxSPStot] != 0) {
             fprintf(stderr,
                     "Error: GC spin projection requires NSPStot=0.\n");
-            info = 1;
-          }
-          if (bufInt[IdxMPTrans] != 1 && bufInt[IdxMPTrans] != -1) {
-            fprintf(stderr, "Error: GC spin projection currently requires "
-                            "abs(NMPTrans)=1.\n");
             info = 1;
           }
           /* SpinJastrow exp(sum v m_i m_j) is not a spin scalar and would
