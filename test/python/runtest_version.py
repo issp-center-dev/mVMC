@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 
 def read_version(source_dir):
@@ -59,12 +60,20 @@ def main():
         programs = ["vmc.out", "vmcdry.out"]
 
     status = 0
+    scratch = os.path.join(os.path.abspath(binary_dir), "tmp")
+    os.makedirs(scratch, exist_ok=True)
     for program in programs:
         for option in ("-v", "--version"):
             command = launcher + [
                 os.path.join(binary_dir, "src", "mVMC", program), option]
-            proc = subprocess.run(command, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, text=True)
+            # Open MPI 4 singleton startup and teardown can race on the
+            # shared ompi.<host>.<uid> directory during parallel CTest runs.
+            # Isolate every invocation, including consecutive short runs.
+            with tempfile.TemporaryDirectory(prefix="mpi-", dir=scratch) as session:
+                env = os.environ.copy()
+                env["OMPI_MCA_orte_tmpdir_base"] = session
+                proc = subprocess.run(command, stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE, text=True, env=env)
             # The version is printed once, also in a run with MPI.
             if proc.returncode != 0 or proc.stdout != expected + "\n":
                 print("ERROR: {}".format(" ".join(command)))

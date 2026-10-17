@@ -36,7 +36,8 @@ void InitFile(char *xNameListFile, int rank) {
   if(rank!=0) return;
 
   FileGC = NULL;
-  if(FlagGrandCanonical != 0) {
+  /* GC Lanczos writes only xxx_pl_out; no particle-number record. */
+  if(FlagGrandCanonical != 0 && NLanczosMode == 0) {
     FileGC = fopen("zvo_gc.dat", "w");
     if(FileGC == NULL) {
       fprintf(stderr, "Error: failed to open grand-canonical output 'zvo_gc.dat'.\n");

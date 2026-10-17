@@ -63,6 +63,8 @@ Grand-canonical粒子数出力 (zvo\_gc.dat)
 変分最適化ではSR stepごとに1行、物理量計算ではbinごとに1行を書きます。
 ファイル名には ``CDataFileHead`` と ``NDataIdxStart`` を適用しません。同じ
 directoryで別runを開始すると、以前の ``zvo_gc.dat`` は置き換えられます。
+``NLanczosMode=1``（grand-canonical samplingによる1 stepのLanczos）では
+このfileを出力しません。
 
 変分パラメータ出力ファイル(\*\*\*\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -549,6 +551,12 @@ variance、そのstandard error、虚部、energyの自己相関時間と有効s
 Green関数やsampleごとのtraceは出力しません。独立chainが複数ある場合、
 ``effective_samples`` はchainごとの有効sample数の合計、``tau_int`` は
 ``total_samples/(2*effective_samples)`` で定義する等価な値です。
+
+``NGrandCanonical=1``（1 stepのみ）でも、headerは ``order=1`` の同じ形式で、
+data行は同じ11項目です。energyとvarianceは :math:`-\mu N` を含む入力
+:math:`H` の全粒子数にわたる値で、粒子数の項目は追加しません。最終chainで
+数値的に零の候補が出た場合などrunが終了したときは結果行を出力せず、理由を
+標準エラーに出力します。
 
 ``LsTrans`` または ``LsInterAll`` で独立 :math:`H'` を選択した場合、1行目の
 headerには ``independent_power_lanczos`` と ``basis={Psi,HprimePsi}`` を

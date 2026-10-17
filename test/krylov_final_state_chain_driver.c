@@ -146,6 +146,7 @@ static MVMCKrylovFockModel two_state_model(void) {
   model.site_count = 2;
   model.up_electron_count = 1;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   model.terms = terms;
   model.term_count = sizeof(terms) / sizeof(terms[0]);
   model.operators = operators;
@@ -183,6 +184,7 @@ static MVMCKrylovFockModel ring4_model(void) {
   model.site_count = 4;
   model.up_electron_count = 1;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   model.terms = terms;
   model.term_count = sizeof(terms) / sizeof(terms[0]);
   model.operators = operators;

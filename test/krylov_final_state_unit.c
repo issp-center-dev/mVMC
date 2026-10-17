@@ -27,6 +27,8 @@ typedef struct {
   double complex values[64];
   uint64_t numeric_zero_mask;
   MVMCKrylovStatus forced_status;
+  uint64_t loose_error_mask;
+  uint64_t nonfinite_mask;
 } TableAmplitude;
 
 static int close_double(double actual, double expected, double tolerance) {
@@ -52,6 +54,32 @@ static MVMCKrylovStatus table_callback(
     return table->forced_status;
   }
   memset(result, 0, sizeof(*result));
+  if ((table->nonfinite_mask & (UINT64_C(1) << index)) != 0) {
+    /* A nonfinite phase yields a NONFINITE scaled value. */
+    if (mvmc_scaled_complex_make_finite(NAN + 0.0 * I, 0.0, -INFINITY,
+                                        &result->value) !=
+        MVMC_PFAFFIAN_STATUS_OK) {
+      return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    }
+    result->well_pivoted_component_count = 1;
+    result->local_factorization_count = 1;
+    result->global_factorization_count = 1;
+    return MVMC_KRYLOV_STATUS_OK;
+  }
+  if ((table->loose_error_mask & (UINT64_C(1) << index)) != 0) {
+    /* Finite with an error bound just below |value|. */
+    const double magnitude = cabs(table->values[index]);
+    if (mvmc_scaled_complex_make_finite(
+            table->values[index] / magnitude, log(magnitude),
+            nextafter(log(magnitude), -INFINITY), &result->value) !=
+        MVMC_PFAFFIAN_STATUS_OK) {
+      return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    }
+    result->near_pivot_component_count = 1;
+    result->local_factorization_count = 1;
+    result->global_factorization_count = 1;
+    return MVMC_KRYLOV_STATUS_OK;
+  }
   if ((table->numeric_zero_mask & (UINT64_C(1) << index)) != 0) {
     if (mvmc_scaled_complex_make_numeric_zero(
             log(1.0e-12), 0.0, -INFINITY, 0.0, &result->value) !=
@@ -87,6 +115,7 @@ static MVMCKrylovFockModel two_state_model(
   model.site_count = 2;
   model.up_electron_count = 1;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   model.terms = terms;
   model.term_count = 2;
   model.operators = operators;
@@ -638,6 +667,165 @@ static void test_rank_invariance(void) {
 #endif
 }
 
+static const char *reason_name(MVMCKrylovBootstrapReason reason) {
+  switch (reason) {
+    case MVMC_KRYLOV_BOOTSTRAP_NO_RETRY:
+      return "no-retry";
+    case MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO:
+      return "exact-zero";
+    case MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO:
+      return "numeric-zero";
+    case MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY:
+      return "local-energy";
+  }
+  return "invalid";
+}
+
+/*
+ * Diagnosed initialize/step: the bootstrap reason separates completed
+ * evaluations that may be redrawn (exact zero, numeric zero, unavailable
+ * local energy) from callback, nonfinite and other failures.  The legacy
+ * entries return the same statuses and snapshots.
+ */
+static void test_diagnosed_reasons(void) {
+  const double complex coefficient[2] = {1.0, 0.0};
+  TableAmplitude table;
+  MVMCKrylovBoundedPlan *plan = NULL;
+  MVMCKrylovBoundedWorkspace *workspace = create_workspace(2, &plan);
+  MVMCKrylovFinalStatePolicy policy;
+  MVMCKrylovFinalStateSnapshot snapshot, legacy;
+  MVMCKrylovFinalDiagnostic diagnostic;
+  MVMCKrylovStatus status, legacy_status;
+  uint64_t words = UINT64_C(0x1);
+  struct {
+    const char *name;
+    double complex here;
+    double complex other;
+    uint64_t numeric_mask;
+    uint64_t loose_mask;
+    uint64_t nonfinite_mask;
+    MVMCKrylovStatus forced;
+    MVMCKrylovStatus expected_status;
+    MVMCKrylovBootstrapReason expected_reason;
+    int expected_available;
+  } cases[] = {
+      {"exact zero Phi", 0.0, 0.5, 0, 0, 0, MVMC_KRYLOV_STATUS_OK,
+       MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+       MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO, 1},
+      {"numeric zero Phi", 0.7, 0.5, UINT64_C(1) << 1, 0, 0,
+       MVMC_KRYLOV_STATUS_OK, MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+       MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO, 1},
+      {"finite Phi, numeric zero H Phi", 0.7, 0.5, UINT64_C(1) << 2, 0, 0,
+       MVMC_KRYLOV_STATUS_OK, MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+       MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY, 1},
+      {"sampleable", 0.7, 0.4, 0, 0, 0, MVMC_KRYLOV_STATUS_OK,
+       MVMC_KRYLOV_STATUS_OK, MVMC_KRYLOV_BOOTSTRAP_NO_RETRY, 1},
+      {"callback failure", 0.7, 0.4, 0, 0, 0,
+       MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+       MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+       MVMC_KRYLOV_BOOTSTRAP_NO_RETRY, 0},
+      {"nonfinite basis", 0.7, 0.4, 0, 0, UINT64_C(1) << 1,
+       MVMC_KRYLOV_STATUS_OK, MVMC_KRYLOV_STATUS_NONFINITE,
+       MVMC_KRYLOV_BOOTSTRAP_NO_RETRY, 0}};
+  size_t index;
+
+  CHECK(workspace != NULL &&
+            mvmc_krylov_final_state_policy_create(
+                1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC,
+                UINT64_C(0x4449414732), coefficient, 2, &policy) ==
+                MVMC_KRYLOV_STATUS_OK,
+        "diagnosed policy");
+  if (workspace == NULL) return;
+  for (index = 0; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+    memset(&table, 0, sizeof(table));
+    table.values[1] = cases[index].here;
+    table.values[2] = cases[index].other;
+    table.numeric_zero_mask = cases[index].numeric_mask;
+    table.loose_error_mask = cases[index].loose_mask;
+    table.nonfinite_mask = cases[index].nonfinite_mask;
+    table.forced_status = cases[index].forced;
+    status = mvmc_krylov_final_state_sampler_initialize_diagnosed(
+        workspace, &policy, &words, 1, table_callback, &table, &snapshot,
+        &diagnostic);
+    legacy_status = mvmc_krylov_final_state_sampler_initialize(
+        workspace, &policy, &words, 1, table_callback, &table, &legacy);
+    CHECK(status == cases[index].expected_status &&
+              diagnostic.status == status &&
+              diagnostic.retry_reason == cases[index].expected_reason &&
+              diagnostic.evaluation_available ==
+                  cases[index].expected_available,
+          "%s: status %s reason %s available %d", cases[index].name,
+          mvmc_krylov_status_string(status),
+          reason_name(diagnostic.retry_reason),
+          diagnostic.evaluation_available);
+    CHECK(legacy_status == status && legacy.valid == snapshot.valid &&
+              legacy.integrity_hash == snapshot.integrity_hash,
+          "%s: legacy initialize contract", cases[index].name);
+    CHECK(status == MVMC_KRYLOV_STATUS_OK || !snapshot.valid,
+          "%s: failed snapshot stays invalid", cases[index].name);
+    CHECK(!diagnostic.evaluation_available ||
+              status == MVMC_KRYLOV_STATUS_OK ||
+              !diagnostic.evaluation.sampleable,
+          "%s: diagnostic never makes a failure sampleable",
+          cases[index].name);
+  }
+
+  /* Loose error bound: H Phi / Phi is unsafe after a finite Phi. */
+  memset(&table, 0, sizeof(table));
+  table.values[1] = 0.7;
+  table.values[2] = 0.4;
+  table.loose_error_mask = UINT64_C(1) << 1;
+  status = mvmc_krylov_final_state_sampler_initialize_diagnosed(
+      workspace, &policy, &words, 1, table_callback, &table, &snapshot,
+      &diagnostic);
+  CHECK(status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+            diagnostic.retry_reason != MVMC_KRYLOV_BOOTSTRAP_NO_RETRY &&
+            diagnostic.evaluation_available,
+        "loose error bound is a recoverable start failure (%s, %s)",
+        mvmc_krylov_status_string(status),
+        reason_name(diagnostic.retry_reason));
+
+  /* Steps keep the strict contract and leave the current state intact. */
+  memset(&table, 0, sizeof(table));
+  table.values[1] = 0.7;
+  table.values[2] = 0.4;
+  CHECK(mvmc_krylov_final_state_sampler_initialize(
+            workspace, &policy, &words, 1, table_callback, &table,
+            &snapshot) == MVMC_KRYLOV_STATUS_OK,
+        "step start");
+  {
+    MVMCKrylovFinalStateSnapshot before = snapshot;
+    MVMCKrylovFinalStateStepResult step;
+    uint64_t proposal = UINT64_C(0x2);
+    uint64_t current = words;
+    table.numeric_zero_mask = UINT64_C(1) << 2;
+    status = mvmc_krylov_final_state_sampler_step_diagnosed(
+        workspace, &policy, &current, 1, &snapshot, &proposal, 1, 0.0, 0.25,
+        table_callback, &table, &step, &diagnostic);
+    CHECK(status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+              diagnostic.status == status &&
+              diagnostic.retry_reason == MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO &&
+              diagnostic.evaluation_available && !step.valid,
+          "numeric-zero proposal remains a step error (%s)",
+          mvmc_krylov_status_string(status));
+    CHECK(current == words &&
+              snapshot.accepted_generation == before.accepted_generation &&
+              snapshot.integrity_hash == before.integrity_hash,
+          "failed step keeps the accepted configuration");
+    table.numeric_zero_mask = 0;
+    table.values[2] = 0.0;
+    status = mvmc_krylov_final_state_sampler_step_diagnosed(
+        workspace, &policy, &current, 1, &snapshot, &proposal, 1, 0.0, 0.25,
+        table_callback, &table, &step, &diagnostic);
+    CHECK(status == MVMC_KRYLOV_STATUS_OK && step.valid && !step.accepted &&
+              step.acceptance.exact_zero_proposal &&
+              diagnostic.retry_reason == MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO &&
+              current == words,
+          "exact-zero proposal is rejected");
+  }
+  destroy_workspace(workspace, plan);
+}
+
 int main(int argc, char **argv) {
 #ifdef _mpi_use
   MPI_Init(&argc, &argv);
@@ -651,6 +839,7 @@ int main(int argc, char **argv) {
   test_synthetic_proposal_transaction();
   test_complex_p2_and_failures();
   test_rank_invariance();
+  test_diagnosed_reasons();
 
 #ifdef _mpi_use
   {

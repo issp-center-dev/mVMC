@@ -268,6 +268,31 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value(
     double scaled_pivot_tolerance,
     MVMCAbsolutePfaffianScaledValueResult *result);
 
+/*
+ * Capacity workspace for variable even dimensions 0 <= n <= max_n (separate
+ * opaque type, so a fixed-dimension workspace is never treated as variable).
+ * Creation sizes the factor, pivot and LAPACK work buffers once for max_n,
+ * taking the largest work query over n = 2, 4, ..., max_n.  Evaluation never
+ * allocates; n = 0 is the empty Pfaffian 1 without a factorization.  The
+ * scaled classification is the one of the fixed-dimension API.
+ */
+typedef struct MVMCAbsolutePfaffianComplexCapacityWorkspace
+    MVMCAbsolutePfaffianComplexCapacityWorkspace;
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_capacity_workspace_create(
+    int max_n, MVMCAbsolutePfaffianComplexCapacityWorkspace **workspace);
+void mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(
+    MVMCAbsolutePfaffianComplexCapacityWorkspace *workspace);
+size_t mvmc_absolute_pfaffian_complex_capacity_workspace_bytes(
+    const MVMCAbsolutePfaffianComplexCapacityWorkspace *workspace);
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+    MVMCAbsolutePfaffianComplexCapacityWorkspace *workspace,
+    const double complex *matrix, int n, int lda, double pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result);
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+/* Testing only: heap allocations made by capacity workspace creation. */
+size_t mvmc_absolute_pfaffian_testing_capacity_allocations(void);
+#endif
+
 /* Canonical global-QP ordered aggregation and its rank-local slice form. */
 MVMCPfaffianStatus mvmc_projected_scaled_amplitude_values(
     const MVMCAbsolutePfaffianScaledValueResult *components,

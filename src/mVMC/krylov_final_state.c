@@ -495,16 +495,45 @@ uint64_t mvmc_krylov_final_state_policy_hash(
   return policy_valid(policy) ? policy->policy_hash : UINT64_C(0);
 }
 
-MVMCKrylovStatus mvmc_krylov_final_state_evaluate(
+static void reset_diagnostic(MVMCKrylovStatus status,
+                             MVMCKrylovFinalDiagnostic *diagnostic) {
+  if (diagnostic == NULL) return;
+  memset(diagnostic, 0, sizeof(*diagnostic));
+  diagnostic->status = status;
+  diagnostic->retry_reason = MVMC_KRYLOV_BOOTSTRAP_NO_RETRY;
+  invalidate_evaluation(status, &diagnostic->evaluation);
+}
+
+/* Classification of a completed evaluation for the initialization retry. */
+static MVMCKrylovBootstrapReason completed_reason(
+    const MVMCKrylovFinalStateEvaluation *evaluation) {
+  switch (evaluation->amplitude.state) {
+    case MVMC_SCALED_COMPLEX_EXACT_ZERO:
+      return MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO;
+    case MVMC_SCALED_COMPLEX_NUMERIC_ZERO:
+      return MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO;
+    case MVMC_SCALED_COMPLEX_FINITE_NONZERO:
+      return evaluation->local_energy_available
+                 ? MVMC_KRYLOV_BOOTSTRAP_NO_RETRY
+                 : MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY;
+    case MVMC_SCALED_COMPLEX_NONFINITE:
+      break;
+  }
+  return MVMC_KRYLOV_BOOTSTRAP_NO_RETRY;
+}
+
+static MVMCKrylovStatus evaluate_core(
     const MVMCKrylovFinalStatePolicy *policy,
     const MVMCKrylovBoundedResult *krylov,
-    MVMCKrylovFinalStateEvaluation *result) {
+    MVMCKrylovFinalStateEvaluation *result,
+    MVMCKrylovFinalDiagnostic *diagnostic) {
   MVMCKrylovFinalStateEvaluation candidate;
   MVMCScaledComplex amplitude_terms[MVMC_KRYLOV_MAX_ORDER + 1];
   MVMCScaledComplex hamiltonian_terms[MVMC_KRYLOV_MAX_ORDER + 1];
   int index;
   MVMCKrylovStatus status;
 
+  reset_diagnostic(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, diagnostic);
   if (result == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   invalidate_evaluation(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, result);
   if (!policy_valid(policy) || krylov == NULL || !krylov->valid ||
@@ -588,6 +617,17 @@ MVMCKrylovStatus mvmc_krylov_final_state_evaluate(
                            &candidate.amplitude,
                            &candidate.local_energy);
     if (status != MVMC_KRYLOV_STATUS_OK) {
+      if (diagnostic != NULL &&
+          status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE) {
+        /* Finite Phi and H Phi exist; only H Phi / Phi is unsafe. */
+        diagnostic->evaluation = candidate;
+        diagnostic->evaluation.status = status;
+        mvmc_scaled_complex_make_exact_zero(
+            &diagnostic->evaluation.local_energy);
+        diagnostic->evaluation_available = 1;
+        diagnostic->retry_reason = MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY;
+      }
+      if (diagnostic != NULL) diagnostic->status = status;
       invalidate_evaluation(status, result);
       return status;
     }
@@ -602,7 +642,20 @@ MVMCKrylovStatus mvmc_krylov_final_state_evaluate(
   }
   candidate.valid = 1;
   *result = candidate;
+  if (diagnostic != NULL) {
+    diagnostic->evaluation = candidate;
+    diagnostic->evaluation_available = 1;
+    diagnostic->retry_reason = completed_reason(&candidate);
+    diagnostic->status = MVMC_KRYLOV_STATUS_OK;
+  }
   return MVMC_KRYLOV_STATUS_OK;
+}
+
+MVMCKrylovStatus mvmc_krylov_final_state_evaluate(
+    const MVMCKrylovFinalStatePolicy *policy,
+    const MVMCKrylovBoundedResult *krylov,
+    MVMCKrylovFinalStateEvaluation *result) {
+  return evaluate_core(policy, krylov, result, NULL);
 }
 
 MVMCScaledComplexExportStatus mvmc_krylov_final_state_local_energy_export(
@@ -693,9 +746,11 @@ static MVMCKrylovStatus evaluate_snapshot(
     const MVMCKrylovFinalStatePolicy *policy,
     const uint64_t *words, size_t word_count,
     MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
-    MVMCKrylovFinalStateSnapshot *snapshot) {
+    MVMCKrylovFinalStateSnapshot *snapshot,
+    MVMCKrylovFinalDiagnostic *diagnostic) {
   MVMCKrylovFinalStateSnapshot candidate;
   MVMCKrylovStatus status;
+  reset_diagnostic(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, diagnostic);
   if (snapshot == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   invalidate_snapshot(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, snapshot);
   if (workspace == NULL || !policy_valid(policy) || words == NULL ||
@@ -706,12 +761,15 @@ static MVMCKrylovStatus evaluate_snapshot(
   status = evaluate_krylov(workspace, words, word_count, amplitude,
                            amplitude_context, &candidate.krylov);
   if (status != MVMC_KRYLOV_STATUS_OK) {
+    /* A failing amplitude callback or engine is never retried. */
+    reset_diagnostic(status, diagnostic);
     invalidate_snapshot(status, snapshot);
     return status;
   }
-  status = mvmc_krylov_final_state_evaluate(
-      policy, &candidate.krylov, &candidate.final_state);
+  status = evaluate_core(policy, &candidate.krylov, &candidate.final_state,
+                         diagnostic);
   if (status != MVMC_KRYLOV_STATUS_OK) {
+    if (diagnostic != NULL) diagnostic->status = status;
     invalidate_snapshot(status, snapshot);
     return status;
   }
@@ -733,22 +791,37 @@ static MVMCKrylovStatus evaluate_snapshot(
   return MVMC_KRYLOV_STATUS_OK;
 }
 
+MVMCKrylovStatus mvmc_krylov_final_state_sampler_initialize_diagnosed(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const MVMCKrylovFinalStatePolicy *policy,
+    const uint64_t *words, size_t word_count,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *context,
+    MVMCKrylovFinalStateSnapshot *snapshot,
+    MVMCKrylovFinalDiagnostic *diagnostic) {
+  MVMCKrylovStatus status = evaluate_snapshot(
+      workspace, policy, words, word_count, amplitude, context, snapshot,
+      diagnostic);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  if (!snapshot->final_state.sampleable ||
+      !snapshot->final_state.local_energy_available) {
+    invalidate_snapshot(MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE, snapshot);
+    if (diagnostic != NULL) {
+      diagnostic->status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+    }
+    return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+  }
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
 MVMCKrylovStatus mvmc_krylov_final_state_sampler_initialize(
     MVMCKrylovBoundedWorkspace *workspace,
     const MVMCKrylovFinalStatePolicy *policy,
     const uint64_t *current_words, size_t word_count,
     MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
     MVMCKrylovFinalStateSnapshot *snapshot) {
-  MVMCKrylovStatus status = evaluate_snapshot(
+  return mvmc_krylov_final_state_sampler_initialize_diagnosed(
       workspace, policy, current_words, word_count, amplitude,
-      amplitude_context, snapshot);
-  if (status != MVMC_KRYLOV_STATUS_OK) return status;
-  if (!snapshot->final_state.sampleable ||
-      !snapshot->final_state.local_energy_available) {
-    invalidate_snapshot(MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE, snapshot);
-    return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
-  }
-  return MVMC_KRYLOV_STATUS_OK;
+      amplitude_context, snapshot, NULL);
 }
 
 MVMCKrylovStatus mvmc_krylov_final_state_sampler_step(
@@ -760,12 +833,29 @@ MVMCKrylovStatus mvmc_krylov_final_state_sampler_step(
     double log_proposal_ratio, double uniform,
     MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
     MVMCKrylovFinalStateStepResult *result) {
+  return mvmc_krylov_final_state_sampler_step_diagnosed(
+      workspace, policy, current_words, current_word_count, current,
+      proposal_words, proposal_word_count, log_proposal_ratio, uniform,
+      amplitude, amplitude_context, result, NULL);
+}
+
+MVMCKrylovStatus mvmc_krylov_final_state_sampler_step_diagnosed(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const MVMCKrylovFinalStatePolicy *policy,
+    uint64_t *current_words, size_t current_word_count,
+    MVMCKrylovFinalStateSnapshot *current,
+    const uint64_t *proposal_words, size_t proposal_word_count,
+    double log_proposal_ratio, double uniform,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    MVMCKrylovFinalStateStepResult *result,
+    MVMCKrylovFinalDiagnostic *diagnostic) {
   MVMCKrylovFinalStateSnapshot proposal;
   MVMCKrylovFinalStateSnapshot updated;
   MVMCKrylovFinalStateStepResult candidate;
   MVMCKrylovFinalStateAcceptance acceptance;
   MVMCKrylovStatus status;
 
+  reset_diagnostic(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, diagnostic);
   if (result == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   invalidate_step(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, result);
   if (workspace == NULL || !policy_valid(policy) || current_words == NULL ||
@@ -793,24 +883,31 @@ MVMCKrylovStatus mvmc_krylov_final_state_sampler_step(
   }
   status = evaluate_snapshot(workspace, policy, proposal_words,
                              proposal_word_count, amplitude,
-                             amplitude_context, &proposal);
+                             amplitude_context, &proposal, diagnostic);
   if (status != MVMC_KRYLOV_STATUS_OK) {
     invalidate_step(status, result);
     return status;
   }
   if (proposal.amplitude_generation_hash !=
       current->amplitude_generation_hash) {
+    if (diagnostic != NULL) {
+      diagnostic->status = MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+    }
     invalidate_step(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, result);
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   }
   status = mvmc_krylov_final_state_acceptance(
       &current->final_state, &proposal.final_state, log_proposal_ratio,
       uniform, &acceptance);
+  if (diagnostic != NULL) diagnostic->status = status;
   if (status != MVMC_KRYLOV_STATUS_OK) {
     invalidate_step(status, result);
     return status;
   }
   if (acceptance.accepted && current->accepted_generation == UINT64_MAX) {
+    if (diagnostic != NULL) {
+      diagnostic->status = MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
+    }
     invalidate_step(MVMC_KRYLOV_STATUS_RESOURCE_LIMIT, result);
     return MVMC_KRYLOV_STATUS_RESOURCE_LIMIT;
   }

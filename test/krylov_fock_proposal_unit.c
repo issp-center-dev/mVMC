@@ -27,6 +27,7 @@ static MVMCKrylovFockModel model_with_sector(
   model.down_electron_count = down_count;
   model.pure_spin = pure_spin;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   return model;
 }
 
