@@ -724,6 +724,20 @@ Keywords and parameters
    histograms, autocorrelation and dependence on the initial configuration;
    global proposals guarantee access to the support, not rapid mixing.
 
+   This mixture applies to every supported anti-parallel pair function with
+   active :math:`S=0` projection (``NSPGaussLeg>=2``), including functions
+   that are not exactly antisymmetric. It does not enable ``OrbitalGeneral``
+   with spin projection. The two-pair and uniform proposals together are
+   selected with probability 17/64. Whenever a candidate can be drawn, its
+   Pfaffian is evaluated directly at every quadrature/translation point;
+   an accepted candidate also rebuilds the matrices. The direct evaluation
+   costs :math:`O(N^3)` per point for a candidate with :math:`N` electrons,
+   instead of a low-rank update. This can increase the cost per sampling
+   step, including for pair functions without the exact triplet symmetry.
+   Large-system performance has not been measured; assess both runtime and
+   particle-number mixing for the intended system. The proposal mixture and
+   random sequences for ``NSPGaussLeg=1`` and canonical sampling are unchanged.
+
    The Hamiltonian needs to conserve only :math:`S^z`; it does not have to be
    :math:`SU(2)` symmetric. Each measured operator whose total :math:`S^z`
    change is nonzero has zero expectation value, while a product whose
