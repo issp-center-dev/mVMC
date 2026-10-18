@@ -1088,7 +1088,7 @@ PILOT_WARMUP = 1000
 PILOT_GAUSS = 8
 PILOT_FIXTURES = (("pbc", 1), ("apbc", 1), ("pbc", 0), ("apbc", 0))
 THRESHOLD_FILE = "gc_spin_thresholds.json"
-THRESHOLD_SCHEMA = 1
+THRESHOLD_SCHEMA = 2
 # Readiness-review criterion: twice the largest Phase 2 MP pilot gate of the
 # same observable class.  S^2 is derived from Green rows and only recorded.
 OVERSIZE_LIMITS = {"energy": 0.096, "energy2": 1.36, "number": 0.094,
@@ -1382,6 +1382,19 @@ def fixture_contract_case(rootdir, args):
                             boundary, row, derivative, expected))
         reports.append((boundary, g2_error, worst))
     print("GC SP fixture contract: support=70, {}".format(reports))
+    for boundary in ("pbc", "apbc"):
+        fixture = statistical_fixture(boundary)
+        wave = spin.project_finite(fixture.raw_F, nodes, fixture.log_charge)
+        support = [m for m, z in wave.items() if z != 0]
+        norm = sum(abs(wave[m])**2 for m in support)
+        probability_min = min(abs(wave[m])**2/norm for m in support)
+        energy2_max = max(abs(sum(c*local_of(wave, m, ops)
+                                 for _, c, ops in fixture.terms()))**2
+                          for m in support)
+        if len(support) != 70 or probability_min < 1e-6 or energy2_max > 2000:
+            raise AssertionError("statistical fixture is too close to a node")
+        print("GC SP statistical conditioning {}: min P={}, max E2={}".format(
+            boundary, probability_min, energy2_max))
 
 
 def expected_comparison_count():
@@ -1392,8 +1405,21 @@ def expected_comparison_count():
                for unused, calmode in PILOT_FIXTURES)
 
 
-def statistical_run(rootdir, boundary, calmode, seed, samples, label):
+def statistical_fixture(boundary):
     fixture = SpinFixture(boundary, PILOT_GAUSS)
+    # The replay fixture's N=6 mask 238 has probability 2.24e-9 but
+    # |E_local|^2=67232. One visit changes a 60000-sample mean by 1.12;
+    # a 16-seed empirical SD cannot characterize this rare tail reliably.
+    # For statistics only, move the diagonal perturbation from 1/64 to 1/2.
+    # Choose this by the oracle support/conditioning bounds below, before
+    # calibrating the unchanged pilot seeds or using the validation seed.
+    # Deterministic replay, derivative and near-node fixtures stay unchanged.
+    fixture.raw_F[3][3] += 0.5 - 1.0/64.0
+    return fixture
+
+
+def statistical_run(rootdir, boundary, calmode, seed, samples, label):
+    fixture = statistical_fixture(boundary)
     workdir = prepare_work(rootdir, "{}_{}_m{}_seed{}".format(
         fixture.label(), label, calmode, seed))
     write_fixture(workdir, fixture, calmode=calmode, store=1, nsplit=1,
@@ -1519,9 +1545,9 @@ def expected_threshold_keys():
     nodes = spin.independent_nodes(PILOT_GAUSS)
     keys = set()
     for boundary, calmode in PILOT_FIXTURES:
-        fixture = SpinFixture(boundary, PILOT_GAUSS)
+        fixture = statistical_fixture(boundary)
         reference = exact_reference(
-            fixture, nodes, fixture_pair_amplitudes(), calmode)
+            fixture, nodes, fixture.raw_F, calmode)
         label = "{}_m{}".format(boundary, calmode)
         keys.update((label, key) for key in reference)
     return keys
