@@ -2126,6 +2126,16 @@ static void test_spin_sector(const char *mode) {
   CHECK(CalculateMAllGC_fcmp(0, idx, start, end) == GC_MALL_OK, "spin vacuum");
   logip = CalculateLogIPGC_fcmp(PfM, 0, start, end, MPI_COMM_WORLD);
   snapshot(&before, idx, cfg, num, proj, logip);
+  if (strcmp(mode, "--spin-sector-bridge") == 0) {
+    /* A component failure on rank 1 must reach the whole communicator,
+     * including an empty-QP rank, before the projected sum is evaluated. */
+    if (rank == (size > 1 ? 1 : 0) && start < end)
+      SlaterElm[start * ORBITALS * ORBITALS + 1] = NAN;
+    GCAttemptBridge(GC_ANTI_ADD_TWO, idx, cfg, num, proj, &logip,
+                    candidate, scratch, start, end, MPI_COMM_WORLD);
+    CHECK(0, "nonfinite bridge component accepted");
+    return;
+  }
   for (q = start; q < end; ++q) candidate[q-start] = 1e-16;
   CHECK(CalculateIPGC_fcmp(candidate, 2, start, end, MPI_COMM_WORLD) == 0,
         "finite forbidden-sector residue removed");

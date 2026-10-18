@@ -197,6 +197,10 @@ add_test(NAME GC_SP_Sector_InitReject
     COMMAND ${PYTHON_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
         $<TARGET_FILE:gc_sampler_unit> --spin-sector-init)
+add_test(NAME GC_SP_Sector_BridgeReject
+    COMMAND ${PYTHON_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+        $<TARGET_FILE:gc_sampler_unit> --spin-sector-bridge)
 if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
     add_test(NAME GC_SP_Sector_RankReject_mpi
         COMMAND ${PYTHON_EXECUTABLE}
@@ -206,6 +210,13 @@ if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
         ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
         PROCESSORS 2 TIMEOUT 60)
     foreach(np 2 3)
+        add_test(NAME GC_SP_Sector_BridgeReject_np${np}_mpi
+            COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+                $<TARGET_FILE:gc_sampler_unit> --spin-sector-bridge ${np})
+        set_tests_properties(GC_SP_Sector_BridgeReject_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+            PROCESSORS ${np} TIMEOUT 60)
         add_test(NAME GC_SP_Sector_Sampler_np${np}_mpi
             COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
                 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
