@@ -2085,6 +2085,91 @@ static void test_boundary_rejection(const char *mode) {
   }
 }
 
+static void test_spin_sector(const char *mode) {
+  int idx[ORBITALS], cfg[ORBITALS], num[ORBITALS], proj[1], scratch[1];
+  double complex candidate[MULTI_QP], logip;
+  int start, end, rank, size, q, i, full = 0;
+  SamplerState before;
+  enter_multiqp_mode();
+  iFlgOrbitalGeneral = 0; TwoSz = 0; NSPGaussLeg = 2; NSPStot = 0;
+  GCSpinTriplet = 1; Proj[0] = 0;
+  /* Direct independent rotation of F=[[0,1],[-1,0]]. */
+  for (q = 0; q < MULTI_QP; ++q) {
+    const double beta = q == 0 ? 0.7 : M_PI - 0.7;
+    const double c = cos(beta / 2), s = sin(beta / 2);
+    double complex *a = SlaterElm + q * ORBITALS * ORBITALS;
+    memset(a, 0, ORBITALS * ORBITALS * sizeof(*a));
+    a[1] = -2*c*s; a[4] = -a[1];
+    a[11] = 2*c*s; a[14] = -a[11];
+    a[3] = c*c-s*s; a[12] = -a[3];
+    a[6] = -a[3]; a[9] = -a[6];
+    QPFullWeight[q] = 0.5;
+  }
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  SplitLoop(&start, &end, NQPFull, rank, size);
+  init_gen_rand(281U);
+  GCRequireSpinSupport(MPI_COMM_WORLD);
+  if (strcmp(mode, "--spin-sector-init") == 0) {
+    Ncur = 2;
+    makeInitialSampleGC(idx, cfg, num, proj, start, end, MPI_COMM_WORLD);
+    CHECK(0, "forbidden initial N accepted");
+    return;
+  }
+  if (strcmp(mode, "--spin-sector-rank") == 0) {
+    GCSpinTriplet = rank == 0 ? 1 : 0;
+    GCRequireSpinSupport(MPI_COMM_WORLD);
+    CHECK(0, "rank-inconsistent support accepted");
+    return;
+  }
+  (void)set_state(0, idx, cfg, num, proj);
+  CHECK(CalculateMAllGC_fcmp(0, idx, start, end) == GC_MALL_OK, "spin vacuum");
+  logip = CalculateLogIPGC_fcmp(PfM, 0, start, end, MPI_COMM_WORLD);
+  snapshot(&before, idx, cfg, num, proj, logip);
+  for (q = start; q < end; ++q) candidate[q-start] = 1e-16;
+  CHECK(CalculateIPGC_fcmp(candidate, 2, start, end, MPI_COMM_WORLD) == 0,
+        "finite forbidden-sector residue removed");
+  if (start < end && rank == (size > 1 ? 1 : 0)) candidate[0] = NAN;
+  CHECK(!isfinite(creal(CalculateIPGC_fcmp(candidate, 2, start, end,
+                                           MPI_COMM_WORLD))),
+        "rank nonfinite input not hidden by sector mask");
+  CHECK(!GCAttemptMove(GC_MOVE_ADD, 0, 3, 0.0, idx, cfg, num, proj,
+                       &logip, candidate, scratch, start, end, MPI_COMM_WORLD),
+        "forbidden N+2 accepted");
+  check_snapshot(&before, idx, cfg, num, proj, logip, "spin N+2 rejection");
+  Proj[0] = -100;
+  CHECK(!GCAttemptBridge(GC_ANTI_ADD_TWO, idx, cfg, num, proj, &logip,
+                         candidate, scratch, start, end, MPI_COMM_WORLD),
+        "suppressed N+4 unexpectedly accepted");
+  check_snapshot(&before, idx, cfg, num, proj, logip, "spin N+4 rejection");
+  Proj[0] = 0;
+  for (i = 0; i < 40000; ++i) {
+    GCMakeOneStep(idx, cfg, num, proj, &logip, candidate, scratch,
+                  start, end, MPI_COMM_WORLD);
+    CHECK(Ncur == 0 || Ncur == 4, "forbidden sector sampled");
+    full += Ncur == 4;
+  }
+  CHECK(abs(full - 20000) < 1200, "triplet vacuum/full distribution %d", full);
+  /* A parameter-generation change can make the saved N=2 forbidden.
+   * Force that case and check that VMCMakeSampleGC restarts, warms up, and
+   * records only the permitted sectors. */
+  GCSpinTriplet = 0;
+  (void)set_state(9U, idx, cfg, num, proj);
+  BurnEleIdx = malloc(sizeof idx); BurnEleCfg = malloc(sizeof cfg);
+  BurnEleNum = malloc(sizeof num); BurnEleProjCnt = malloc(sizeof proj);
+  TmpEleIdx = idx; TmpEleCfg = cfg; TmpEleNum = num; TmpEleProjCnt = proj;
+  copyToBurnSampleGC(idx, cfg, num, proj);
+  EleIdx = malloc(4 * sizeof idx); EleCfg = malloc(4 * sizeof cfg);
+  EleNum = malloc(4 * sizeof num); EleProjCnt = malloc(4 * sizeof proj);
+  EleNumSample = malloc(4 * sizeof *EleNumSample);
+  logSqPfFullSlater = malloc(4 * sizeof *logSqPfFullSlater);
+  GCSpinTriplet = 1; BurnFlag = 1; NGCInitNelec = 2;
+  NVMCWarmUp = 100; NVMCInterval = 1; NVMCSample = 4;
+  VMCMakeSampleGC(MPI_COMM_WORLD);
+  for (i = 0; i < 4; ++i)
+    CHECK(EleNumSample[i] == 0 || EleNumSample[i] == 4, "stale burn N");
+}
+
 static void cleanup_globals(void) {
   GCComponentRelease();
   FreeWorkSpaceAll();
@@ -2128,7 +2213,9 @@ int main(int argc, char **argv) {
   if (strncmp(mode, "--death-", 8) == 0) {
     return run_death(mode);
   }
-  if (strncmp(mode, "--boundary", 10) == 0) {
+  if (strncmp(mode, "--spin-sector", 13) == 0) {
+    test_spin_sector(mode);
+  } else if (strncmp(mode, "--boundary", 10) == 0) {
     test_boundary_rejection(mode);
   } else if (strcmp(mode, "--multiqp") == 0) {
     enter_multiqp_mode();

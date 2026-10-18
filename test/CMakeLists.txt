@@ -86,6 +86,34 @@ target_include_directories(gc_config_unit PRIVATE
 target_link_libraries(gc_config_unit m)
 add_test(NAME GCConfig_Unit COMMAND gc_config_unit)
 
+add_executable(gc_spin_support_unit gc_spin_support_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_antiparallel.c)
+target_include_directories(gc_spin_support_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(gc_spin_support_unit m)
+add_test(NAME GC_SP_Support_Unit COMMAND gc_spin_support_unit)
+foreach(case minimal triplet near singlet general combined six)
+    add_test(NAME GC_SP_Sector_${case}
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_spin_sector.py
+            $<TARGET_FILE:vmc.out> --case ${case}
+            --work ${CMAKE_CURRENT_BINARY_DIR}/gc-spin-sector-${case})
+    set_tests_properties(GC_SP_Sector_${case} PROPERTIES TIMEOUT 600
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1")
+endforeach()
+if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+    foreach(np 2 3)
+        add_test(NAME GC_SP_Sector_minimal_np${np}_mpi
+            COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_spin_sector.py
+                $<TARGET_FILE:vmc.out> --case minimal --np ${np}
+                --work ${CMAKE_CURRENT_BINARY_DIR}/gc-spin-sector-minimal-np${np})
+        set_tests_properties(GC_SP_Sector_minimal_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};OMPI_MCA_rmaps_base_oversubscribe=1"
+            PROCESSORS ${np} TIMEOUT 600)
+    endforeach()
+endif()
+
 add_executable(gc_antiparallel_unit gc_antiparallel_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/gc_antiparallel.c)
 target_include_directories(gc_antiparallel_unit PRIVATE
@@ -164,6 +192,29 @@ if(MPI_FOUND)
     target_link_libraries(gc_sampler_unit ${MPI_C_LIBRARIES})
 endif()
 add_test(NAME GCSampler_Unit COMMAND gc_sampler_unit)
+add_test(NAME GC_SP_Sector_Sampler COMMAND gc_sampler_unit --spin-sector)
+add_test(NAME GC_SP_Sector_InitReject
+    COMMAND ${PYTHON_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+        $<TARGET_FILE:gc_sampler_unit> --spin-sector-init)
+if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+    add_test(NAME GC_SP_Sector_RankReject_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+            $<TARGET_FILE:gc_sampler_unit> --spin-sector-rank 2)
+    set_tests_properties(GC_SP_Sector_RankReject_mpi PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+        PROCESSORS 2 TIMEOUT 60)
+    foreach(np 2 3)
+        add_test(NAME GC_SP_Sector_Sampler_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:gc_sampler_unit>
+                --spin-sector ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GC_SP_Sector_Sampler_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;OMPI_MCA_rmaps_base_oversubscribe=1"
+            PROCESSORS ${np} TIMEOUT 120)
+    endforeach()
+endif()
 add_test(NAME GCSampler_Unit_DebugRebuild COMMAND gc_sampler_unit)
 set_tests_properties(GCSampler_Unit_DebugRebuild PROPERTIES
     ENVIRONMENT "MVMC_GC_DEBUG_REBUILD_INTERVAL=1")

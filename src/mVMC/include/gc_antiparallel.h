@@ -12,6 +12,19 @@
  * is present (the orbital table is the Nsite x Nsite anti-parallel form). */
 int GCAntiEnabled(int grandCanonical, int orbitalGeneral);
 
+enum GCAntiBridgeMove { GC_ANTI_ADD_TWO, GC_ANTI_REMOVE_TWO, GC_ANTI_GLOBAL };
+/* Fixed mixture for active spin projection: 1/8 add-two, 1/8 remove-two,
+ * 1/64 uniform balanced configuration, 47/64 original local kernel.
+ * Return -1 for the original kernel. Impossible bridge moves self-loop. */
+int GCAntiSelectBridge(double draw);
+double GCAntiRatioTwoPairs(int m, int nsite, int adding);
+/* Write occupation numbers for a bridge proposal without changing current.
+ * Return 1 for a candidate, 0 for an impossible move, -1 for invalid input.
+ * q_reverse/q_forward is 1 for global, the squared binomial ratio otherwise. */
+int GCAntiDrawBridge(enum GCAntiBridgeMove move, const int *current,
+                     int nsite, int m, int *candidate,
+                     uint32_t (*next32)(void), double *ratio);
+
 /* Reverse/forward proposal ratio for adding one up-down pair to a state with
  * m pairs on nsite sites.  pAdd is the add-class probability at m and
  * pRemoveNext the remove-class probability at m+1.  Invalid input gives 0. */

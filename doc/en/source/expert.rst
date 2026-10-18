@@ -701,6 +701,29 @@ Keywords and parameters
    with the spin projection. The existing prohibition on ``OptTrans`` in
    GC mode also remains in effect.
 
+   If the actual unrotated pair function is exactly antisymmetric
+   (:math:`F^T=-F`, pure triplet pairs), the :math:`S=0` projection removes
+   every sector with :math:`N=2\pmod 4`. The code checks the parameter values
+   including orbital signs at every update, and treats these sectors as exact
+   zeros after checking the QP sum for nonfinite values. This also removes
+   roundoff residues of the paired quadrature points at finite :math:`G`.
+   It applies to momentum projection as well, but not to ``NSPGaussLeg=1``.
+   ``NGCInitNelec`` must then be a multiple of four with nonzero projected
+   amplitude. If an optimization update invalidates the saved particle number,
+   the chain is initialized in a permitted sector and warmed up again.
+   Near-antisymmetric functions are not rounded to this symmetry.
+
+   For ordinary GC sampling with active spin projection, the move mixture now
+   includes simultaneous addition/removal of two up-down pairs (probability
+   1/8 each) and a uniform balanced configuration (1/64). The remaining 47/64
+   uses the original local moves. Each proposal uses its own Metropolis ratio;
+   an unavailable move is a self-loop. These moves connect sectors across the
+   forbidden intermediate particle number. Older versions using only
+   :math:`N\mathbin{\pm}2` could silently stay at the initial particle number.
+   Random sequences in this sampling mode have changed. Check particle-number
+   histograms, autocorrelation and dependence on the initial configuration;
+   global proposals guarantee access to the support, not rapid mixing.
+
    The Hamiltonian needs to conserve only :math:`S^z`; it does not have to be
    :math:`SU(2)` symmetric. Each measured operator whose total :math:`S^z`
    change is nonzero has zero expectation value, while a product whose
