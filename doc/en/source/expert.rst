@@ -993,8 +993,20 @@ Keywords and parameters
    proof is frozen with the parameter generation; near-antisymmetric inputs
    are not rounded to exact zeros. ``NGCInitNelec`` must be a multiple of four
    for this symmetry (see ``NGrandCanonical``).
-   Only
-   the first configuration of the final chain is redrawn, at most 1024
+
+   The two-pair moves in GC Lanczos are enabled only for this exact symmetry.
+   Near-antisymmetric pair functions retain the preceding 15/16 local and
+   1/16 uniform mixture to preserve existing random sequences. In such cases,
+   the small weight of intermediate particle-number sectors can suppress local
+   transitions, and the uniform proposals can have low acceptance. Slow
+   particle-number mixing therefore remains possible. Ordinary GC sampling
+   with active spin projection includes two-pair moves even for these inputs,
+   as described under ``NGrandCanonical``. For GC Lanczos, compare independent
+   seeds and different allowed initial particle numbers, and check convergence
+   with longer warm-up and sampling runs before relying on reported errors.
+   Access to all allowed configurations does not guarantee rapid mixing.
+
+   Only the first configuration of the final chain is redrawn, at most 1024
    times, when :math:`\Phi` is exactly or numerically zero or its local
    energy cannot be formed; the attempts are reported on standard output as
    ``GC Lanczos bootstrap: ...``. After that, a proposed configuration whose
