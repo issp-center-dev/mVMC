@@ -2756,6 +2756,18 @@ add_gc_lanczos_test(GCLanczos_Input input --vmc $<TARGET_FILE:vmc.out>
     --workdir work/GCLanczos_Input)
 add_gc_lanczos_test(GCLanczos_Production production
     --vmc $<TARGET_FILE:vmc.out> --workdir work/GCLanczos_Production)
+add_gc_lanczos_test(GCLanczos_SpinSector spin-sector
+    --vmc $<TARGET_FILE:vmc.out> --workdir work/GCLanczos_SpinSector)
+if(MPI_FOUND)
+    foreach(np 2 3)
+        add_gc_lanczos_test(GCLanczos_SpinSector_np${np}_mpi spin-sector --np ${np}
+            --vmc $<TARGET_FILE:vmc.out>
+            --workdir work/GCLanczos_SpinSector_np${np})
+        set_tests_properties(GCLanczos_SpinSector_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+            PROCESSORS ${np})
+    endforeach()
+endif()
 add_gc_lanczos_test(GCLanczos_Failure failure --vmc $<TARGET_FILE:vmc.out>
     --workdir work/GCLanczos_Failure)
 add_gc_lanczos_test(GCLanczos_Sample sample --vmc $<TARGET_FILE:vmc.out>

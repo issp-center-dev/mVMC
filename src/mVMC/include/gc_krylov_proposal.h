@@ -55,6 +55,14 @@ MVMCKrylovStatus mvmc_gc_krylov_draw_local(
     MVMCKrylovFockProposalBoundedDraw draw, void *context,
     uint64_t *out, size_t word_count);
 
+/* Balanced-domain N +/- 4 proposal: choose two distinct sites of each spin
+ * uniformly from all sites, then flip all four only if their occupations
+ * agree. Otherwise self-loop. No availability conditioning: Q is symmetric. */
+MVMCKrylovStatus mvmc_gc_krylov_draw_two_pairs(
+    const MVMCKrylovFockModel *model, const uint64_t *current,
+    MVMCKrylovFockProposalBoundedDraw draw, void *context,
+    uint64_t *out, size_t word_count);
+
 #endif /* reference or bounded engine */
 
 #endif /* MVMC_GC_KRYLOV_PROPOSAL_H */

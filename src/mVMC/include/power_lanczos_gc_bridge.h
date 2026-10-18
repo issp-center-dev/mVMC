@@ -9,7 +9,7 @@
 #include <complex.h>
 #include <stdint.h>
 
-#define MVMC_POWER_LANCZOS_GC_BRIDGE_VERSION UINT64_C(1)
+#define MVMC_POWER_LANCZOS_GC_BRIDGE_VERSION UINT64_C(2)
 
 /*
  * Production-shaped grand-canonical view.  data.up/down_electron_count and
@@ -26,6 +26,7 @@ typedef struct {
   MVMCKrylovConfigurationDomain domain;
   int translation_count;
   const double complex *translation_weights;
+  int spin_triplet_s0; /* Exact, generation-specific S=0 pair-parity proof. */
 } MVMCPowerLanczosGCView;
 
 typedef struct MVMCPowerLanczosGCBridge MVMCPowerLanczosGCBridge;

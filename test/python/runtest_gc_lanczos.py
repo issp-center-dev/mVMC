@@ -133,6 +133,15 @@ def fixture(name, nsite, pairing, matrix, boundary="pbc", translations=None,
 
 def oracle_cases():
     cases = []
+    for g in (2, 8):
+        cases.append(fixture("triplet_L2_G%d" % g, 2, "antiparallel",
+                             [[0, 1], [-1, 0]], gauss=g))
+    cases.append(fixture("near_triplet_L2", 2, "antiparallel",
+                         [[1e-4, 1], [-1, 1e-4]], gauss=8))
+    rng = np.random.default_rng(7)
+    raw = rng.normal(size=(4, 4)) + 1j*rng.normal(size=(4, 4))
+    cases.append(fixture("triplet_L4_G2", 4, "antiparallel",
+                         ((raw-raw.T)/4).tolist(), gauss=2))
     f2_rows = lambda boundary, phase=1.0: model_rows(
         2, [(0, 1)], boundary, phase=phase, V=0.125, J=0.0625)
     g2 = general_matrix(F2)
@@ -248,9 +257,9 @@ def write_probe_input(case, path):
     slaters, weights = gl.production_qp(case)
     raw = [w for _, w in case.get("raw_translation_weights",
                                    case["translations"])]
-    lines = ["GC_LANCZOS_PROBE_V1",
-             "%d %d %d %d" % (nsite, 1 if case["domain"] == "balanced" else 2,
-                              len(slaters), len(raw))]
+    lines = ["GC_LANCZOS_PROBE_V2",
+             "%d %d %d %d %d" % (nsite, 1 if case["domain"] == "balanced" else 2,
+                                 len(slaters), len(raw), int(gl.pure_triplet_s0(case)))]
     lines += ["%s %s" % (fmt(complex(w).real), fmt(complex(w).imag))
               for w in raw]
     lines += ["%s %s" % (fmt(w.real), fmt(w.imag)) for w in weights]
@@ -394,6 +403,9 @@ def compare_case(case, probe_result):
     for position, mask in enumerate(basis):
         status, values = probe_result["Q"][mask]
         require(status == "ok", "%s: mask %d status %s" % (name, mask, status))
+        if gl.pure_triplet_s0(case) and gl.popcount(mask) % 4 == 2:
+            require(all(value[0] == "EXACT_ZERO" for value in values),
+                    "%s: forbidden N must give exact q0/q1/q2 zeros" % name)
         if not case.get("compare_values", True):
             continue
         for order in range(3):
@@ -1077,6 +1089,35 @@ def production_mode(args):
     return 1 if failures else 0
 
 
+def spin_sector_mode(args):
+    rng = np.random.default_rng(7)
+    raw = rng.normal(size=(4, 4)) + 1j*rng.normal(size=(4, 4))
+    F = ((raw-raw.T)/4).tolist()
+    for gauss in (2, 8):
+        case = fixture("triplet", 4, "antiparallel", F, gauss=gauss)
+        reference = oracle_reference(case)
+        for initial in (0, 4, 8):
+            for seed in (17, 29):
+                label = "triplet_g%d_N%d_seed%d_np%d" % (gauss, initial, seed, args.np)
+                work = pathlib.Path(args.workdir)/label
+                write_e2e_input(case, work, seed=seed, nsplit=args.np,
+                                init_nelec=initial)
+                done = run_vmc(args.vmc, work, args.np,
+                    env={"MVMC_GC_LANCZOS_TEST_SUMMARY": "1"})
+                result = require_success(label, done, work, STAT_SAMPLES, 1)
+                summary = parse_summary(label, done.stdout, 1, case["L"])
+                statistical_gates(label, result, summary, reference, STAT_SAMPLES, 1)
+                require(all(summary["sectors"][n] == 0 for n in (2, 6)),
+                        label + ": sampled forbidden sector")
+    work = pathlib.Path(args.workdir)/"forbidden_initial_N2"
+    write_e2e_input(case, work, init_nelec=2, nsplit=args.np)
+    done = run_vmc(args.vmc, work, args.np)
+    require_failure("triplet initial N2", done, work,
+                    ["NGCInitNelec=2", "exactly antisymmetric", "multiple of 4"])
+    print("GC Lanczos triplet spin sectors: PASS")
+    return 0
+
+
 def deterministic_match(label, first, second):
     """Same chain seeds, only the QP partition changed."""
     (r1, s1), (r2, s2) = first, second
@@ -1558,7 +1599,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("oracle", "proposal", "input",
                                          "production", "mpi", "failure",
-                                         "sample"))
+                                         "sample", "spin-sector"))
     parser.add_argument("--unit")
     parser.add_argument("--probe")
     parser.add_argument("--vmc")
@@ -1582,7 +1623,8 @@ def main():
             parser.error("sample mode requires --sample")
         return sample_mode(args)
     modes = {"input": input_mode, "production": production_mode,
-             "mpi": mpi_mode, "failure": failure_mode}
+             "mpi": mpi_mode, "failure": failure_mode,
+             "spin-sector": spin_sector_mode}
     try:
         return modes[args.mode](args)
     except CheckFailure as error:

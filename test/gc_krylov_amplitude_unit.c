@@ -416,6 +416,69 @@ static void test_boundary_rule(void) {
   }
 }
 
+static void test_spin_parity_rule(void) {
+  double complex slater[2 * ORB2 * ORB2];
+  const double complex translation[1] = {1};
+  const double complex weights[2] = {0.5, 0.5};
+  AmplitudeFixture fixture;
+  MVMCGCKrylovAmplitudeWorkspace *masked = NULL, *raw = NULL;
+  MVMCKrylovScaledAmplitudeResult result;
+  int q;
+  for (q = 0; q < 2; ++q) {
+    const double beta = q == 0 ? 0.7 : acos(-1.0)-0.7;
+    const double c = cos(beta/2), s = sin(beta/2);
+    double complex *a = slater + q*ORB2*ORB2;
+    memset(a, 0, ORB2*ORB2*sizeof(*a));
+    a[1] = -2*c*s; a[4] = -a[1];
+    a[11] = 2*c*s; a[14] = -a[11];
+    a[3] = c*c-s*s; a[12] = -a[3];
+    a[6] = -a[3]; a[9] = -a[6];
+  }
+  fixture_layout(&fixture, MVMC_KRYLOV_DOMAIN_GC_BALANCED, 2, translation,
+                 1, 0, world_comm(), 1);
+  CHECK(mvmc_gc_krylov_amplitude_workspace_create(
+            &fixture.layout, slater, weights, &raw) == MVMC_KRYLOV_STATUS_OK,
+        "raw spin workspace");
+  fixture.layout.spin_triplet_s0 = 1;
+  CHECK(mvmc_gc_krylov_amplitude_workspace_create(
+            &fixture.layout, slater, weights, &masked) == MVMC_KRYLOV_STATUS_OK,
+        "triplet spin workspace");
+  if (raw && masked) {
+    CHECK(mvmc_gc_krylov_amplitude_generation_hash(raw) !=
+              mvmc_gc_krylov_amplitude_generation_hash(masked),
+          "support proof is part of generation binding");
+    CHECK(evaluate(masked, 0x9, &result) == MVMC_KRYLOV_STATUS_OK &&
+              result.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
+          "triplet N=2 is exact zero");
+    CHECK(evaluate(masked, 0, &result) == MVMC_KRYLOV_STATUS_OK &&
+              matches(&result, 1), "triplet vacuum survives");
+    CHECK(evaluate(masked, 0xf, &result) == MVMC_KRYLOV_STATUS_OK &&
+              matches(&result, -1), "triplet full survives");
+    /* Mutating the caller's proof cannot change an existing generation. */
+    fixture.layout.spin_triplet_s0 = 0;
+    CHECK(evaluate(masked, 0x9, &result) == MVMC_KRYLOV_STATUS_OK &&
+              result.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
+          "immutable support snapshot");
+    mvmc_gc_krylov_amplitude_testing_set_fault(
+        MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONFINITE,
+        world_size() > 1 ? 1 : 0);
+    CHECK(evaluate(masked, 0x9, &result) == MVMC_KRYLOV_STATUS_NONFINITE,
+          "rank fault not hidden by triplet mask");
+    mvmc_gc_krylov_amplitude_testing_set_fault(
+        MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE, -1);
+  }
+  mvmc_gc_krylov_amplitude_workspace_destroy(raw);
+  mvmc_gc_krylov_amplitude_workspace_destroy(masked);
+  masked = NULL;
+  if (world_size() > 1) {
+    fixture.layout.spin_triplet_s0 = world_rank() == 0;
+    CHECK(mvmc_gc_krylov_amplitude_workspace_create(
+              &fixture.layout, slater, weights, &masked) ==
+              MVMC_KRYLOV_STATUS_INVALID_ARGUMENT && masked == NULL,
+          "rank-mismatched support proof rejected");
+  }
+}
+
 static void test_node_and_vacuum(void) {
   /* Node fixture F=[[1,0],[1,1]]: q0(0x9)=0, q1(0x9)=-2 with hopping -1. */
   static const double complex node[L2][L2] = {{1.0, 0.0}, {1.0, 1.0}};
@@ -765,6 +828,7 @@ int main(int argc, char **argv) {
   test_single_qp_amplitudes();
   test_permutation_parity();
   test_boundary_rule();
+  test_spin_parity_rule();
   test_node_and_vacuum();
   test_invalid_layouts();
   test_partition();

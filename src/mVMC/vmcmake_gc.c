@@ -10,6 +10,7 @@
 #include "include/gc_antiparallel.h"
 #include "include/gc_config.h"
 #include "include/gc_size.h"
+#include "include/gc_spin_support.h"
 #include "include/global.h"
 #include "include/matrix_gc.h"
 #include "include/pfupdate_gc.h"
@@ -30,6 +31,30 @@ static int GCAntiMode(void) {
 }
 
 static uint32_t GCAntiNext32(void) { return gen_rand32(); }
+
+static int GCActiveSpinProjection(void) {
+  return GCAntiMode() && NSPGaussLeg > 1 && NSPStot == 0;
+}
+
+static int GCForbiddenSpinSector(const int n) {
+  return GCSpinForbiddenSector(FlagGrandCanonical, iFlgOrbitalGeneral,
+                               NSPGaussLeg, NSPStot, GCSpinTriplet, n);
+}
+
+static void GCRequireSpinSupport(MPI_Comm comm) {
+  int low = GCSpinTriplet, high = GCSpinTriplet;
+  if (!GCActiveSpinProjection()) return;
+  MPI_Allreduce(&GCSpinTriplet, &low, 1, MPI_INT, MPI_MIN, comm);
+  MPI_Allreduce(&GCSpinTriplet, &high, 1, MPI_INT, MPI_MAX, comm);
+  if (low < 0 || high > 1 || low != high) {
+    int rank = 0;
+    MPI_Comm_rank(comm, &rank);
+    if (rank == 0)
+      fprintf(stderr, "Error: invalid or rank-inconsistent GC spin support.\n");
+    MPI_Barrier(comm);
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+}
 
 static void GCRecordCompositeZero(MPI_Comm comm) {
   int rank = 0;
@@ -447,11 +472,103 @@ static void GCDebugCheckFastState(const int *eleIdx,
   GCRequireRebuiltAmplitude(*logIpOld, "debug", comm);
 }
 
+/* Full endpoint evaluation: never accept two successive N+/-2 moves through
+ * a zero intermediate sector. Candidate values use private configuration
+ * arrays and component scratch; rejected proposals leave the sampler's
+ * arrays, Pfaffians, inverses, and QP states untouched. */
+static int GCAttemptBridge(const enum GCAntiBridgeMove move,
+                           int *eleIdx, int *eleCfg, int *eleNum,
+                           int *eleProjCnt, double complex *logIpOld,
+                           double complex *pfMNew, int *projCntNew,
+                           const int qpStart, const int qpEnd, MPI_Comm comm) {
+  int *candidate = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(GCNonnegativeSize(Nsite2, "GC spin bridge orbitals"),
+                        2 * sizeof(*candidate)),
+      "GC spin bridge configuration");
+  int *indices = candidate + Nsite2;
+  int count = 0, rs, qp, accepted = 0;
+  int localStatus = GC_MALL_OK, status = GC_MALL_OK;
+  double ratio = 1.0;
+  double complex logIpNew;
+  const int drawn = GCAntiDrawBridge(move, eleNum, Nsite, Ncur / 2,
+                                     candidate, GCAntiNext32, &ratio);
+  if (drawn == 0) {
+    free(candidate);
+    return 0;
+  }
+  if (drawn < 0) {
+    fprintf(stderr, "Error: invalid GC spin bridge proposal.\n");
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  for (rs = 0; rs < Nsite2; ++rs)
+    if (candidate[rs]) indices[count++] = rs;
+  MakeProjCnt(projCntNew, candidate);
+#pragma omp parallel default(shared)
+  {
+    GCComponentCache *cache = GCComponentThreadCache();
+#pragma omp for
+    for (qp = qpStart; qp < qpEnd; ++qp) {
+      const int result = GCComponentValue(qp, count, indices, cache,
+                                          pfMNew + qp - qpStart);
+      if (result != GC_MALL_OK) {
+#pragma omp critical
+        { if (result > localStatus) localStatus = result; }
+      }
+    }
+  }
+  MPI_Allreduce(&localStatus, &status, 1, MPI_INT, MPI_MAX, comm);
+  if (status != GC_MALL_OK) {
+    fprintf(stderr, "Error: GC spin bridge evaluation failed (status=%d).\n",
+            status);
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  logIpNew = CalculateLogIPGC_fcmp(pfMNew, count, qpStart, qpEnd, comm);
+  if (GCAntiAcceptLog(*logIpOld, logIpNew,
+                      LogProjRatio(projCntNew, eleProjCnt), ratio,
+                      genrand_real2(), &accepted) != 0) {
+    fprintf(stderr, "Error: invalid GC spin bridge acceptance input.\n");
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  if (creal(logIpNew) == -INFINITY) GCRecordCompositeZero(comm);
+  if (accepted) {
+    for (rs = 0; rs < Nsite2; ++rs) {
+      eleNum[rs] = candidate[rs];
+      eleCfg[rs] = -1;
+    }
+    for (rs = 0; rs < NsizeMax; ++rs) eleIdx[rs] = -1;
+    for (rs = 0; rs < count; ++rs) {
+      eleIdx[rs] = indices[rs];
+      eleCfg[indices[rs]] = rs;
+    }
+    if (NProj > 0)
+      memcpy(eleProjCnt, projCntNew, (size_t)NProj * sizeof(*eleProjCnt));
+    Ncur = count;
+    localStatus = CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd);
+    MPI_Allreduce(&localStatus, &status, 1, MPI_INT, MPI_MAX, comm);
+    if (status != GC_MALL_OK) {
+      fprintf(stderr, "Error: GC spin bridge commit failed (status=%d).\n",
+              status);
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+    GCRequireRebuiltAmplitude(*logIpOld, "spin bridge", comm);
+  }
+  free(candidate);
+  return accepted;
+}
+
 int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
                   int *eleProjCnt, double complex *logIpOld,
                   double complex *pfMNew, int *projCntNew,
                   const int qpStart, const int qpEnd, MPI_Comm comm) {
   static long long debugAccepted = 0;
+  if (GCActiveSpinProjection()) {
+    const int bridge = GCAntiSelectBridge(genrand_real2());
+    if (bridge >= 0)
+      return GCAttemptBridge((enum GCAntiBridgeMove)bridge, eleIdx, eleCfg,
+                             eleNum, eleProjCnt, logIpOld, pfMNew,
+                             projCntNew, qpStart, qpEnd, comm);
+  }
   const enum GCMoveClass moveClass =
       GCSelectMoveClass(genrand_real2(), Ncur, Nsite2);
   int arg0;
@@ -546,6 +663,14 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
   int rank;
   double complex logIp;
   MPI_Comm_rank(comm, &rank);
+  if (GCForbiddenSpinSector(Ncur)) {
+    if (rank == 0)
+      fprintf(stderr, "Error: NGCInitNelec=%d is forbidden by S=0 spin "
+              "projection of an exactly antisymmetric pair function "
+              "(N must be a multiple of 4).\n", Ncur);
+    MPI_Barrier(comm);
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   for (attempt = 0; attempt < 100; attempt++) {
     int position;
     int status;
@@ -698,6 +823,7 @@ void VMCMakeSampleGC(MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
   SplitLoop(&qpStart, &qpEnd, NQPFull, rank, size);
+  GCRequireSpinSupport(comm);
   RequestWorkSpaceInt(NProj);
   projCntNew = GetWorkSpaceInt(NProj);
 
@@ -730,6 +856,19 @@ void VMCMakeSampleGC(MPI_Comm comm) {
                 "Error: GC restored configuration has a nonfinite "
                 "amplitude.\n");
       MPI_Abort(comm, EXIT_FAILURE);
+    }
+    /* An SR update may enter the pure-triplet manifold and invalidate the
+     * saved N. Restart in a permitted sector and perform the full warm-up.
+     * Initial user input is checked separately by makeInitialSampleGC. */
+    if (GCForbiddenSpinSector(Ncur)) {
+      Ncur = NGCInitNelec;
+      if (GCForbiddenSpinSector(Ncur)) Ncur = 0;
+      if (Ncur == 0 && GCProjectionSectorZero(0)) Ncur = 4;
+      if (Ncur > NsizeMax) {
+        if (rank == 0)
+          fprintf(stderr, "Error: no GC spin sector available for restart.\n");
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
     }
     (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
                               TmpEleProjCnt, qpStart, qpEnd, comm);

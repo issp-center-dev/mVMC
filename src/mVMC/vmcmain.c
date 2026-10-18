@@ -574,6 +574,15 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
                                         : MVMC_KRYLOV_DOMAIN_GC_BALANCED;
   view.translation_count = NMPTrans;
   view.translation_weights = ParaQPTrans;
+  GCRequireSpinSupport(world_communicator);
+  if (GCForbiddenSpinSector(Ncur)) {
+    if (rank == 0)
+      fprintf(stderr, "Error: NGCInitNelec=%d is forbidden by S=0 spin "
+              "projection of an exactly antisymmetric pair function "
+              "(N must be a multiple of 4).\n", Ncur);
+    return 1;
+  }
+  view.spin_triplet_s0 = GCActiveSpinProjection() && GCSpinTriplet == 1;
   memset(&input, 0, sizeof(input));
   input.gc_view = &view;
   input.world_communicator = world_communicator;

@@ -31,6 +31,9 @@ static MVMCKrylovStatus validate_gc_view_shape(
       (view->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED &&
        view->domain != MVMC_KRYLOV_DOMAIN_GC_EVEN) ||
       view->translation_count <= 0 || view->translation_weights == NULL ||
+      (view->spin_triplet_s0 != 0 && view->spin_triplet_s0 != 1) ||
+      (view->spin_triplet_s0 &&
+       view->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED) ||
       data->transfer_count < 0 || data->coulomb_intra_count < 0 ||
       data->coulomb_inter_count < 0 || data->hund_count < 0 ||
       data->exchange_count < 0 || data->pair_hopping_count < 0 ||
@@ -102,6 +105,7 @@ static uint64_t gc_view_metadata_hash(const MVMCPowerLanczosGCView *view) {
   const MVMCPowerLanczosClassicView *data = &view->data;
   const int values[] = {
       data->site_count, (int)view->domain, view->translation_count,
+      view->spin_triplet_s0,
       data->transfer_count, data->coulomb_intra_count,
       data->coulomb_inter_count, data->hund_count, data->qp_total,
       data->nproj, data->ngutzwiller_idx, data->njastrow_idx,
@@ -164,6 +168,7 @@ static MVMCGCKrylovAmplitudeLayout amplitude_layout(
   layout.qp_end = data->qp_end;
   layout.translation_count = view->translation_count;
   layout.translation_weights = view->translation_weights;
+  layout.spin_triplet_s0 = view->spin_triplet_s0;
   layout.scaled_pivot_tolerance = data->scaled_pivot_tolerance;
   layout.projection.site_count = (size_t)data->site_count;
   layout.projection.nproj = data->nproj;

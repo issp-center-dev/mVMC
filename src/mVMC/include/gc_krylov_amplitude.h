@@ -43,6 +43,9 @@ typedef struct {
   int qp_total, qp_start, qp_end;
   int translation_count;
   const double complex *translation_weights;
+  /* Proven by exact comparison of the unrotated parameter values for this
+   * generation: active S=0 projection and F^T=-F. Balanced domain only. */
+  int spin_triplet_s0;
   double scaled_pivot_tolerance;
   MVMCClassicKrylovProjectionLayout projection;
   MVMCClassicPfaffianCommunicator communicator;
