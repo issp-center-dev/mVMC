@@ -1083,7 +1083,9 @@ PILOT_SEEDS = (1001, 2003, 3011, 4019, 5021, 6037, 7043, 8053,
                9067, 10079, 11087, 12097, 13109, 14119, 15121, 16127)
 VALIDATION_SEED = 91807
 ALPHA_FAMILY = 0.002699796063260207  # two-sided normal 3 sigma
-PILOT_SAMPLES = 60000
+# The extended kernel needs more samples for the existing SR precision cap.
+# Keep the seed sets, six-SD calibration and all oversize limits unchanged.
+PILOT_SAMPLES = 120000
 PILOT_WARMUP = 1000
 PILOT_GAUSS = 8
 PILOT_FIXTURES = (("pbc", 1), ("apbc", 1), ("pbc", 0), ("apbc", 0))
