@@ -1639,7 +1639,11 @@ int main(int argc, char **argv) {
       CHECK(audit.teamMin == required && audit.teamMax == required,
             "green audit team min/max=%d/%d expected=%d", audit.teamMin,
             audit.teamMax, required);
-      CHECK(audit.workers >= 2, "green audit workers=%d", audit.workers);
+      /* Dynamic QP worksharing may legally use a single worker. Actual
+       * kernel execution on every thread is checked independently by
+       * test_anomalous_omp_stress (including its evaluation mask). */
+      CHECK(audit.workers >= 1 && audit.workers <= required,
+            "green audit workers=%d", audit.workers);
       CHECK(audit.workCount > 0, "green audit recorded no work");
     }
   }
