@@ -1081,6 +1081,34 @@ static void run_spin_checks(void) {
   }
 }
 
+/* Same independent orbital table, changed parameter values: the production
+ * matrix builder must recompute its support proof on every generation. */
+static void run_spin_support_generations(void) {
+  const double beta[2] = {0.7, 2.441592653589793};
+  const double weights[2] = {0.5, 0.5};
+  initialize_antiparallel_fixture(2, 0, 0);
+  extend_antiparallel_spin(2, beta, weights);
+  FlagGrandCanonical = 1; NSPStot = 0;
+  Slater[0] = Slater[3] = 0;
+  Slater[1] = 0.5 + 0.25*I; Slater[2] = -Slater[1];
+  UpdateSlaterElm_fcmp();
+  CHECK(GCSpinTriplet == 1, "parameter generation enters triplet support");
+  Slater[3] = 1e-100;
+  UpdateSlaterElm_fcmp();
+  CHECK(GCSpinTriplet == 0, "near-triplet generation is not masked");
+  Slater[3] = 0;
+  UpdateSlaterElm_fcmp();
+  CHECK(GCSpinTriplet == 1, "parameter generation reenters triplet support");
+  Slater[3] = NAN;
+  UpdateSlaterElm_fcmp();
+  CHECK(GCSpinTriplet == -1, "nonfinite generation cannot prove symmetry");
+  Slater[3] = 0; NSPGaussLeg = 1; NQPFull = NQPFix = 1;
+  UpdateSlaterElm_fcmp();
+  CHECK(GCSpinTriplet == 0, "G=1 clears spin support proof");
+  FlagGrandCanonical = 0;
+  free_antiparallel_fixture();
+}
+
 /* One spin component is exactly zero (PFONLY) while the projected overlap is
  * not: its cofactor must still enter the derivative. */
 static void run_spin_pfonly_checks(void) {
@@ -1215,6 +1243,7 @@ int main(int argc, char **argv) {
     run_antiparallel_checks();
   } else if (argc > 1 && strcmp(argv[1], "--spin") == 0) {
     run_spin_checks();
+    run_spin_support_generations();
   } else if (argc > 1 && strcmp(argv[1], "--spin-pfonly") == 0) {
     run_spin_pfonly_checks();
   } else if (argc > 1 && strcmp(argv[1], "--spin-omp") == 0) {

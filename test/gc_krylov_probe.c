@@ -5,8 +5,8 @@
  *
  * The input is one fixed-order whitespace token stream written by
  * runtest_gc_lanczos.py:
- *   GC_LANCZOS_PROBE_V1
- *   L domain QP R
+ *   GC_LANCZOS_PROBE_V2
+ *   L domain QP R spin_triplet_s0
  *   R x (re im)                    raw translation weights
  *   QP x (re im)                   QP weights
  *   QP x (2L)^2 x (re im)          row-major QP Slater matrices
@@ -96,6 +96,7 @@ typedef struct {
   int domain;
   int qp_total;
   int translation_count;
+  int spin_triplet_s0;
   double complex *translation;
   double complex *qp_weights;
   double complex *slater;
@@ -153,7 +154,7 @@ static int parse_input(const char *path, ProbeInput *input) {
   reader.failed = reader.stream == NULL;
   if (reader.failed) return 0;
   if (!read_token(&reader, token, sizeof(token)) ||
-      strcmp(token, "GC_LANCZOS_PROBE_V1") != 0) {
+      strcmp(token, "GC_LANCZOS_PROBE_V2") != 0) {
     fclose(reader.stream);
     return 0;
   }
@@ -161,6 +162,7 @@ static int parse_input(const char *path, ProbeInput *input) {
   input->domain = (int)read_long(&reader, 1, 2);
   input->qp_total = (int)read_long(&reader, 1, 4096);
   input->translation_count = (int)read_long(&reader, 1, 4096);
+  input->spin_triplet_s0 = (int)read_long(&reader, 0, 1);
   if (reader.failed) {
     fclose(reader.stream);
     return 0;
@@ -396,6 +398,7 @@ int main(int argc, char **argv) {
   view.domain = (MVMCKrylovConfigurationDomain)input.domain;
   view.translation_count = input.translation_count;
   view.translation_weights = input.translation;
+  view.spin_triplet_s0 = input.spin_triplet_s0;
 #ifdef _mpi_use
   status = mvmc_power_lanczos_gc_bridge_create(&view, MPI_COMM_WORLD,
                                                MPI_COMM_WORLD, &bridge);
@@ -428,7 +431,7 @@ int main(int argc, char **argv) {
     policy.log_basis_scale[index] = 0.0;
   }
   if (output != NULL) {
-    fprintf(output, "# GC_LANCZOS_PROBE_V1 L=%d domain=%d qp=%d\n",
+    fprintf(output, "# GC_LANCZOS_PROBE_V2 L=%d domain=%d qp=%d\n",
             input.site_count, input.domain, input.qp_total);
     fprintf(output, "BRIDGE\t%s\n", mvmc_krylov_status_string(status));
   }

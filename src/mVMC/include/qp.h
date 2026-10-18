@@ -4,6 +4,9 @@
 #include "mvmc_mpi.h"
 
 void InitQPWeight();
+/* Proven support zeros only; finite component validation still precedes
+ * applying this mask to any amplitude. */
+int GCProjectionSectorZero(int newN);
 
 double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);
 double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm);

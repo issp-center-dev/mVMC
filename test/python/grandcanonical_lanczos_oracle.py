@@ -102,6 +102,13 @@ def translated_wave(base, mappings, r, nsite):
     return result
 
 
+def pure_triplet_s0(fixture):
+    return (fixture["pairing"] == "antiparallel" and
+            fixture.get("gauss", 1) > 1 and
+            all(complex(fixture["F"][i][j]) == -complex(fixture["F"][j][i])
+                for i in range(fixture["L"]) for j in range(fixture["L"])))
+
+
 def reference_wave(fixture):
     """Psi(x) over the domain basis from Fock operations only."""
     nsite = fixture["L"]
@@ -133,7 +140,10 @@ def reference_wave(fixture):
                                    fixture["translations"])])
     basis = domain_basis(nsite, fixture["domain"])
     psi = np.zeros(len(basis), dtype=complex)
+    triplet = pure_triplet_s0(fixture)
     for k, mask in enumerate(basis):
+        if triplet and popcount(mask) % 4 == 2:
+            continue
         if boundary_zero and popcount(mask) in (0, 2 * nsite):
             psi[k] = 0.0
             continue

@@ -3,11 +3,80 @@
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "include/gc_antiparallel.h"
 
 int GCAntiEnabled(const int grandCanonical, const int orbitalGeneral) {
   return grandCanonical != 0 && orbitalGeneral == 0;
+}
+
+int GCAntiSelectBridge(const double draw) {
+  if (draw < 1.0 / 64.0) return GC_ANTI_GLOBAL;
+  if (draw < 9.0 / 64.0) return GC_ANTI_ADD_TWO;
+  if (draw < 17.0 / 64.0) return GC_ANTI_REMOVE_TWO;
+  return -1;
+}
+
+double GCAntiRatioTwoPairs(const int m, const int nsite, const int adding) {
+  double ratio;
+  if (nsite < 2 || m < 0 || m > nsite) return 0.0;
+  if (adding) {
+    if (nsite - m < 2) return 0.0;
+    ratio = ((double)(nsite - m) / (double)(m + 2)) *
+            ((double)(nsite - m - 1) / (double)(m + 1));
+  } else {
+    if (m < 2) return 0.0;
+    ratio = ((double)m / (double)(nsite - m + 2)) *
+            ((double)(m - 1) / (double)(nsite - m + 1));
+  }
+  return ratio * ratio;
+}
+
+int GCAntiDrawBridge(const enum GCAntiBridgeMove move, const int *current,
+                     const int nsite, const int m, int *candidate,
+                     uint32_t (*next32)(void), double *ratio) {
+  int spin;
+  if (nsite <= 0 || nsite > INT_MAX / 2 || m < 0 || m > nsite ||
+      current == NULL || candidate == NULL || current == candidate ||
+      next32 == NULL || ratio == NULL) return -1;
+  if (move == GC_ANTI_GLOBAL) {
+    /* Choose L labels uniformly among U_i and Dbar_i. Every balanced
+     * configuration has exactly one such subset, so q(x->y) is constant. */
+    int label, remaining = nsite;
+    for (label = 0; label < 2 * nsite; ++label) {
+      const int taken = (int)GCAntiDrawBelow((uint32_t)(2 * nsite - label),
+                                            next32) < remaining;
+      remaining -= taken;
+      candidate[label] = label < nsite ? taken : !taken;
+    }
+    *ratio = 1.0;
+    return remaining == 0 ? 1 : -1;
+  }
+  if (move != GC_ANTI_ADD_TWO && move != GC_ANTI_REMOVE_TWO) return -1;
+  *ratio = GCAntiRatioTwoPairs(m, nsite, move == GC_ANTI_ADD_TWO);
+  if (*ratio == 0.0) return 0;
+  memcpy(candidate, current, (size_t)(2 * nsite) * sizeof(*candidate));
+  for (spin = 0; spin < 2; ++spin) {
+    const int occupied = move == GC_ANTI_REMOVE_TWO;
+    const int count = occupied ? m : nsite - m;
+    int first = (int)GCAntiDrawBelow((uint32_t)count, next32);
+    int second = (int)GCAntiDrawBelow((uint32_t)(count - 1), next32);
+    int site, k = 0, changed = 0;
+    if (second >= first) ++second;
+    for (site = 0; site < nsite; ++site) {
+      const int rs = spin * nsite + site;
+      if (current[rs] == occupied) {
+        if (k == first || k == second) {
+          candidate[rs] = !occupied;
+          ++changed;
+        }
+        ++k;
+      }
+    }
+    if (k != count || changed != 2) return -1;
+  }
+  return 1;
 }
 
 double GCAntiRatioAdd(const int m, const int nsite, const double pAdd,

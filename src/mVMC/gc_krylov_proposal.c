@@ -230,4 +230,42 @@ MVMCKrylovStatus mvmc_gc_krylov_draw_local(
   return MVMC_KRYLOV_STATUS_OK;
 }
 
+MVMCKrylovStatus mvmc_gc_krylov_draw_two_pairs(
+    const MVMCKrylovFockModel *model, const uint64_t *current,
+    MVMCKrylovFockProposalBoundedDraw draw, void *context,
+    uint64_t *out, size_t word_count) {
+  MVMCKrylovStatus status = validate_target(model, draw, out, word_count);
+  size_t up0, up1, down0, down1, nsite;
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  if (model->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED || current == NULL) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  {
+    const uintptr_t a = (uintptr_t)current, b = (uintptr_t)out;
+    const uintptr_t bytes = (uintptr_t)(word_count * sizeof(*out));
+    if (a < b + bytes && b < a + bytes)
+      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  status = mvmc_krylov_fock_validate(model, current, word_count);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  memcpy(out, current, word_count * sizeof(*out));
+  nsite = model->site_count;
+  if (nsite < 2) return MVMC_KRYLOV_STATUS_OK;
+  status = distinct_pair(draw, context, nsite, &up0, &up1);
+  if (status == MVMC_KRYLOV_STATUS_OK)
+    status = distinct_pair(draw, context, nsite, &down0, &down1);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  down0 += nsite;
+  down1 += nsite;
+  if (get_bit(current, up0) == get_bit(current, up1) &&
+      get_bit(current, up0) == get_bit(current, down0) &&
+      get_bit(current, up0) == get_bit(current, down1)) {
+    flip_bit(out, up0);
+    flip_bit(out, up1);
+    flip_bit(out, down0);
+    flip_bit(out, down1);
+  }
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
 #endif /* reference or bounded engine */

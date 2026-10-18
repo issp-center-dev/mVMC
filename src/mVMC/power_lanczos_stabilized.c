@@ -233,6 +233,7 @@ typedef struct {
   uint64_t chain_index;
   MVMCPowerLanczosGCStage stage;
   int initial_electron_count;
+  int spin_triplet_s0;
   uint64_t bootstrap_attempts;
   uint64_t bootstrap_exact_zero;
   uint64_t bootstrap_numeric_zero;
@@ -382,12 +383,16 @@ static MVMCKrylovStatus gc_propose(MVMCPowerLanczosGCRun *gc,
     size_t kind = 0;
     status = mvmc_krylov_positive_sampler_rng_draw_bounded(rng, 16, &kind);
     if (status == MVMC_KRYLOV_STATUS_OK) {
-      status = kind == 0
-                   ? mvmc_gc_krylov_draw_uniform(gc->model, draw_bounded, rng,
-                                                 proposal, word_count)
-                   : mvmc_gc_krylov_draw_local(gc->model, current,
-                                               draw_bounded, rng, proposal,
-                                               word_count);
+      if (kind == 0) {
+        status = mvmc_gc_krylov_draw_uniform(gc->model, draw_bounded, rng,
+                                            proposal, word_count);
+      } else if (gc->spin_triplet_s0 && kind <= 8) {
+        status = mvmc_gc_krylov_draw_two_pairs(gc->model, current,
+                         draw_bounded, rng, proposal, word_count);
+      } else {
+        status = mvmc_gc_krylov_draw_local(gc->model, current,
+                         draw_bounded, rng, proposal, word_count);
+      }
     }
     if (status == MVMC_KRYLOV_STATUS_OK) {
       status = mvmc_krylov_positive_sampler_rng_draw_uniform(rng, uniform);
@@ -1105,6 +1110,7 @@ static MVMCKrylovStatus stabilized_core(
       generation_hash =
           mvmc_power_lanczos_gc_bridge_generation_hash(gc_bridge);
       gc->model = model;
+      gc->spin_triplet_s0 = gc_view->spin_triplet_s0;
       gc->chain_communicator = input->chain_communicator;
       gc->chain_rank = sampling.chain_rank;
       gc->chain_index = sampling.chain_index;

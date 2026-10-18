@@ -95,7 +95,7 @@ static MVMCKrylovStatus script_draw(void *context, size_t bound,
   return MVMC_KRYLOV_STATUS_OK;
 }
 
-typedef enum { KIND_UNIFORM, KIND_INITIAL, KIND_LOCAL } Kind;
+typedef enum { KIND_UNIFORM, KIND_INITIAL, KIND_LOCAL, KIND_TWO_PAIRS } Kind;
 
 typedef struct {
   const MVMCKrylovFockModel *model;
@@ -117,6 +117,9 @@ static MVMCKrylovStatus run_proposal(const Proposal *proposal, Script *script,
     case KIND_LOCAL:
       return mvmc_gc_krylov_draw_local(proposal->model, &proposal->current,
                                        script_draw, script, out, 1);
+    case KIND_TWO_PAIRS:
+      return mvmc_gc_krylov_draw_two_pairs(proposal->model, &proposal->current,
+                                          script_draw, script, out, 1);
   }
   return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
 }
@@ -483,6 +486,60 @@ static void test_errors(void) {
         "missing draw callback rejected");
 }
 
+/* Enumerate every random path and compare with the independent closed form
+ * Q(x,y)=1/binom(L,2)^2 for valid additions/removals. Detailed balance is
+ * exact, including unavailable moves and vacuum/full filling. */
+static void test_two_pair_kernel(void) {
+  int sites;
+  for (sites = 1; sites <= 4; ++sites) {
+    MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED,
+                                         (size_t)sites);
+    const size_t states = (size_t)1 << (2 * sites);
+    Fraction *matrix = calloc(states * states, sizeof(*matrix));
+    Proposal proposal;
+    size_t x, y;
+    memset(&proposal, 0, sizeof(proposal));
+    proposal.model = &model;
+    proposal.kind = KIND_TWO_PAIRS;
+    CHECK(matrix != NULL, "two-pair matrix allocation");
+    if (matrix == NULL) return;
+    for (x = 0; x < states; ++x) {
+      Fraction off_diagonal = fraction(0, 1);
+      if (!in_domain(model.domain, x, sites)) continue;
+      proposal.current = x;
+      CHECK(enumerate(&proposal, matrix + x * states, states),
+            "two-pair enumeration");
+      for (y = 0; y < states; ++y) {
+        const uint64_t difference = x ^ y;
+        const uint64_t low = (UINT64_C(1) << sites) - 1;
+        const int changed_up = popcount64(difference & low);
+        const int changed_down = popcount64(difference >> sites);
+        const int added = (x & difference) == 0;
+        const int removed = (y & difference) == 0;
+        Fraction expected = fraction(0, 1);
+        if (x == y) continue;
+        if (changed_up == 2 && changed_down == 2 && (added || removed)) {
+          const uint64_t pairs = binomial(sites, 2);
+          expected = fraction(1, pairs * pairs);
+        }
+        CHECK(fraction_equal(matrix[x * states + y], expected),
+              "two-pair probability agrees with combinatorics");
+        off_diagonal = fraction_add(off_diagonal, expected);
+      }
+      CHECK(fraction_equal(matrix[x * states + x],
+                fraction(off_diagonal.den - off_diagonal.num, off_diagonal.den)),
+            "two-pair self-loop completes unit row sum");
+    }
+    for (x = 0; x < states; ++x)
+      for (y = 0; y < states; ++y)
+        if (in_domain(model.domain, x, sites) &&
+            in_domain(model.domain, y, sites))
+          CHECK(fraction_equal(matrix[x * states + y], matrix[y * states + x]),
+                "two-pair exact detailed balance");
+    free(matrix);
+  }
+}
+
 int main(int argc, char **argv) {
   if (argc == 3 && strcmp(argv[1], "--dump") == 0) {
     dump_stream = fopen(argv[2], "w");
@@ -494,6 +551,7 @@ int main(int argc, char **argv) {
   test_exact_kernels();
   test_word_boundary();
   test_errors();
+  test_two_pair_kernel();
   if (dump_stream != NULL) fclose(dump_stream);
   printf(failure_count == 0 ? "gc_krylov_proposal_unit: PASS\n"
                             : "gc_krylov_proposal_unit: FAIL\n");

@@ -35,6 +35,7 @@ struct MVMCGCKrylovAmplitudeWorkspace {
   size_t slater_matrix_count;
   double scaled_pivot_tolerance;
   int boundary_exact_zero;
+  int spin_triplet_s0;
   uint64_t generation_hash;
   double complex *slater;
   double complex *global_weights;
@@ -118,6 +119,9 @@ static MVMCKrylovStatus validate_layout(
       layout->qp_end > layout->qp_total ||
       layout->translation_count <= 0 ||
       layout->translation_weights == NULL ||
+      (layout->spin_triplet_s0 != 0 && layout->spin_triplet_s0 != 1) ||
+      (layout->spin_triplet_s0 &&
+       layout->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED) ||
       !isfinite(layout->scaled_pivot_tolerance) ||
       layout->projection.site_count != (size_t)layout->site_count ||
       layout->projection.nproj < 0 ||
@@ -194,7 +198,7 @@ static MVMCPfaffianStatus audit_binding(
     MVMCGCKrylovAmplitudeWorkspace *workspace,
     const MVMCGCKrylovAmplitudeLayout *layout,
     const double complex *slater, const double complex *qp_weights) {
-  uint64_t metadata[7];
+  uint64_t metadata[8];
   uint64_t tolerance_bits = 0;
   const unsigned char *projection_binding;
   size_t projection_binding_bytes = 0;
@@ -210,13 +214,14 @@ static MVMCPfaffianStatus audit_binding(
 
   memcpy(&tolerance_bits, &workspace->scaled_pivot_tolerance,
          sizeof(tolerance_bits));
-  metadata[0] = UINT64_C(0x4743414d504c4931); /* GC amplitude v1 */
+  metadata[0] = UINT64_C(0x4743414d504c4932); /* GC amplitude v2 */
   metadata[1] = (uint64_t)workspace->site_count;
   metadata[2] = (uint64_t)(unsigned)workspace->domain;
   metadata[3] = (uint64_t)workspace->qp_total;
   metadata[4] = (uint64_t)(unsigned)layout->translation_count;
   metadata[5] = (uint64_t)(unsigned)workspace->boundary_exact_zero;
   metadata[6] = tolerance_bits;
+  metadata[7] = (uint64_t)(unsigned)workspace->spin_triplet_s0;
   status = mvmc_classic_pfaffian_collective_all_equal_u64(
       workspace->collective_workspace, metadata,
       sizeof(metadata) / sizeof(metadata[0]), &all_equal);
@@ -341,6 +346,7 @@ MVMCKrylovStatus mvmc_gc_krylov_amplitude_workspace_create(
   created->local_qp_count = (size_t)(layout->qp_end - layout->qp_start);
   created->scaled_pivot_tolerance = layout->scaled_pivot_tolerance;
   created->boundary_exact_zero = boundary;
+  created->spin_triplet_s0 = layout->spin_triplet_s0;
   status = checked_multiply(created->orbital_count, created->orbital_count,
                             &created->slater_matrix_count) &&
                    created->word_count != 0 &&
@@ -593,10 +599,12 @@ MVMCKrylovStatus mvmc_gc_krylov_scaled_amplitude(
   if (projected.value.state == MVMC_SCALED_COMPLEX_NONFINITE) {
     return MVMC_KRYLOV_STATUS_NONFINITE;
   }
-  /* Phase 3b boundary rule, applied only after the components were checked. */
-  if (workspace->boundary_exact_zero &&
+  /* Proven symmetry zeros, only after all ranks checked their components.
+   * Do not convert arbitrary numerical zeros or hide nonfinite failures. */
+  if ((workspace->boundary_exact_zero &&
       (electron_count == 0 ||
-       (size_t)electron_count == workspace->orbital_count)) {
+       (size_t)electron_count == workspace->orbital_count)) ||
+      (workspace->spin_triplet_s0 && electron_count % 4 == 2)) {
     if (mvmc_scaled_complex_make_exact_zero(&projected.value) !=
         MVMC_PFAFFIAN_STATUS_OK) {
       return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;

@@ -72,6 +72,9 @@ int TwoSz;
 /* GC */
 int FlagGrandCanonical;
 int NGCInitNelec;
+/* Recomputed with each anti-parallel Slater matrix generation. -1 is invalid;
+ * 1 proves F^T=-F exactly, 0 includes every near-antisymmetric general F. */
+int GCSpinTriplet;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
 int NSPStot; /* S of Spin projection */
