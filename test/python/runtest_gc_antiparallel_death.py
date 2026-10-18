@@ -8,6 +8,7 @@ EXPECTED = {
     '--spin-sector-init': ['NGCInitNelec=2', 'exactly antisymmetric',
                            'multiple of 4'],
     '--spin-sector-rank': ['rank-inconsistent GC spin support'],
+    '--spin-sector-bridge': ['GC spin bridge evaluation failed'],
     '--antiparallel-death-init': ['zero projected amplitude',
                                   'anti-parallel mode', 'Ncur=2'],
     '--antiparallel-death-nonfinite': ['GC sampler met a nonfinite',
