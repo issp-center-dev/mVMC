@@ -888,8 +888,8 @@ def run_vmc(vmc, workdir, nproc=1, env=None, timeout=None, options=()):
     return done
 
 
-def pl_out_rows(workdir):
-    path = pathlib.Path(workdir) / "output" / "zvo_pl_out_001.dat"
+def pl_out_rows(workdir, prefix="zvo", index=1):
+    path = pathlib.Path(workdir) / "output" / ("%s_pl_out_%03d.dat" % (prefix, index))
     if not path.exists():
         return None, []
     lines = path.read_text().splitlines()
@@ -899,11 +899,64 @@ def pl_out_rows(workdir):
     return headers, rows
 
 
-def require_success(label, done, workdir, samples, chains):
+def number_result(label, workdir, samples, chains, prefix="zvo", index=1):
+    """Check the public number file against its histogram and block sums."""
+    path = pathlib.Path(workdir) / "output" / (
+        "%s_gc_pl_number_%03d.dat" % (prefix, index))
+    require(path.is_file(), "%s: missing number file" % label)
+    lines = path.read_text().splitlines()
+    meta = dict(re.findall(r"(\w+)=(\S+)", lines[0]))
+    coeff = dict(re.findall(r"(\w+)=(\S+)", lines[1]))
+    total, blocks = samples * chains, block_count(samples * chains)
+    require(meta["source"] == "final" and
+            meta["error"] == "conditional_fixed_coefficients" and
+            [int(meta[k]) for k in ("chains", "samples_per_chain",
+                                    "final_samples", "blocks")] ==
+            [chains, samples, total, blocks], label + ": number metadata")
+    c = np.array([complex(float(coeff["c%d_re" % i]),
+                          float(coeff["c%d_im" % i])) for i in range(2)])
+    require(np.all(np.isfinite(c)) and np.any(c != 0), label + ": number c")
+    records = [line.split() for line in lines if line and not line.startswith("#")]
+    require(len(records) == 1 + 2 * int(meta["sites"]) + 1 + blocks,
+            label + ": number record count")
+    row = records[0]
+    require(row[0] == "summary" and len(row) == 7, label + ": number summary")
+    keys = ("mean", "se", "mean_square", "square_se", "variance")
+    result = dict(zip(keys, map(float, row[1:6])))
+    require(int(row[6]) == total and all(math.isfinite(v) and v >= 0
+            for v in result.values()), label + ": invalid number values")
+    hist = records[1:2 * int(meta["sites"]) + 2]
+    require(all(len(r) == 3 and r[0] == "hist" and int(r[1]) == n and
+                int(r[2]) >= 0 for n, r in enumerate(hist)),
+            label + ": invalid number histogram")
+    counts = [int(r[2]) for r in hist]
+    require(sum(counts) == total, label + ": number histogram total")
+    means = [sum(n**power * count for n, count in enumerate(counts)) / total
+             for power in (1, 2)]
+    data = records[len(hist) + 1:]
+    require(all(len(r) == 5 and r[0] == "block" and int(r[1]) == b and
+                int(r[2]) == total // blocks for b, r in enumerate(data)),
+            label + ": invalid number blocks")
+    sums = np.array([[float(r[3]), float(r[4])] for r in data])
+    require(np.all(np.isfinite(sums)) and np.all(sums >= 0),
+            label + ": nonfinite/negative number blocks")
+    require(np.allclose(np.sum(sums, axis=0) / total, means, rtol=0, atol=1e-12),
+            label + ": histogram/block moments differ")
+    # Independent sample variance of equally sized block means.
+    errors = np.std(sums / (total // blocks), axis=0, ddof=1) / math.sqrt(blocks)
+    expected = (means[0], errors[0], means[1], errors[1], means[1] - means[0]**2)
+    require(all(abs(result[k] - v) <= 2e-12 * (1 + abs(v))
+                for k, v in zip(keys, expected)), label + ": number statistics")
+    result.update(c=c, sectors=counts, block_sums=sums.tolist())
+    return result
+
+
+def require_success(label, done, workdir, samples, chains, gc=True,
+                    prefix="zvo", index=1):
     """Exit 0 and exactly one finite 11-column row with a valid header."""
     require(done.returncode == 0, "%s: exit %d\n%s%s" % (
         label, done.returncode, done.stdout[-3000:], done.stderr[-3000:]))
-    headers, rows = pl_out_rows(workdir)
+    headers, rows = pl_out_rows(workdir, prefix, index)
     require(headers is not None, "%s: no pl_out file" % label)
     require(len(headers) == 2, "%s: header lines %r" % (label, headers))
     match = PL_HEADER.match(headers[0])
@@ -928,6 +981,11 @@ def require_success(label, done, workdir, samples, chains):
     require(0 < result["effective_samples"] <= total and
             result["tau_int"] >= 0.5,
             "%s: ESS/tau %r" % (label, result))
+    if gc:
+        result["number"] = number_result(label, workdir, samples, chains, prefix, index)
+    else:
+        require(not list(pathlib.Path(workdir).glob("output/*_gc_pl_number_*.dat")),
+                label + ": canonical run wrote GC numbers")
     return result
 
 
@@ -996,6 +1054,15 @@ def statistical_gates(label, result, summary, reference, samples, chains):
     norm = reference[3]
     energy, variance, probability = oracle_observables(reference,
                                                        summary["c"])
+    number = result["number"]
+    require(number["sectors"] == summary["sectors"] and
+            np.array_equal(number["c"], summary["c"]),
+            label + ": public final state differs from testing summary")
+    for key, error, power in (("mean", "se", 1), ("mean_square", "square_se", 2)):
+        expected = sum(n**power * p for n, p in probability.items())
+        require(abs(number[key] - expected) <= 8 * number[error] + 2e-10 * (1 + abs(expected)),
+                "%s: N^%d %.12g +/- %.4g vs oracle %.12g" %
+                (label, power, number[key], number[error], expected))
     scale = max(1.0, norm)
     checks = [
         ("energy", abs(result["energy"] - energy),
@@ -1125,6 +1192,9 @@ def deterministic_match(label, first, second):
         a, b = r1[key], r2[key]
         require(abs(a - b) <= 2e-10 * (1 + abs(b)),
                 "%s: %s %.17g vs %.17g" % (label, key, a, b))
+    require(r1["number"]["sectors"] == r2["number"]["sectors"] and
+            r1["number"]["block_sums"] == r2["number"]["block_sums"],
+            label + ": number samples differ across QP partitions")
     for index in range(2):
         a, b = s1["c"][index], s2["c"][index]
         require(abs(a - b) <= 2e-10 * (1 + abs(b)),
@@ -1455,7 +1525,7 @@ def check_canonical_green(args, name):
                   {"NGrandCanonical": None, "NGCInitNelec": None,
                    "Ncond": 2})
     done = run_vmc(args.vmc, work, args.np)
-    require_success(name, done, work, STAT_SAMPLES, args.np)
+    require_success(name, done, work, STAT_SAMPLES, args.np, gc=False)
     print("PASS accepted %-23s canonical Green input unchanged" % name)
 
 
@@ -1563,6 +1633,48 @@ def classify_singular(args):
           "zeros, run completed, sectors=%s" % summary["sectors"])
 
 
+def number_mode(args):
+    # Exact momentum weights remove N=0 and N=4, leaving only N=2.
+    # H=-mu*N is nonzero and constant on this space, so the retained
+    # rank-one state has no extra Lanczos nodes from excited-state removal.
+    fixed = fixture("fixed_N", 2, "antiparallel", F2,
+                    translations=[(0, 1.0), (1, -1.0)],
+                    rows=model_rows(2, [(0, 1)], "pbc", t=0.0, U=0.0))
+    work = pathlib.Path(args.workdir) / "fixed_N"
+    write_e2e_input(fixed, work, seed=101, nsplit=args.np)
+    done = run_vmc(args.vmc, work, args.np)
+    result = require_success("fixed N", done, work, STAT_SAMPLES, 1)["number"]
+    require([result[k] for k in ("mean", "mean_square", "variance", "se", "square_se")]
+            == [2.0, 4.0, 0.0, 0.0, 0.0], "fixed N: exact moments and zero SE")
+    # Nondefault prefix/index, two output bins, no Testing-only summary.
+    work = pathlib.Path(args.workdir) / "prefix"
+    write_e2e_input(fixed, work, seed=101, samples=14,
+                    nsplit=1, overrides={"NDataIdxStart": 7, "NDataQtySmp": 2})
+    path = work / "modpara.def"
+    path.write_text(path.read_text().replace("CDataFileHead  zvo", "CDataFileHead  numbers"))
+    done = run_vmc(args.vmc, work, args.np)
+    # np3: total=42, K=14, block length=3 crosses chain boundaries 14 and 28.
+    for index in (7, 8):
+        require_success("prefix", done, work, 14, args.np, prefix="numbers", index=index)
+    require(not list(work.glob("output/zvo_gc_pl_number*")), "prefix ignored")
+    # An actual fopen failure on root must reach all ranks without hanging.
+    work = pathlib.Path(args.workdir) / "io_failure"
+    write_e2e_input(fixed, work, seed=101, samples=32,
+                    nsplit=args.np)
+    (work / "output" / "zvo_gc_pl_number_001.dat").mkdir(parents=True)
+    done = run_vmc(args.vmc, work, args.np)
+    require_failure("number fopen", done, work, ["cannot open GC Lanczos number output"])
+    if pathlib.Path("/dev/full").exists():
+        work = pathlib.Path(args.workdir) / "flush_failure"
+        write_e2e_input(fixed, work, seed=101, samples=32, nsplit=args.np)
+        (work / "output").mkdir()
+        (work / "output" / "zvo_gc_pl_number_001.dat").symlink_to("/dev/full")
+        done = run_vmc(args.vmc, work, args.np)
+        require_failure("number flush", done, work, ["failed to write GC Lanczos number output"])
+    print("GCLanczos number public path: PASS (fixed N, prefix/index, output failure)")
+    return 0
+
+
 # --- public sample ----------------------------------------------------------
 def sample_mode(args):
     source = pathlib.Path(args.sample)
@@ -1599,7 +1711,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("oracle", "proposal", "input",
                                          "production", "mpi", "failure",
-                                         "sample", "spin-sector"))
+                                         "sample", "spin-sector", "number"))
     parser.add_argument("--unit")
     parser.add_argument("--probe")
     parser.add_argument("--vmc")
@@ -1624,7 +1736,7 @@ def main():
         return sample_mode(args)
     modes = {"input": input_mode, "production": production_mode,
              "mpi": mpi_mode, "failure": failure_mode,
-             "spin-sector": spin_sector_mode}
+             "spin-sector": spin_sector_mode, "number": number_mode}
     try:
         return modes[args.mode](args)
     except CheckFailure as error:

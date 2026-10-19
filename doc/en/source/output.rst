@@ -621,9 +621,10 @@ Hamiltonian runs without changing the sampled physical observables.
 With ``NGrandCanonical=1`` (first step only) the file has the same header
 with ``order=1`` and the same 11 fields. Energy and variance are those of the
 input :math:`H`, including :math:`-\mu N`, over all particle numbers; no
-particle-number fields are added. When the run stops, for example on a
-numerically zero candidate in the final chain, no result row is written and
-the reason is given on standard error.
+particle-number fields are added to this file. Final-state number statistics
+are written separately to ``xxx_gc_pl_number_yyy.dat``. When the run stops,
+for example on a numerically zero candidate in the final chain, no result
+row is written and the reason is given on standard error.
 
 When ``LsTrans`` or ``LsInterAll`` selects an independent :math:`H'`, the
 first header instead contains ``independent_power_lanczos`` and
@@ -634,6 +635,50 @@ metadata. The data row has 12 fields in this order:
 ``condition``, ``gevp_residual``, and ``streamed_row_terms``. The final field
 counts physical-H rows applied at the retained coefficient-chain measurement
 snapshots. A failed run writes no result row.
+
+xxx\_gc\_pl\_number\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every successful grand-canonical first-step stabilized Lanczos run writes
+this file alongside ``xxx_pl_out_yyy.dat``, with the same ``CDataFileHead``
+and output index. It measures particle number in the final state
+:math:`(c_0+c_1 H)\Psi`, using the same saved configurations and blocks as
+energy. Warm-up and coefficient-chain samples are excluded.
+
+The first header identifies ``source=final`` and
+``error=conditional_fixed_coefficients``, and records sites, chains,
+samples per chain, total final samples and blocks. The second header gives
+the real and imaginary parts of the frozen coefficients ``c0`` and ``c1``.
+Column-name comments precede these records::
+
+    summary N_mean N_se N2_mean N2_se N_var total_samples
+    hist N count
+    block global_block_id count sum_N sum_N2
+
+There is one summary, one histogram row for each N from 0 to twice the
+number of sites (including zero counts), and one row per block. ``N_var``
+is :math:`\langle N^2\rangle-\langle N\rangle^2`, a point estimate without
+an error bar. Tiny negative roundoff is clamped to zero within
+``64*DBL_EPSILON*max(1,N2_mean,N_mean*N_mean)``; a larger negative or
+nonfinite result stops the run.
+
+``N_se`` and ``N2_se`` are standard errors from equally sized blocks:
+:math:`\mathrm{SE}^2=\sum_b(\overline{N}_b-\overline{N})^2/[K(K-1)]`,
+with the analogous formula for N squared. These errors are conditional on
+the frozen coefficients and do not include uncertainty in their estimation.
+They require adequate mixing and block length; a zero error alone does not
+prove convergence. No particle-number autocorrelation time or effective
+sample count is reported.
+
+Blocks partition the chain-major sequence
+``global_sample = chain_index*samples_per_chain + local_sample`` into K
+equal pieces. A block may span a chain boundary. The histogram contains no
+time ordering, and independent chains must not be concatenated for an
+autocorrelation estimate. The file is always enabled in this mode, including
+builds with ``Testing=OFF``. Ordinary ``zvo_gc.dat`` output is unchanged.
+No chemical potential is inferred from ``Trans``, and no conversion of the
+reported Hamiltonian energy is performed. If a run fails, any partial file
+from that run must not be used as a successful measurement.
 
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~

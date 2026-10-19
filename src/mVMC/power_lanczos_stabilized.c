@@ -13,6 +13,7 @@
 #include "power_lanczos_sampling.h"
 
 #include <complex.h>
+#include <float.h>
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
@@ -1024,6 +1025,9 @@ static MVMCKrylovStatus stabilized_core(
   MVMCPowerLanczosMatrixBlock matrix_blocks[
       MVMC_POWER_LANCZOS_STABILIZED_BLOCKS];
   MVMCPowerLanczosMatrixBlock matrix_total;
+  MVMCPowerLanczosGCNumberResult number = {0};
+  double complex final_number_block_sum[MVMC_POWER_LANCZOS_STABILIZED_BLOCKS] = {0};
+  double complex final_number_square_block_sum[MVMC_POWER_LANCZOS_STABILIZED_BLOCKS] = {0};
   double complex final_energy_block_sum[
       MVMC_POWER_LANCZOS_STABILIZED_BLOCKS];
   uint64_t final_energy_block_count[
@@ -1401,11 +1405,16 @@ static MVMCKrylovStatus stabilized_core(
         status = MVMC_KRYLOV_STATUS_NONFINITE;
       }
     }
-    if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL &&
-        gc->sector_samples != NULL) {
+    if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL) {
       const int count = popcount_words(words, word_count);
-      if (count >= 0 && (size_t)count < gc->sector_capacity) {
-        ++gc->sector_samples[count];
+      const double n = (double)count;
+      if (count < 0 || (size_t)count > 2 * model->site_count) {
+        status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+      } else {
+        final_number_block_sum[block] += n;
+        final_number_square_block_sum[block] += n * n;
+        if (gc->sector_samples != NULL && (size_t)count < gc->sector_capacity)
+          ++gc->sector_samples[count];
       }
     }
     if (status == MVMC_KRYLOV_STATUS_OK) {
@@ -1433,6 +1442,14 @@ static MVMCKrylovStatus stabilized_core(
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_power_lanczos_sampling_sum_u64(
         &sampling, final_energy_block_count, block_count);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL) {
+    status = mvmc_power_lanczos_sampling_sum_complex(
+        &sampling, final_number_block_sum, block_count);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL) {
+    status = mvmc_power_lanczos_sampling_sum_complex(
+        &sampling, final_number_square_block_sum, block_count);
   }
   if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL &&
       gc->sector_samples != NULL) {
@@ -1498,6 +1515,40 @@ static MVMCKrylovStatus stabilized_core(
        !isfinite(effective_sample_count))) {
     status = MVMC_KRYLOV_STATUS_NONFINITE;
   }
+  if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL) {
+    double sum = 0.0, square_sum = 0.0;
+    double roundoff;
+    for (block = 0; block < block_count; ++block) {
+      number.block_sample_count[block] = final_energy_block_count[block];
+      number.block_sum[block] = creal(final_number_block_sum[block]);
+      number.block_square_sum[block] = creal(final_number_square_block_sum[block]);
+      if (final_energy_block_count[block] != sampling.total_samples / block_count)
+        status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+      sum += number.block_sum[block];
+      square_sum += number.block_square_sum[block];
+    }
+    number.mean = sum / (double)sampling.total_samples;
+    number.mean_square = square_sum / (double)sampling.total_samples;
+    number.variance = number.mean_square - number.mean * number.mean;
+    roundoff = 64.0 * DBL_EPSILON *
+        fmax(1.0, fmax(number.mean_square, number.mean * number.mean));
+    if (number.variance < 0.0 && number.variance >= -roundoff)
+      number.variance = 0.0;
+    number.standard_error = block_mean_standard_error(
+        final_number_block_sum, final_energy_block_count, block_count, number.mean);
+    number.mean_square_standard_error = block_mean_standard_error(
+        final_number_square_block_sum, final_energy_block_count, block_count,
+        number.mean_square);
+    if (!isfinite(number.mean) || !isfinite(number.mean_square) ||
+        !isfinite(number.variance) || !isfinite(number.standard_error) ||
+        !isfinite(number.mean_square_standard_error))
+      status = MVMC_KRYLOV_STATUS_NONFINITE;
+    else if (number.variance < 0.0)
+      status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    number.valid = status == MVMC_KRYLOV_STATUS_OK;
+  }
+  if (gc != NULL)
+    status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
   if (status == MVMC_KRYLOV_STATUS_OK) {
     result->valid = 1;
     result->status = MVMC_KRYLOV_STATUS_OK;
@@ -1523,6 +1574,7 @@ static MVMCKrylovStatus stabilized_core(
     result->effective_sample_count = effective_sample_count;
     result->coefficient_energy_available = coefficient_energy_available;
     result->coefficient_energy = coefficient_energy;
+    result->gc_number = number;
   } else {
     invalidate_result(status, result);
   }
