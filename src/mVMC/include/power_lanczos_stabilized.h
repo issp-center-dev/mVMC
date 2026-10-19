@@ -35,6 +35,20 @@ typedef struct {
   size_t interval;
 } MVMCPowerLanczosStabilizedInput;
 
+/* Final-state particle numbers; populated only by the GC entry. The
+ * blocks use the same global (chain-major) partition as energy. */
+typedef struct {
+  int valid;
+  double mean;
+  double standard_error;
+  double mean_square;
+  double mean_square_standard_error;
+  double variance;
+  uint64_t block_sample_count[MVMC_POWER_LANCZOS_STABILIZED_BLOCKS];
+  double block_sum[MVMC_POWER_LANCZOS_STABILIZED_BLOCKS];
+  double block_square_sum[MVMC_POWER_LANCZOS_STABILIZED_BLOCKS];
+} MVMCPowerLanczosGCNumberResult;
+
 typedef struct {
   int valid;
   MVMCKrylovStatus status;
@@ -58,6 +72,7 @@ typedef struct {
   /* E_coeff = c^dagger K c / c^dagger S c of the coefficient chain. */
   int coefficient_energy_available;
   double complex coefficient_energy;
+  MVMCPowerLanczosGCNumberResult gc_number;
 } MVMCPowerLanczosStabilizedResult;
 
 MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(

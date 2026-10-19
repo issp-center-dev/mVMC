@@ -36,7 +36,7 @@ void InitFile(char *xNameListFile, int rank) {
   if(rank!=0) return;
 
   FileGC = NULL;
-  /* GC Lanczos writes only xxx_pl_out; no particle-number record. */
+  /* GC Lanczos writes its final-state number file in RunPowerLanczosGC. */
   if(FlagGrandCanonical != 0 && NLanczosMode == 0) {
     FileGC = fopen("zvo_gc.dat", "w");
     if(FileGC == NULL) {

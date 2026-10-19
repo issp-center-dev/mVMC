@@ -2811,13 +2811,15 @@ if(MPI_FOUND)
             PROCESSORS ${np})
     endforeach()
 endif()
+add_gc_lanczos_test(GCLanczos_Number number --vmc $<TARGET_FILE:vmc.out>
+    --workdir work/GCLanczos_Number)
 add_gc_lanczos_test(GCLanczos_Failure failure --vmc $<TARGET_FILE:vmc.out>
     --workdir work/GCLanczos_Failure)
 add_gc_lanczos_test(GCLanczos_Sample sample --vmc $<TARGET_FILE:vmc.out>
     --sample ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/FirstLanczos
     --workdir work/GCLanczos_Sample)
 if(MPI_FOUND)
-    foreach(case Input:input:2 Failure:failure:2 Production:mpi:2
+    foreach(case Input:input:2 Failure:failure:2 Number:number:2 Number:number:3 Production:mpi:2
                  Production:mpi:3)
         string(REPLACE ":" ";" fields ${case})
         list(GET fields 0 label)

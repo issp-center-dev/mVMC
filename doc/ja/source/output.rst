@@ -562,7 +562,8 @@ chainごとのGeyer initial-positive推定器は統計的非効率度
 
 ``NGrandCanonical=1``（1 stepのみ）でも、headerは ``order=1`` の同じ形式で、
 data行は同じ11項目です。energyとvarianceは :math:`-\mu N` を含む入力
-:math:`H` の全粒子数にわたる値で、粒子数の項目は追加しません。最終chainで
+:math:`H` の全粒子数にわたる値で、このfileには粒子数の項目を追加しません。
+最終状態の粒子数統計は別の ``xxx_gc_pl_number_yyy.dat`` に出力します。最終chainで
 数値的に零の候補が出た場合などrunが終了したときは結果行を出力せず、理由を
 標準エラーに出力します。
 
@@ -574,6 +575,44 @@ headerには ``independent_power_lanczos`` と ``basis={Psi,HprimePsi}`` を
 ``effective_samples``、``retained_rank``、``condition``、``gevp_residual``、
 ``streamed_row_terms`` です。最後の項目はcoefficient chainで採用した測定snapshotに
 対して作用した物理Hの行数です。失敗時はresult行を出力しません。
+
+xxx\_gc\_pl\_number\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Grand-canonicalの第1段stabilized Lanczosが成功すると、``xxx_pl_out_yyy.dat`` と
+同じ ``CDataFileHead`` と出力indexで必ず出力します。
+最終状態 :math:`(c_0+c_1 H)\Psi` の粒子数を、energyと同じ保存配置・blockで測定します。
+warm-upと係数決定chainのsampleは含みません。
+
+第1headerには ``source=final``、``error=conditional_fixed_coefficients``、
+site数、chain数、chain当たりsample数、final総sample数、block数を記録します。
+第2headerは固定した係数 ``c0``・``c1`` の実部と虚部です。列名コメントの後に
+以下のrecordを出力します::
+
+    summary N_mean N_se N2_mean N2_se N_var total_samples
+    hist N count
+    block global_block_id count sum_N sum_N2
+
+summaryは1行、histはN=0からsite数の2倍まで各1行（count=0も含む）、blockは
+各blockについて1行です。``N_var`` は :math:`\langle N^2\rangle-\langle N\rangle^2`
+の点推定で、誤差は付けません。丸めによる小さな負値は
+``64*DBL_EPSILON*max(1,N2_mean,N_mean*N_mean)`` 以内だけ0に補正し、
+それを超える負値やnonfiniteは計算失敗とします。
+
+``N_se`` と ``N2_se`` は等長blockの標準誤差です。
+:math:`\mathrm{SE}^2=\sum_b(\overline{N}_b-\overline{N})^2/[K(K-1)]`
+で計算し、N²も同様です。係数を固定した条件付き誤差であり、係数決定の不確かさは
+含みません。十分な混合とblock長を前提とし、誤差が0でも収束を保証しません。
+Nの自己相関時間・有効sample数は出力しません。
+
+blockはchain順の列 ``global_sample = chain_index*samples_per_chain + local_sample``
+をK等分します。chain境界をまたぐblockもあります。histは時系列情報を持たず、
+独立chainを連結して自己相関を推定してはいけません。``Testing=OFF`` buildでも
+出力し、通常の ``zvo_gc.dat`` の意味は変えません。``Trans`` から化学ポテンシャルを
+推測したり、報告するHamiltonianのenergyを変換したりしません。
+runが失敗した場合、そのrunの途中fileを成功した測定結果として使用しないでください。
+粒子数fileのopen・write・closeに失敗すると、対応する ``xxx_pl_out_yyy.dat`` の
+結果行は出力せず、終了コード1で終了します。
 
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~

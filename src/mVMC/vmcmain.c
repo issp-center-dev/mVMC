@@ -463,6 +463,56 @@ static const char *GCLanczosAmplitudeStateName(int state) {
   }
 }
 
+/* Called only on the world root after a successful final chain. */
+static int WriteGCLanczosNumberResult(
+    int outputIndex, const MVMCPowerLanczosStabilizedResult *result,
+    const MVMCPowerLanczosGCDiagnostics *diagnostics,
+    const uint64_t *sectors, size_t sector_capacity) {
+  char fileName[D_FileNameMax + 64];
+  const MVMCPowerLanczosGCNumberResult *number = &result->gc_number;
+  FILE *fp;
+  size_t i;
+  int failed;
+  const int length = snprintf(fileName, sizeof(fileName),
+      "%s_gc_pl_number_%03d.dat", CDataFileHead, outputIndex);
+  if (length < 0 || (size_t)length >= sizeof(fileName) ||
+      !number->valid || !diagnostics->coefficient_available || sectors == NULL) {
+    fprintf(stderr, "Error: invalid GC Lanczos number output metadata.\n");
+    return 1;
+  }
+  fp = fopen(fileName, "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: cannot open GC Lanczos number output '%s'.\n", fileName);
+    return 1;
+  }
+  fprintf(fp, "# gc_power_lanczos_number source=final "
+          "error=conditional_fixed_coefficients sites=%d chains=%llu "
+          "samples_per_chain=%d final_samples=%llu blocks=%zu\n",
+          Nsite, (unsigned long long)result->sampling_chains, NVMCSample,
+          (unsigned long long)result->final_samples, result->block_count);
+  fprintf(fp, "# c0_re=%.18e c0_im=%.18e c1_re=%.18e c1_im=%.18e\n",
+          creal(diagnostics->coefficient[0]), cimag(diagnostics->coefficient[0]),
+          creal(diagnostics->coefficient[1]), cimag(diagnostics->coefficient[1]));
+  fprintf(fp, "# summary N_mean N_se N2_mean N2_se N_var total_samples\n");
+  fprintf(fp, "summary %.18e %.18e %.18e %.18e %.18e %llu\n",
+          number->mean, number->standard_error, number->mean_square,
+          number->mean_square_standard_error, number->variance,
+          (unsigned long long)result->final_samples);
+  fprintf(fp, "# hist N count\n");
+  for (i = 0; i < sector_capacity; ++i)
+    fprintf(fp, "hist %zu %llu\n", i, (unsigned long long)sectors[i]);
+  fprintf(fp, "# block global_block_id count sum_N sum_N2\n");
+  for (i = 0; i < result->block_count; ++i)
+    fprintf(fp, "block %zu %llu %.18e %.18e\n", i,
+            (unsigned long long)number->block_sample_count[i],
+            number->block_sum[i], number->block_square_sum[i]);
+  failed = ferror(fp) != 0;
+  if (fclose(fp) != 0) failed = 1;
+  if (failed)
+    fprintf(stderr, "Error: failed to write GC Lanczos number output '%s'.\n", fileName);
+  return failed;
+}
+
 /* Grand-canonical first-step stabilized Lanczos (same 11 columns). */
 static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
                              MPI_Comm chain_communicator) {
@@ -472,6 +522,7 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
   MVMCPowerLanczosGCDiagnostics diagnostics;
   MVMCKrylovStatus status;
   uint64_t *sectors = NULL;
+  size_t sector_capacity = 0;
   size_t sweep;
   long long qp_start, qp_end;
   int rank = 0;
@@ -598,12 +649,12 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
   /* NGCInitNelec after the reader's range check and even rounding. */
   input.initial_electron_count = Ncur;
   memset(&diagnostics, 0, sizeof(diagnostics));
-  if (summary) {
-    sectors = (uint64_t *)calloc((size_t)Nsite2 + 1, sizeof(*sectors));
-    allocation_failed = sectors == NULL;
-    diagnostics.final_sector_samples = sectors;
-    diagnostics.final_sector_capacity = sectors == NULL ? 0 : (size_t)Nsite2 + 1;
-  }
+  sector_capacity = 2 * (size_t)Nsite + 1;
+  if (sector_capacity <= SIZE_MAX / sizeof(*sectors))
+    sectors = (uint64_t *)calloc(sector_capacity, sizeof(*sectors));
+  allocation_failed = sectors == NULL;
+  diagnostics.final_sector_samples = sectors;
+  diagnostics.final_sector_capacity = sectors == NULL ? 0 : sector_capacity;
 #ifdef _mpi_use
   MPI_Allreduce(&allocation_failed, &any_allocation_failed, 1, MPI_INT,
                 MPI_MAX, world_communicator);
@@ -612,7 +663,7 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
 #endif
   if (any_allocation_failed) {
     if (rank == 0) {
-      fprintf(stderr, "Error: GC Lanczos summary allocation failed.\n");
+      fprintf(stderr, "Error: GC Lanczos number allocation failed.\n");
     }
     free(sectors);
     return 1;
@@ -634,7 +685,9 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
             (unsigned long long)diagnostics.total_bootstrap_local_energy,
             diagnostics.any_bootstrap_exhausted);
     if (status == MVMC_KRYLOV_STATUS_OK && result.valid) {
-      WriteStabilizedPowerLanczosResult(&result);
+      write_failed = WriteGCLanczosNumberResult(outputIndex, &result,
+          &diagnostics, sectors, sector_capacity);
+      if (!write_failed) WriteStabilizedPowerLanczosResult(&result);
       fprintf(stdout,
               "Stabilized power-Lanczos (grand canonical): E=%.17g +/- "
               "%.6g, variance=%.17g +/- %.6g\n",
@@ -668,10 +721,13 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
       }
     }
   }
+#ifdef _mpi_use
+  MPI_Bcast(&write_failed, 1, MPI_INT, 0, world_communicator);
+#endif
 #ifdef MVMC_ENABLE_FAULT_INJECTION
-  if (summary && status == MVMC_KRYLOV_STATUS_OK && result.valid) {
+  if (!write_failed && summary && status == MVMC_KRYLOV_STATUS_OK && result.valid) {
     write_failed = GCLanczosTestingSummary(world_communicator, &diagnostics,
-                                           sectors, (size_t)Nsite2 + 1);
+                                           sectors, sector_capacity);
   }
 #endif
   free(sectors);

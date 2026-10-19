@@ -284,12 +284,50 @@ static void test_stage_counts(int mode) {
               !run.diagnostics.failure_recorded,
           "world-root diagnostics");
     CHECK(total == chains * samples, "final N histogram counts every sample");
+    {
+      const MVMCPowerLanczosGCNumberResult *number = &run.result.gc_number;
+      double sum = 0.0, square_sum = 0.0;
+      double block_sum = 0.0, block_square_sum = 0.0;
+      double se_sum = 0.0, square_se_sum = 0.0;
+      size_t b;
+      for (n = 0; n <= ORB; ++n) {
+        sum += (double)n * (double)run.sectors[n];
+        square_sum += (double)n * (double)n * (double)run.sectors[n];
+      }
+      CHECK(number->valid && number->mean == sum / (double)total &&
+                number->mean_square == square_sum / (double)total &&
+                fabs(number->variance - (square_sum / (double)total -
+                     number->mean * number->mean)) < 1e-12,
+            "final number moments equal the independently accumulated histogram");
+      for (b = 0; b < run.result.block_count; ++b) {
+        double delta, square_delta;
+        CHECK(number->block_sample_count[b] == total / run.result.block_count,
+              "number blocks count each sample once");
+        block_sum += number->block_sum[b];
+        block_square_sum += number->block_square_sum[b];
+        delta = number->block_sum[b] / (double)number->block_sample_count[b] -
+                number->mean;
+        square_delta = number->block_square_sum[b] /
+                (double)number->block_sample_count[b] - number->mean_square;
+        se_sum += delta * delta;
+        square_se_sum += square_delta * square_delta;
+      }
+      CHECK(block_sum == sum && block_square_sum == square_sum,
+            "number block totals equal histogram moments");
+      CHECK(fabs(number->standard_error - sqrt(se_sum /
+                (run.result.block_count * (run.result.block_count - 1)))) < 1e-12 &&
+            fabs(number->mean_square_standard_error - sqrt(square_se_sum /
+                (run.result.block_count * (run.result.block_count - 1)))) < 1e-12,
+            "number SE agrees with the independent block calculation");
+    }
     CHECK(cabs(run.diagnostics.coefficient_energy -
                run.result.coefficient_energy) == 0.0,
           "diagnostic E_coeff equals the result field");
   }
   CHECK(all_ranks_equal_double(run.result.energy) &&
             all_ranks_equal_double(run.result.variance) &&
+            all_ranks_equal_double(run.result.gc_number.mean) &&
+            all_ranks_equal_double(run.result.gc_number.mean_square_standard_error) &&
             all_ranks_equal_double(creal(run.result.coefficient_energy)),
         "results are identical on every rank");
   run_gc(&chain, 0, 2, warm_up, samples, interval,
@@ -298,7 +336,11 @@ static void test_stage_counts(int mode) {
             memcmp(&again.result.energy, &run.result.energy,
                    sizeof(double)) == 0 &&
             memcmp(&again.result.variance, &run.result.variance,
-                   sizeof(double)) == 0,
+                   sizeof(double)) == 0 &&
+            memcmp(again.result.gc_number.block_sum, run.result.gc_number.block_sum,
+                   sizeof(run.result.gc_number.block_sum)) == 0 &&
+            memcmp(again.result.gc_number.block_square_sum, run.result.gc_number.block_square_sum,
+                   sizeof(run.result.gc_number.block_square_sum)) == 0,
         "the same seed reproduces the run bit for bit");
   free_chain(&chain);
 }
@@ -335,8 +377,8 @@ static void test_faults_and_rejections(void) {
   run_gc(&chain, 0, 2, 4, 256, 1, MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC,
          &run);
   CHECK(run.status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
-            !run.result.valid,
-        "a numeric-zero final proposal ends the run");
+            !run.result.valid && !run.result.gc_number.valid,
+        "a numeric-zero final proposal invalidates both energy and number");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.failure_recorded &&
               run.diagnostics.failure_stage ==
