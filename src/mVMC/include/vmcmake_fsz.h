@@ -1,7 +1,7 @@
 #ifndef _VMCMAKE_FSZ
 #define _VMCMAKE_FSZ
 #include <complex.h>
-#include <mpi.h>
+#include "mvmc_mpi.h"
 
 void VMCMakeSample_fsz(MPI_Comm comm);
 void VMC_BF_MakeSample_fsz(MPI_Comm comm);

@@ -30,18 +30,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <string.h>
 #include "global.h"
 
-#ifdef _mpi_use
-#include <mpi.h>
-#else
-typedef int MPI_Comm;
-MPI_Comm MPI_COMM_WORLD=0;
-inline void MPI_Init(int argc, char* argv[]) {return;}
-inline void MPI_Finalize() {return;}
-inline void MPI_Abort(MPI_Comm comm, int errorcode) {exit(errorcode); return;}
-inline void MPI_Barrier(MPI_Comm comm) {return;}
-inline void MPI_Comm_size(MPI_Comm comm, int *size) {*size = 1; return;}
-inline void MPI_Comm_rank(MPI_Comm comm, int *rank) {*rank = 0; return;}
-#endif /* _mpi_use */
+#include "mvmc_mpi.h"
 
 void InitParameter();
 int ReadInitParameter(char *initFile);

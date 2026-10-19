@@ -1807,3 +1807,9 @@ if(MPI_FOUND)
 endif()
 
 add_subdirectory(python)
+
+# The serial compatibility layer is checked even in an MPI-enabled build.
+add_executable(serial_mpi_unit serial_mpi_unit.c)
+target_include_directories(serial_mpi_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+add_test(NAME SerialMPI_Unit COMMAND serial_mpi_unit)

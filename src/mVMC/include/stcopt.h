@@ -1,6 +1,6 @@
 #ifndef _STCOPT_HEADER
 #define _STCOPT_HEADER
-#include <mpi.h>
+#include "mvmc_mpi.h"
 
 int StochasticOpt(MPI_Comm comm);
 void stcOptInit(double *const s, double *const g, const int nSmat, const int *const smatToParaIdx);

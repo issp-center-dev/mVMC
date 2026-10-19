@@ -211,6 +211,7 @@ endfunction(add_python_vmc_test_mode1)
 function(add_python_vmc_test_mpi model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_mpi.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+    set_property(TEST ${model} APPEND PROPERTY LABELS requires_mpi)
 endfunction(add_python_vmc_test_mpi)
 
 function(add_python_vmc_test_expert model)
@@ -290,6 +291,9 @@ function(add_gc_oracle_test test_name case_name)
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
         RESOURCE_LOCK "gc_oracle_${case_name}")
+    if("${case_name}" MATCHES "(^|_)mpi(_|$)")
+        set_property(TEST ${test_name} APPEND PROPERTY LABELS requires_mpi)
+    endif()
 endfunction(add_gc_oracle_test)
 
 function(add_python_projection_parser_test test_name mode)
@@ -406,6 +410,7 @@ endfunction(add_python_vmc_test_expert_phys_mpi)
 function(add_python_vmc_test_expert_mpi model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest_expert_mpi.py ${model})
     set_tests_properties(${model} PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+    set_property(TEST ${model} APPEND PROPERTY LABELS requires_mpi)
 endfunction(add_python_vmc_test_expert_mpi)
 
 function(add_python_vmc_test_doublon_only model)
@@ -1609,6 +1614,9 @@ function(add_gc_ap_test test_name case_name)
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
         RESOURCE_LOCK "gc_ap_${case_name}")
+    if("${case_name}" MATCHES "(^|_)mpi(_|$)")
+        set_property(TEST ${test_name} APPEND PROPERTY LABELS requires_mpi)
+    endif()
 endfunction(add_gc_ap_test)
 add_gc_ap_test(GC_AP_LegacyParser legacy_parser)
 add_gc_ap_test(GC_AP_IdentityWiring identity_wiring)
@@ -2786,5 +2794,21 @@ if(MPI_FOUND)
         set_tests_properties(GCLanczos_${label}_np${np}_mpi PROPERTIES
             ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
             PROCESSORS ${np})
+    endforeach()
+endif()
+
+# Several legacy Python tests launch MPI through MVMC_MPI_PROCS instead of
+# being registered inside if(MPI_FOUND). A serial vmc.out cannot supply their
+# rank-specific output or collective behavior, even if mpirun is installed.
+if(NOT MPI_FOUND)
+    get_property(mvmc_python_tests DIRECTORY PROPERTY TESTS)
+    foreach(mvmc_test IN LISTS mvmc_python_tests)
+        get_test_property(${mvmc_test} ENVIRONMENT mvmc_test_environment)
+        get_test_property(${mvmc_test} LABELS mvmc_test_labels)
+        if("${mvmc_test_environment}" MATCHES
+           "(^|;)MVMC_MPI_PROCS=([2-9]|[1-9][0-9]+)(;|$)" OR
+           ";${mvmc_test_labels};" MATCHES ";requires_mpi;")
+            set_tests_properties(${mvmc_test} PROPERTIES DISABLED TRUE)
+        endif()
     endforeach()
 endif()

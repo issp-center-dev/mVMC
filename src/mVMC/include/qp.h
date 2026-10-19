@@ -1,6 +1,8 @@
 #ifndef _QP
 #define _QP
 
+#include "mvmc_mpi.h"
+
 void InitQPWeight();
 /* Proven support zeros only; finite component validation still precedes
  * applying this mask to any amplitude. */

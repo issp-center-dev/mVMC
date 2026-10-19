@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _mpi_use
-#include <mpi.h>
-#endif
+#include "mvmc_mpi.h"
 
 extern int omp_get_thread_num(void);
 extern int omp_get_max_threads(void);
