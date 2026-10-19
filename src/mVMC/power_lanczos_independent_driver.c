@@ -734,8 +734,9 @@ MVMCKrylovStatus mvmc_power_lanczos_independent_run(
     }
     status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
     if (status == MVMC_KRYLOV_STATUS_OK) {
+        /* The Geyer helper returns g = 1 + 2 sum(rho), not g/2. */
         effective_sample_count =
-            (double)input->sample_count / (2.0 * tau.tau_int);
+            (double)input->sample_count / tau.tau_int;
         status = mvmc_power_lanczos_sampling_sum_double(
             &sampling, &effective_sample_count, 1);
     }

@@ -130,6 +130,9 @@ typedef struct {
   size_t positive_pair_count;
   double mean;
   double variance;
+  /* Historical name: statistical inefficiency g = 1 + 2 sum(rho),
+   * clamped to >= 1 (also 1 for a constant series).  Public Lanczos
+   * outputs use tau_int = g/2 and effective_samples = sample_count/g. */
   double tau_int;
 } MVMCKrylovTauIntResult;
 

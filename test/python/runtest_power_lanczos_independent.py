@@ -49,7 +49,7 @@ source = root / "data" / "BackFlow_Identity_InterAll_Real"
 extra = root / "data" / "PowerLanczosIndependent"
 arguments = set(sys.argv[1:])
 unknown_arguments = arguments.difference(
-    ("blocked", "interall", "invalid", "projection", "hybrid"))
+    ("blocked", "interall", "invalid", "projection", "hybrid", "constant"))
 if unknown_arguments:
     raise RuntimeError("unknown arguments: {}".format(sorted(unknown_arguments)))
 processes = os.environ.get("MVMC_MPI_PROCS")
@@ -58,11 +58,12 @@ invalid = "invalid" in arguments
 interall = "interall" in arguments
 projection = "projection" in arguments
 hybrid = "hybrid" in arguments
+constant = "constant" in arguments
 if projection and hybrid:
     raise RuntimeError("projection and hybrid modes are mutually exclusive")
 if (projection or hybrid) and not processes:
     raise RuntimeError("MPI split test requires MVMC_MPI_PROCS")
-suffix_parts = []
+suffix_parts = ["constant"] if constant else []
 if processes:
     suffix_parts.append("mpi")
 if projection:
@@ -84,6 +85,16 @@ work.mkdir(parents=True)
 for name in ("locspn.def", "trans.def", "interall.def", "orbitalidx.def",
              "qptransidx.def"):
     shutil.copy2(str(source / name), str(work / name))
+if constant:
+    # Physical H=0, but H' remains nonzero: the Krylov basis is nontrivial
+    # while every final local energy is exactly zero. This isolates the
+    # public ESS convention from stochastic estimation error.
+    for name in ("trans.def", "interall.def"):
+        path = work / name
+        lines = path.read_text().splitlines()
+        lines[5:] = [" ".join(line.split()[:-2] + ["0.0", "0.0"])
+                     for line in lines[5:] if line.strip()]
+        path.write_text("\n".join(lines) + "\n")
 ls_name = "lsinterall.def" if interall else "lstrans.def"
 shutil.copy2(str(extra / ls_name), str(work / ls_name))
 if invalid:
@@ -153,6 +164,11 @@ if completed.returncode != 0:
 output = work / "output" / "zvo_pl_out_001.dat"
 values = read_result(output)
 metadata = read_sampling_metadata(output)
+if constant:
+    if not (values[0] == 0 and values[1] == 0 and values[6] == 0.5 and
+            values[7] == metadata["final_samples"]):
+        raise RuntimeError("constant H: expected tau=0.5 and ESS=M: {}".format(values))
+
 if processes:
     expected_chains = (
         int(processes) + split_size - 1) // split_size
