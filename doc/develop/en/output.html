@@ -625,9 +625,10 @@ Hamiltonian runs without changing the sampled physical observables.</p>
 <p>With <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> (first step only) the file has the same header
 with <code class="docutils literal notranslate"><span class="pre">order=1</span></code> and the same 11 fields. Energy and variance are those of the
 input <span class="math notranslate nohighlight">\(H\)</span>, including <span class="math notranslate nohighlight">\(-\mu N\)</span>, over all particle numbers; no
-particle-number fields are added. When the run stops, for example on a
-numerically zero candidate in the final chain, no result row is written and
-the reason is given on standard error.</p>
+particle-number fields are added to this file. Final-state number statistics
+are written separately to <code class="docutils literal notranslate"><span class="pre">xxx_gc_pl_number_yyy.dat</span></code>. When the run stops,
+for example on a numerically zero candidate in the final chain, no result
+row is written and the reason is given on standard error.</p>
 <p>When <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> or <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> selects an independent <span class="math notranslate nohighlight">\(H'\)</span>, the
 first header instead contains <code class="docutils literal notranslate"><span class="pre">independent_power_lanczos</span></code> and
 <code class="docutils literal notranslate"><span class="pre">basis={Psi,HprimePsi}</span></code>; it records the same chain and sample-count
@@ -637,6 +638,48 @@ metadata. The data row has 12 fields in this order:
 <code class="docutils literal notranslate"><span class="pre">condition</span></code>, <code class="docutils literal notranslate"><span class="pre">gevp_residual</span></code>, and <code class="docutils literal notranslate"><span class="pre">streamed_row_terms</span></code>. The final field
 counts physical-H rows applied at the retained coefficient-chain measurement
 snapshots. A failed run writes no result row.</p>
+</section>
+<section id="xxx-gc-pl-number-yyy-dat">
+<h2>xxx_gc_pl_number_yyy.dat<a class="headerlink" href="#xxx-gc-pl-number-yyy-dat" title="Permalink to this heading">¶</a></h2>
+<p>Every successful grand-canonical first-step stabilized Lanczos run writes
+this file alongside <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code>, with the same <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code>
+and output index. It measures particle number in the final state
+<span class="math notranslate nohighlight">\((c_0+c_1 H)\Psi\)</span>, using the same saved configurations and blocks as
+energy. Warm-up and coefficient-chain samples are excluded.</p>
+<p>The first header identifies <code class="docutils literal notranslate"><span class="pre">source=final</span></code> and
+<code class="docutils literal notranslate"><span class="pre">error=conditional_fixed_coefficients</span></code>, and records sites, chains,
+samples per chain, total final samples and blocks. The second header gives
+the real and imaginary parts of the frozen coefficients <code class="docutils literal notranslate"><span class="pre">c0</span></code> and <code class="docutils literal notranslate"><span class="pre">c1</span></code>.
+Column-name comments precede these records:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="n">N_mean</span> <span class="n">N_se</span> <span class="n">N2_mean</span> <span class="n">N2_se</span> <span class="n">N_var</span> <span class="n">total_samples</span>
+<span class="n">hist</span> <span class="n">N</span> <span class="n">count</span>
+<span class="n">block</span> <span class="n">global_block_id</span> <span class="n">count</span> <span class="n">sum_N</span> <span class="n">sum_N2</span>
+</pre></div>
+</div>
+<p>There is one summary, one histogram row for each N from 0 to twice the
+number of sites (including zero counts), and one row per block. <code class="docutils literal notranslate"><span class="pre">N_var</span></code>
+is <span class="math notranslate nohighlight">\(\langle N^2\rangle-\langle N\rangle^2\)</span>, a point estimate without
+an error bar. Tiny negative roundoff is clamped to zero within
+<code class="docutils literal notranslate"><span class="pre">64*DBL_EPSILON*max(1,N2_mean,N_mean*N_mean)</span></code>; a larger negative or
+nonfinite result stops the run.</p>
+<p><code class="docutils literal notranslate"><span class="pre">N_se</span></code> and <code class="docutils literal notranslate"><span class="pre">N2_se</span></code> are standard errors from equally sized blocks:
+<span class="math notranslate nohighlight">\(\mathrm{SE}^2=\sum_b(\overline{N}_b-\overline{N})^2/[K(K-1)]\)</span>,
+with the analogous formula for N squared. These errors are conditional on
+the frozen coefficients and do not include uncertainty in their estimation.
+They require adequate mixing and block length; a zero error alone does not
+prove convergence. No particle-number autocorrelation time or effective
+sample count is reported.</p>
+<p>Blocks partition the chain-major sequence
+<code class="docutils literal notranslate"><span class="pre">global_sample</span> <span class="pre">=</span> <span class="pre">chain_index*samples_per_chain</span> <span class="pre">+</span> <span class="pre">local_sample</span></code> into K
+equal pieces. A block may span a chain boundary. The histogram contains no
+time ordering, and independent chains must not be concatenated for an
+autocorrelation estimate. The file is always enabled in this mode, including
+builds with <code class="docutils literal notranslate"><span class="pre">Testing=OFF</span></code>. Ordinary <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> output is unchanged.
+No chemical potential is inferred from <code class="docutils literal notranslate"><span class="pre">Trans</span></code>, and no conversion of the
+reported Hamiltonian energy is performed. If a run fails, any partial file
+from that run must not be used as a successful measurement.
+If opening, writing or closing the number file fails, no result row is
+written to the corresponding <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code> and the run exits with status 1.</p>
 </section>
 <section id="xxx-ls2-moment-yyy-dat">
 <h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="Permalink to this heading">¶</a></h2>
@@ -748,6 +791,7 @@ xxx_cisajscktalt_yyy.dat file. This file is outputted when
 <li><a class="reference internal" href="#xxx-nzguide-yyy-dat">xxx_nzguide_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-pl-out-yyy-dat">xxx_pl_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-gc-pl-number-yyy-dat">xxx_gc_pl_number_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-support-yyy-dat">xxx_ls_support_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>

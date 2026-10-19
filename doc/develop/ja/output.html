@@ -584,7 +584,8 @@ chainごとのGeyer initial-positive推定器は統計的非効率度
 各経路に適用され、sampleされた物理量は変わりません。</p>
 <p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1``（1</span> <span class="pre">stepのみ）でも、headerは</span> <span class="pre">``order=1</span></code> の同じ形式で、
 data行は同じ11項目です。energyとvarianceは <span class="math notranslate nohighlight">\(-\mu N\)</span> を含む入力
-<span class="math notranslate nohighlight">\(H\)</span> の全粒子数にわたる値で、粒子数の項目は追加しません。最終chainで
+<span class="math notranslate nohighlight">\(H\)</span> の全粒子数にわたる値で、このfileには粒子数の項目を追加しません。
+最終状態の粒子数統計は別の <code class="docutils literal notranslate"><span class="pre">xxx_gc_pl_number_yyy.dat</span></code> に出力します。最終chainで
 数値的に零の候補が出た場合などrunが終了したときは結果行を出力せず、理由を
 標準エラーに出力します。</p>
 <p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> または <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> で独立 <span class="math notranslate nohighlight">\(H'\)</span> を選択した場合、1行目の
@@ -595,6 +596,40 @@ headerには <code class="docutils literal notranslate"><span class="pre">indepe
 <code class="docutils literal notranslate"><span class="pre">effective_samples</span></code>、<code class="docutils literal notranslate"><span class="pre">retained_rank</span></code>、<code class="docutils literal notranslate"><span class="pre">condition</span></code>、<code class="docutils literal notranslate"><span class="pre">gevp_residual</span></code>、
 <code class="docutils literal notranslate"><span class="pre">streamed_row_terms</span></code> です。最後の項目はcoefficient chainで採用した測定snapshotに
 対して作用した物理Hの行数です。失敗時はresult行を出力しません。</p>
+</section>
+<section id="xxx-gc-pl-number-yyy-dat">
+<h2>xxx_gc_pl_number_yyy.dat<a class="headerlink" href="#xxx-gc-pl-number-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
+<p>Grand-canonicalの第1段stabilized Lanczosが成功すると、<code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code> と
+同じ <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> と出力indexで必ず出力します。
+最終状態 <span class="math notranslate nohighlight">\((c_0+c_1 H)\Psi\)</span> の粒子数を、energyと同じ保存配置・blockで測定します。
+warm-upと係数決定chainのsampleは含みません。</p>
+<p>第1headerには <code class="docutils literal notranslate"><span class="pre">source=final</span></code>、<code class="docutils literal notranslate"><span class="pre">error=conditional_fixed_coefficients</span></code>、
+site数、chain数、chain当たりsample数、final総sample数、block数を記録します。
+第2headerは固定した係数 <code class="docutils literal notranslate"><span class="pre">c0</span></code>・<code class="docutils literal notranslate"><span class="pre">c1</span></code> の実部と虚部です。列名コメントの後に
+以下のrecordを出力します:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="n">N_mean</span> <span class="n">N_se</span> <span class="n">N2_mean</span> <span class="n">N2_se</span> <span class="n">N_var</span> <span class="n">total_samples</span>
+<span class="n">hist</span> <span class="n">N</span> <span class="n">count</span>
+<span class="n">block</span> <span class="n">global_block_id</span> <span class="n">count</span> <span class="n">sum_N</span> <span class="n">sum_N2</span>
+</pre></div>
+</div>
+<p>summaryは1行、histはN=0からsite数の2倍まで各1行（count=0も含む）、blockは
+各blockについて1行です。<code class="docutils literal notranslate"><span class="pre">N_var</span></code> は <span class="math notranslate nohighlight">\(\langle N^2\rangle-\langle N\rangle^2\)</span>
+の点推定で、誤差は付けません。丸めによる小さな負値は
+<code class="docutils literal notranslate"><span class="pre">64*DBL_EPSILON*max(1,N2_mean,N_mean*N_mean)</span></code> 以内だけ0に補正し、
+それを超える負値やnonfiniteは計算失敗とします。</p>
+<p><code class="docutils literal notranslate"><span class="pre">N_se</span></code> と <code class="docutils literal notranslate"><span class="pre">N2_se</span></code> は等長blockの標準誤差です。
+<span class="math notranslate nohighlight">\(\mathrm{SE}^2=\sum_b(\overline{N}_b-\overline{N})^2/[K(K-1)]\)</span>
+で計算し、N²も同様です。係数を固定した条件付き誤差であり、係数決定の不確かさは
+含みません。十分な混合とblock長を前提とし、誤差が0でも収束を保証しません。
+Nの自己相関時間・有効sample数は出力しません。</p>
+<p>blockはchain順の列 <code class="docutils literal notranslate"><span class="pre">global_sample</span> <span class="pre">=</span> <span class="pre">chain_index*samples_per_chain</span> <span class="pre">+</span> <span class="pre">local_sample</span></code>
+をK等分します。chain境界をまたぐblockもあります。histは時系列情報を持たず、
+独立chainを連結して自己相関を推定してはいけません。<code class="docutils literal notranslate"><span class="pre">Testing=OFF</span></code> buildでも
+出力し、通常の <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> の意味は変えません。<code class="docutils literal notranslate"><span class="pre">Trans</span></code> から化学ポテンシャルを
+推測したり、報告するHamiltonianのenergyを変換したりしません。
+runが失敗した場合、そのrunの途中fileを成功した測定結果として使用しないでください。
+粒子数fileのopen・write・closeに失敗すると、対応する <code class="docutils literal notranslate"><span class="pre">xxx_pl_out_yyy.dat</span></code> の
+結果行は出力せず、終了コード1で終了します。</p>
 </section>
 <section id="xxx-ls2-moment-yyy-dat">
 <h2>xxx_ls2_moment_yyy.dat<a class="headerlink" href="#xxx-ls2-moment-yyy-dat" title="この見出しへのパーマリンク">¶</a></h2>
@@ -699,6 +734,7 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-nzguide-yyy-dat">xxx_nzguide_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-out-yyy-dat">xxx_ls2_out_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-pl-out-yyy-dat">xxx_pl_out_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-gc-pl-number-yyy-dat">xxx_gc_pl_number_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls2-moment-yyy-dat">xxx_ls2_moment_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-support-yyy-dat">xxx_ls_support_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-ls-cisajs-yyy-dat">xxx_ls_cisajs_yyy.dat</a></li>
