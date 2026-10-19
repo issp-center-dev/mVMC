@@ -193,10 +193,18 @@ jobs:
           print('Disabled:', len(actual_disabled), 'Optional skips:', sorted(skipped - disabled))
           PYCODE
 
+      - name: Stage noMPI evidence
+        if: always()
+        run: |
+          if [ -d ../build-nompi/ci-evidence ]; then
+            mkdir -p "$GITHUB_WORKSPACE/ci-evidence"
+            cp -R ../build-nompi/ci-evidence/. "$GITHUB_WORKSPACE/ci-evidence/"
+          fi
+
       - name: Save noMPI evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nompi-ctest-evidence
-          path: ${{ github.workspace }}/../build-nompi/ci-evidence
+          path: ${{ github.workspace }}/ci-evidence
           if-no-files-found: warn
