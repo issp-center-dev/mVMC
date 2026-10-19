@@ -314,7 +314,7 @@ endif()
 if(MPI_FOUND)
     target_link_libraries(gc_finite_spin_unit ${MPI_C_LIBRARIES})
 endif()
-foreach(gc_fs_mode mask transactions init restart support)
+foreach(gc_fs_mode mask transactions init restart support kernel)
     add_test(NAME GC_FS_Unit_${gc_fs_mode}
         COMMAND gc_finite_spin_unit --${gc_fs_mode})
     set_tests_properties(GC_FS_Unit_${gc_fs_mode} PROPERTIES

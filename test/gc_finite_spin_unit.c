@@ -7,7 +7,7 @@
  *   --probe <fixture> <out>  production values for the independent oracle
  *   --chain <fixture> <seed> <sweeps> <out>
  *                            production chain histogram (oracle compares)
- *   --mask | --transactions | --init | --restart | --support
+ *   --mask | --transactions | --init | --restart | --support | --kernel
  *                            self-contained unit checks
  *   --death-*                intended aborts (runtest_gc_antiparallel_death)
  *
@@ -240,6 +240,20 @@ static void builtin_fixture(const char *name, const int gauss) {
     general[8] -= 0.25 * I;
     general[13] += 0.375;
     setup_fixture(4, 1, gauss, general, 0.4);
+  } else if (strcmp(name, "L5_S1_general") == 0) {
+    /* The oracle's L5 general table with S=1: its N=2..8 support has
+     * two-pair moves with an asymmetric binomial ratio (N=2 <-> 6). */
+    double complex general[25];
+    int i, j;
+    for (i = 0; i < 5; ++i)
+      for (j = 0; j < 5; ++j)
+        general[5 * i + j] =
+            (11 + 3 * i - 2 * j + 17 * (i == j) + 5 * (i * j % 3)) / 32.0 +
+            I * ((1 + 2 * i + j - 3 * (i == j)) / 64.0);
+    general[1] += 0.75;
+    general[10] -= 0.25 * I;
+    general[21] += 0.375;
+    setup_fixture(5, 1, gauss, general, -0.25);
   } else {
     fprintf(stderr, "unknown builtin fixture %s\n", name);
     exit(EXIT_FAILURE);
@@ -959,6 +973,152 @@ static void test_support(void) {
 }
 
 /* ------------------------------------------------------------------------ */
+/* --kernel: exact transition matrix of the S>0 mixture                     */
+/* ------------------------------------------------------------------------ */
+static double choose(const int n, const int k) {
+  double value = 1.0;
+  int i;
+  if (k < 0 || k > n) return 0.0;
+  for (i = 1; i <= k; ++i) value = value * (n - k + i) / i;
+  return value;
+}
+
+/* The q_reverse/q_forward ratio GCAttemptBridge would use for this move
+ * from x, as returned by the production draw. */
+static double production_ratio(const enum GCAntiBridgeMove move,
+                               const unsigned x) {
+  int current[MAX_ORBITALS], candidate[MAX_ORBITALS];
+  double ratio = 0.0;
+  const int m = to_occupation(x, Nsite, current);
+  return GCAntiDrawBridge(move, current, Nsite, m, candidate, support_word,
+                          &ratio) == 1
+             ? ratio
+             : 0.0;
+}
+
+/* Proposal probabilities from the test's own formulas (production draws are
+ * checked separately in gc_spin_support_unit); acceptance uses the
+ * production ratios and class probabilities. Each kernel then satisfies
+ * detailed balance only if the production ratio equals q(y->x)/q(x->y). */
+static double kernel_entry(const unsigned x, const unsigned y,
+                           const double *pi) {
+  const int L = Nsite;
+  const unsigned low = (1U << L) - 1U;
+  const unsigned xu = x & low, xd = x >> L, yu = y & low, yd = y >> L;
+  const int m = popcount(xu), n = 2 * m;
+  const unsigned diff = x ^ y;
+  double total = 0.0;
+  if (pi[y] == 0.0) return 0.0;
+  /* Global: 1/C(2L, L) per balanced configuration, ratio 1. */
+  total += (1.0 / 64.0) / choose(2 * L, L) *
+           fmin(1.0, pi[y] / pi[x] * production_ratio(GC_ANTI_GLOBAL, x));
+  /* Two-pair add/remove: one of C(L-m,2) up pairs times one down pair. */
+  if (popcount(yu) == m + 2 && (yu & xu) == xu && (yd & xd) == xd &&
+      popcount(yd) == m + 2)
+    total += (8.0 / 64.0) / (choose(L - m, 2) * choose(L - m, 2)) *
+             fmin(1.0, pi[y] / pi[x] * production_ratio(GC_ANTI_ADD_TWO, x));
+  if (popcount(yu) == m - 2 && (yu & xu) == yu && (yd & xd) == yd &&
+      popcount(yd) == m - 2)
+    total += (8.0 / 64.0) / (choose(m, 2) * choose(m, 2)) *
+             fmin(1.0, pi[y] / pi[x] *
+                           production_ratio(GC_ANTI_REMOVE_TWO, x));
+  /* Swap: up-only i <-> down-only j, probability 1/(u d), ratio 1. */
+  {
+    const unsigned upOnly = xu & ~xd, downOnly = xd & ~xu;
+    const unsigned swapped = (xu ^ yu);
+    if (popcount(swapped) == 2 && swapped == (xd ^ yd) &&
+        popcount(swapped & upOnly) == 1 && popcount(swapped & downOnly) == 1)
+      total += (8.0 / 64.0) / (popcount(upOnly) * popcount(downOnly)) *
+               fmin(1.0, pi[y] / pi[x] * production_ratio(GC_ANTI_SWAP, x));
+  }
+  /* Legacy anti-parallel hop/N+-2 kernel with weight 39/64. */
+  {
+    const double legacy = 39.0 / 64.0;
+    const double pHop = GCMoveClassProbability(GC_MOVE_HOP, n, Nsite2);
+    const double pAdd = GCMoveClassProbability(GC_MOVE_ADD, n, Nsite2);
+    const double pRemove = GCMoveClassProbability(GC_MOVE_REMOVE, n, Nsite2);
+    if (popcount(diff) == 2 && (popcount(diff & low) == 2 ||
+                                popcount(diff >> L) == 2) &&
+        popcount(x & diff) == 1)
+      total += legacy * pHop * 0.5 / m / (L - m) * fmin(1.0, pi[y] / pi[x]);
+    if (popcount(diff & low) == 1 && popcount(diff >> L) == 1) {
+      if ((x & diff) == 0U)
+        total += legacy * pAdd / ((double)(L - m) * (L - m)) *
+                 fmin(1.0, pi[y] / pi[x] *
+                               GCAntiRatioAdd(m, L, pAdd,
+                                              GCMoveClassProbability(
+                                                  GC_MOVE_REMOVE, n + 2,
+                                                  Nsite2)));
+      else if ((x & diff) == diff)
+        total += legacy * pRemove / ((double)m * m) *
+                 fmin(1.0, pi[y] / pi[x] *
+                               GCAntiRatioRemove(m, L, pRemove,
+                                                 GCMoveClassProbability(
+                                                     GC_MOVE_ADD, n - 2,
+                                                     Nsite2)));
+    }
+  }
+  return total;
+}
+
+static void test_kernel(const char *fixture) {
+  int eleIdx[MAX_ORBITALS], eleCfg[MAX_ORBITALS], eleNum[MAX_ORBITALS];
+  int eleProjCnt[1];
+  static double pi[1024];
+  static unsigned support[1024];
+  static int parent[1024];
+  unsigned x, y, count;
+  int size = 0, i, components;
+  builtin_fixture(fixture, 6);
+  CHECK(Nsite <= 5, "kernel fixtures use L<=5");
+  count = 1U << (2 * Nsite);
+  for (x = 0U; x < count; ++x) {
+    pi[x] = 0.0;
+    if (!balanced(x)) continue;
+    CHECK(load_state(x, eleIdx, eleCfg, eleNum, eleProjCnt) == GC_MALL_OK,
+          "kernel rebuild");
+    {
+      const double complex ip = CalculateIPGC_fcmp(PfM, Ncur, eleNum, 0,
+                                                   NQPFull, MPI_COMM_SELF);
+      pi[x] = cabs(ip) * cabs(ip) * exp(2.0 * LogProjVal(eleProjCnt));
+    }
+    if (pi[x] != 0.0) support[size++] = x;
+  }
+  for (i = 0; i < size; ++i) parent[i] = i;
+  components = size;
+  for (i = 0; i < size; ++i) {
+    double row = 0.0;
+    int j;
+    x = support[i];
+    for (j = 0; j < size; ++j) {
+      const double forward = kernel_entry(x, support[j], pi);
+      y = support[j];
+      if (j == i) continue;
+      row += forward;
+      {
+        const double balanceError =
+            fabs(pi[x] * forward - pi[y] * kernel_entry(y, x, pi));
+        CHECK(balanceError <= 1.0e-12 * (pi[x] * forward + 1.0e-300),
+              "%s detailed balance %u->%u: %.17g", fixture, x, y,
+              balanceError);
+      }
+      if (forward > 0.0) {
+        int a = i, b = j;
+        while (parent[a] != a) a = parent[a];
+        while (parent[b] != b) b = parent[b];
+        if (a != b) { parent[a] = b; --components; }
+      }
+    }
+    CHECK(row <= 1.0 + 1.0e-12, "%s row %u leaves %.17g", fixture, x, row);
+  }
+  CHECK(components == 1, "%s support splits into %d components", fixture,
+        components);
+  printf("kernel %s: %d support states, detailed balance and one "
+         "component\n", fixture, size);
+  release_fixture();
+}
+
+/* ------------------------------------------------------------------------ */
 /* --death-*                                                                */
 /* ------------------------------------------------------------------------ */
 static int run_death(const char *mode) {
@@ -1055,9 +1215,14 @@ int main(int argc, char **argv) {
     test_restart();
   } else if (strcmp(mode, "--support") == 0) {
     test_support();
+  } else if (strcmp(mode, "--kernel") == 0) {
+    test_kernel("L4_S2");
+    test_kernel("L4_S1_triplet");
+    test_kernel("L4_S1_general");
+    test_kernel("L5_S1_general");
   } else {
     fprintf(stderr, "usage: %s --probe|--chain|--mask|--transactions|"
-            "--init|--restart|--support|--death-*\n", argv[0]);
+            "--init|--restart|--support|--kernel|--death-*\n", argv[0]);
     status = 2;
   }
 #ifdef _mpi_use
