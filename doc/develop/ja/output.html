@@ -125,7 +125,9 @@
 <span class="math notranslate nohighlight">\(\langle N^2\rangle-\langle N\rangle^2\)</span> の3列を出力します。
 変分最適化ではSR stepごとに1行、物理量計算ではbinごとに1行を書きます。
 ファイル名には <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> と <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> を適用しません。同じ
-directoryで別runを開始すると、以前の <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> は置き換えられます。</p>
+directoryで別runを開始すると、以前の <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> は置き換えられます。
+<a href="#id2"><span class="problematic" id="id3">``</span></a>NLanczosMode=1``（grand-canonical samplingによる1 stepのLanczos）では
+このfileを出力しません。</p>
 </section>
 <section id="opt-dat">
 <h2>変分パラメータ出力ファイル(***_opt.dat)<a class="headerlink" href="#opt-dat" title="この見出しへのパーマリンク">¶</a></h2>
@@ -318,14 +320,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 …
 </pre></div>
 </div>
-<section id="id2">
-<h3>ファイル形式<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id4">
+<h3>ファイル形式<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id3">
-<h3>パラメータ<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id5">
+<h3>パラメータ<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span></p>
 <p><strong>形式 :</strong> int型</p>
@@ -369,14 +371,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 …
 </pre></div>
 </div>
-<section id="id4">
-<h3>ファイル形式<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id6">
+<h3>ファイル形式<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int06 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int07 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int08 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id5">
-<h3>パラメータ<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id7">
+<h3>パラメータ<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>,
 <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>,
@@ -420,14 +422,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 …
 </pre></div>
 </div>
-<section id="id6">
-<h3>ファイル形式<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id8">
+<h3>ファイル形式<a class="headerlink" href="#id8" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p>[N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02]</p></li>
 </ul>
 </section>
-<section id="id7">
-<h3>パラメータ<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id9">
+<h3>パラメータ<a class="headerlink" href="#id9" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p>[N]</p>
 <p><strong>形式 :</strong> Int</p>
@@ -487,14 +489,14 @@ MPI reduction後の実部・虚部です。<code class="docutils literal notrans
 …
 </pre></div>
 </div>
-<section id="id8">
-<h3>ファイル形式<a class="headerlink" href="#id8" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id10">
+<h3>ファイル形式<a class="headerlink" href="#id10" title="この見出しへのパーマリンク">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id9">
-<h3>パラメータ<a class="headerlink" href="#id9" title="この見出しへのパーマリンク">¶</a></h3>
+<section id="id11">
+<h3>パラメータ<a class="headerlink" href="#id11" title="この見出しへのパーマリンク">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
 <p><strong>形式 :</strong> double型</p>
@@ -572,6 +574,11 @@ variance、そのstandard error、虚部、energyの自己相関時間と有効s
 Green関数やsampleごとのtraceは出力しません。独立chainが複数ある場合、
 <code class="docutils literal notranslate"><span class="pre">effective_samples</span></code> はchainごとの有効sample数の合計、<code class="docutils literal notranslate"><span class="pre">tau_int</span></code> は
 <code class="docutils literal notranslate"><span class="pre">total_samples/(2*effective_samples)</span></code> で定義する等価な値です。</p>
+<p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1``（1</span> <span class="pre">stepのみ）でも、headerは</span> <span class="pre">``order=1</span></code> の同じ形式で、
+data行は同じ11項目です。energyとvarianceは <span class="math notranslate nohighlight">\(-\mu N\)</span> を含む入力
+<span class="math notranslate nohighlight">\(H\)</span> の全粒子数にわたる値で、粒子数の項目は追加しません。最終chainで
+数値的に零の候補が出た場合などrunが終了したときは結果行を出力せず、理由を
+標準エラーに出力します。</p>
 <p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> または <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> で独立 <span class="math notranslate nohighlight">\(H'\)</span> を選択した場合、1行目の
 headerには <code class="docutils literal notranslate"><span class="pre">independent_power_lanczos</span></code> と <code class="docutils literal notranslate"><span class="pre">basis={Psi,HprimePsi}</span></code> を
 記録し、同じchain数・sample数metadataも記録します。data行の12項目は順に
@@ -660,24 +667,24 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>
-<li><a class="reference internal" href="#id2">ファイル形式</a></li>
-<li><a class="reference internal" href="#id3">パラメータ</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id4">ファイル形式</a></li>
 <li><a class="reference internal" href="#id5">パラメータ</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#xxx-nbodyg-yyy-dat">xxx_NBodyG_yyy.dat</a><ul>
+<li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id6">ファイル形式</a></li>
 <li><a class="reference internal" href="#id7">パラメータ</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#xxx-anomalousg-yyy-dat">xxx_anomalousg_yyy.dat</a></li>
-<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#xxx-nbodyg-yyy-dat">xxx_NBodyG_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id8">ファイル形式</a></li>
 <li><a class="reference internal" href="#id9">パラメータ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-anomalousg-yyy-dat">xxx_anomalousg_yyy.dat</a></li>
+<li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id10">ファイル形式</a></li>
+<li><a class="reference internal" href="#id11">パラメータ</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>
