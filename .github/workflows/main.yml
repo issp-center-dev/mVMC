@@ -91,3 +91,120 @@ jobs:
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
         run: ctest --output-on-failure -R '_mpi$'
+
+  nompi:
+    name: "Linux, MPI=OFF, full CTest"
+    runs-on: ubuntu-latest
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install --yes gfortran liblapack-dev openmpi-bin libopenmpi-dev
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: python3 -m pip install numpy
+
+      - name: Configure without MPI
+        working-directory: ${{ github.workspace }}/..
+        run: |
+          mkdir -p build-nompi/ci-evidence
+          git -C "$GITHUB_WORKSPACE" rev-parse HEAD > build-nompi/ci-evidence/source-sha.txt
+          cmake -S "$GITHUB_WORKSPACE" -B build-nompi \
+            -DCONFIG=gcc -DCMAKE_BUILD_TYPE=Release -DTesting=ON -DUSE_GEMMT=OFF \
+            -DCMAKE_DISABLE_FIND_PACKAGE_MPI=ON -DUSE_SCALAPACK=OFF \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            2>&1 | tee build-nompi/ci-evidence/configure.log
+          cp build-nompi/CMakeCache.txt build-nompi/ci-evidence/
+
+      - name: Build all targets
+        working-directory: ${{ github.workspace }}/../build-nompi
+        run: cmake --build . --parallel 4 2>&1 | tee ci-evidence/build.log
+
+      - name: Check MPI isolation and disabled tests
+        working-directory: ${{ github.workspace }}/../build-nompi
+        run: |
+          ldd src/mVMC/vmc.out > ci-evidence/ldd.txt
+          nm -u src/mVMC/vmc.out > ci-evidence/undefined-symbols.txt
+          if grep -Ei 'libmpi|libmpich|(^|[[:space:]])P?MPI_|not found' \
+              ci-evidence/ldd.txt ci-evidence/undefined-symbols.txt; then
+            exit 1
+          fi
+          ctest --show-only=json-v1 > ci-evidence/inventory.json
+          python3 - <<'PYCODE'
+          import json
+          import pathlib
+          import re
+          cache = pathlib.Path('CMakeCache.txt').read_text()
+          assert 'CMAKE_DISABLE_FIND_PACKAGE_MPI:UNINITIALIZED=ON' in cache or \
+                 'CMAKE_DISABLE_FIND_PACKAGE_MPI:BOOL=ON' in cache
+          commands = json.loads(pathlib.Path('compile_commands.json').read_text())
+          assert commands and all('-D_mpi_use' not in c['command'] for c in commands)
+          tests = json.loads(pathlib.Path('ci-evidence/inventory.json').read_text())['tests']
+          assert tests, 'No registered tests'
+          expected, disabled = set(), set()
+          for test in tests:
+              props = {p['name']: p['value'] for p in test.get('properties', [])}
+              env = ';'.join(props.get('ENVIRONMENT', []))
+              if ('requires_mpi' in props.get('LABELS', []) or
+                      re.search(r'(^|;)MVMC_MPI_PROCS=([2-9]|[1-9][0-9]+)(;|$)', env)):
+                  expected.add(test['name'])
+              if props.get('DISABLED', False):
+                  disabled.add(test['name'])
+          assert disabled == expected, (sorted(disabled - expected), sorted(expected - disabled))
+          assert len(tests) > len(disabled), 'All tests are disabled'
+          print('Registered: {}, MPI-only disabled: {}'.format(len(tests), len(disabled)))
+          pathlib.Path('ci-evidence/disabled.json').write_text(json.dumps(sorted(disabled)))
+          PYCODE
+
+      - name: Full CTest
+        working-directory: ${{ github.workspace }}/../build-nompi
+        run: |
+          ctest --parallel 2 --output-on-failure --no-tests=error \
+            --output-junit ci-evidence/ctest.xml 2>&1 | tee ci-evidence/ctest.log
+          python3 - <<'PYCODE'
+          import json
+          import pathlib
+          import xml.etree.ElementTree as ET
+          disabled = set(json.loads(pathlib.Path('ci-evidence/disabled.json').read_text()))
+          results = ET.parse('ci-evidence/ctest.xml').getroot().findall('testcase')
+          assert results, 'No test results'
+          actual_disabled = {t.attrib['name'] for t in results if t.attrib.get('status') == 'disabled'}
+          assert actual_disabled == disabled, 'Disabled results differ from the inventory'
+          skipped = {t.attrib['name'] for t in results if t.find('skipped') is not None}
+          unexpected = skipped - disabled - {'GC_HPhi_CrossCheck'}
+          assert not unexpected, 'Unexpected skipped tests: {}'.format(sorted(unexpected))
+          print('Disabled:', len(actual_disabled), 'Optional skips:', sorted(skipped - disabled))
+          PYCODE
+
+      - name: Stage noMPI evidence
+        if: always()
+        run: |
+          if [ -d ../build-nompi/ci-evidence ]; then
+            mkdir -p "$GITHUB_WORKSPACE/ci-evidence"
+            cp -R ../build-nompi/ci-evidence/. "$GITHUB_WORKSPACE/ci-evidence/"
+          fi
+
+      - name: Save noMPI evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nompi-ctest-evidence
+          path: ${{ github.workspace }}/ci-evidence
+          if-no-files-found: warn

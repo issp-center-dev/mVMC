@@ -2576,6 +2576,9 @@ set_tests_properties(NSplitSize_NStore_Compare_mpi PROPERTIES ENVIRONMENT "PYTHO
 add_test(NAME NSplitSize_NStore_fsz_Compare_mpi
          COMMAND ${PYTHON_EXECUTABLE} runtest_nstore_nsplit.py HubbardChain_fsz_SpinJastrow)
 set_tests_properties(NSplitSize_NStore_fsz_Compare_mpi PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS_REF=2;MVMC_MPI_PROCS_SPLIT=4;OMP_NUM_THREADS=1")
+# These tests launch MPI through the REF/SPLIT variables, not MVMC_MPI_PROCS.
+set_tests_properties(NSplitSize_NStore_Compare_mpi NSplitSize_NStore_fsz_Compare_mpi
+    PROPERTIES LABELS requires_mpi)
 add_test(NAME NSplitSize_SRCG_Invalid
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
                  "NSplitSize > 1 cannot be combined" NSplitSize=2 NStore=0 NSRCG=1)
