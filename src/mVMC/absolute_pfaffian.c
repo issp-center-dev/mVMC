@@ -2028,6 +2028,146 @@ MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value(
   return status;
 }
 
+struct MVMCAbsolutePfaffianComplexCapacityWorkspace {
+  int max_n;
+  size_t matrix_count;
+  int factor_lwork;
+  int *pivots;
+  double complex *factor;
+  double complex *factor_work;
+};
+
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+static size_t capacity_allocation_count = 0;
+
+size_t mvmc_absolute_pfaffian_testing_capacity_allocations(void) {
+  return capacity_allocation_count;
+}
+#endif
+
+static void *capacity_allocate(size_t count, size_t size, int zeroed) {
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  ++capacity_allocation_count;
+#endif
+  return zeroed ? calloc(count, size) : malloc(count * size);
+}
+
+void mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(
+    MVMCAbsolutePfaffianComplexCapacityWorkspace *workspace) {
+  if (workspace == NULL) return;
+  free(workspace->factor_work);
+  free(workspace->factor);
+  free(workspace->pivots);
+  free(workspace);
+}
+
+size_t mvmc_absolute_pfaffian_complex_capacity_workspace_bytes(
+    const MVMCAbsolutePfaffianComplexCapacityWorkspace *workspace) {
+  if (workspace == NULL) return 0;
+  return sizeof(*workspace) +
+         (size_t)workspace->max_n * sizeof(*workspace->pivots) +
+         workspace->matrix_count * sizeof(*workspace->factor) +
+         (size_t)workspace->factor_lwork * sizeof(*workspace->factor_work);
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_capacity_workspace_create(
+    int max_n, MVMCAbsolutePfaffianComplexCapacityWorkspace **workspace) {
+  MVMCAbsolutePfaffianComplexCapacityWorkspace *created = NULL;
+  size_t matrix_count;
+  int factor_lwork = 0;
+  int n;
+
+  if (workspace == NULL) return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  *workspace = NULL;
+  if (!mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  /* Every size product is checked before the first allocation. */
+  if (max_n <= 0 || (max_n % 2) != 0 ||
+      !checked_square_size(max_n, sizeof(double complex), &matrix_count) ||
+      (size_t)max_n > SIZE_MAX / sizeof(int)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  created = (MVMCAbsolutePfaffianComplexCapacityWorkspace *)
+      capacity_allocate(1, sizeof(*created), 1);
+  if (created == NULL) return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  created->max_n = max_n;
+  created->matrix_count = matrix_count;
+  created->pivots =
+      (int *)capacity_allocate((size_t)max_n, sizeof(*created->pivots), 0);
+  created->factor = (double complex *)capacity_allocate(
+      matrix_count, sizeof(*created->factor), 1);
+  if (created->pivots == NULL || created->factor == NULL) {
+    mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  }
+  /* One shared query buffer: the largest work length over n = 2..max_n. */
+  for (n = 2; n <= max_n; n += 2) {
+    double complex factor_query = 0.0;
+    int query_lwork = -1;
+    int info = 0;
+    int lwork;
+    int index;
+    for (index = 0; index < n; ++index) created->pivots[index] = index + 1;
+    M_ZSKTRF("U", "P", &n, created->factor, &n, created->pivots,
+             &factor_query, &query_lwork, &info);
+    if (info != 0 || !valid_complex_lwork_query(factor_query, &lwork)) {
+      mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(created);
+      return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+    }
+    if (lwork > factor_lwork) factor_lwork = lwork;
+  }
+  if ((size_t)factor_lwork > SIZE_MAX / sizeof(*created->factor_work)) {
+    mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+  }
+  created->factor_lwork = factor_lwork;
+  created->factor_work = (double complex *)capacity_allocate(
+      (size_t)factor_lwork, sizeof(*created->factor_work), 0);
+  if (created->factor_work == NULL) {
+    mvmc_absolute_pfaffian_complex_capacity_workspace_destroy(created);
+    return MVMC_PFAFFIAN_STATUS_ALLOCATION_FAILURE;
+  }
+  *workspace = created;
+  return MVMC_PFAFFIAN_STATUS_OK;
+}
+
+MVMCPfaffianStatus mvmc_absolute_pfaffian_complex_scaled_value_with_capacity(
+    MVMCAbsolutePfaffianComplexCapacityWorkspace *workspace,
+    const double complex *matrix, int n, int lda, double pivot_tolerance,
+    MVMCAbsolutePfaffianScaledValueResult *result) {
+  MVMCAbsolutePfaffianScaledValueResult candidate;
+  if (result == NULL || !mvmc_absolute_pfaffian_strict_fp_enabled()) {
+    return result == NULL ? MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT
+                          : MVMC_PFAFFIAN_STATUS_UNSUPPORTED_FP_MODE;
+  }
+  if (workspace == NULL || n < 0 || (n % 2) != 0 || n > workspace->max_n ||
+      lda < n || !isfinite(pivot_tolerance) ||
+      (n > 0 && matrix == NULL)) {
+    return MVMC_PFAFFIAN_STATUS_INVALID_ARGUMENT;
+  }
+  if (n == 0) {
+    /* Empty Pfaffian: exactly one, no factorization. */
+    initialize_scaled_pfaffian_result(&candidate);
+    if (mvmc_scaled_complex_make_finite(1.0, 0.0, -INFINITY,
+                                        &candidate.value) !=
+        MVMC_PFAFFIAN_STATUS_OK) {
+      return MVMC_PFAFFIAN_STATUS_FACTORIZATION_FAILURE;
+    }
+    /* No pivots: report a finite, well-pivoted classification. */
+    candidate.factor_state = MVMC_PFAFFIAN_VALUE_WELL_PIVOTED;
+    candidate.factor_info = 0;
+    candidate.matrix_scale = 0.0;
+    candidate.scaled_min_pivot = 1.0;
+    *result = candidate;
+    return MVMC_PFAFFIAN_STATUS_OK;
+  }
+  return factorize_complex_scaled_value(
+      matrix, n, lda, workspace->factor, workspace->pivots,
+      workspace->factor_work, workspace->factor_lwork, pivot_tolerance,
+      result);
+}
+
 MVMCPfaffianStatus mvmc_projected_scaled_amplitude_values(
     const MVMCAbsolutePfaffianScaledValueResult *components,
     const double complex *weights, size_t component_count,

@@ -757,7 +757,8 @@ INPUT_MUTATIONS = {
         ["NlocalSpin 1\n"] + lines[2:5] + ["0 1\n"] + lines[6:]),
         ["does not support LocSpin"]),
     "lanczos": _m(lambda workdir, ap: update_modpara(
-        workdir, "NLanczosMode", 1), ["does not support Lanczos"]),
+        workdir, "NLanczosMode", 1),
+        ["supports Lanczos only as the first-step stabilized estimator"]),
     "srcg": _m(lambda workdir, ap: update_modpara(workdir, "NSRCG", 1),
                ["supports dense SR only"]),
     "exupdate": _m(lambda workdir, ap: update_modpara(

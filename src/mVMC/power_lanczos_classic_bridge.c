@@ -338,6 +338,53 @@ static int build_root_raw(
   return 1;
 }
 
+/* Root-only row conversion, then the collective domain model creator. */
+static MVMCKrylovStatus create_model_from_rows(
+    const MVMCPowerLanczosClassicView *view,
+    MVMCKrylovConfigurationDomain domain, int world_rank,
+    MVMCClassicPfaffianCommunicator world_communicator,
+    MVMCClassicKrylovModelWorkspace **workspace) {
+  MVMCPowerLanczosClassicRawCopies copies;
+  MVMCClassicKrylovRawModel raw;
+  MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_OK;
+  memset(&copies, 0, sizeof(copies));
+  memset(&raw, 0, sizeof(raw));
+  if (world_rank == 0) {
+    if (view == NULL || !valid_model_rows(view, 1)) {
+      status = MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+    } else if (!build_root_raw(view, &copies, &raw)) {
+      status = MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE;
+    }
+  }
+  status = synchronize_status(status, world_communicator);
+  if (status != MVMC_KRYLOV_STATUS_OK) {
+    free_raw_copies(&copies);
+    return status;
+  }
+  status = mvmc_classic_krylov_model_workspace_create_domain_from_root(
+      world_rank == 0 ? &raw : NULL, domain, world_communicator, workspace);
+  free_raw_copies(&copies);
+  return status;
+}
+
+MVMCKrylovStatus mvmc_power_lanczos_model_create_from_view(
+    const MVMCPowerLanczosClassicView *view,
+    MVMCKrylovConfigurationDomain domain,
+    MVMCClassicPfaffianCommunicator world_communicator,
+    MVMCClassicKrylovModelWorkspace **workspace) {
+  int world_rank = 0;
+  if (workspace == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  *workspace = NULL;
+#ifdef _mpi_use
+  if (world_communicator == MPI_COMM_NULL ||
+      MPI_Comm_rank(world_communicator, &world_rank) != MPI_SUCCESS) {
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+#endif
+  return create_model_from_rows(view, domain, world_rank,
+                                world_communicator, workspace);
+}
+
 static MVMCClassicKrylovAmplitudeLayout amplitude_layout(
     const MVMCPowerLanczosClassicView *view,
     MVMCClassicPfaffianCommunicator chain_communicator) {
@@ -377,19 +424,14 @@ MVMCKrylovStatus mvmc_power_lanczos_classic_bridge_create(
     MVMCClassicPfaffianCommunicator chain_communicator,
     MVMCPowerLanczosClassicBridge **bridge) {
   MVMCPowerLanczosClassicBridge *created = NULL;
-  MVMCPowerLanczosClassicRawCopies copies;
-  MVMCClassicKrylovRawModel raw;
   MVMCClassicKrylovAmplitudeLayout layout;
   const MVMCKrylovFockModel *model = NULL;
   MVMCKrylovStatus status;
   int world_rank = 0;
   int chain_rank = 0;
   int chain_size = 1;
-  int root_raw_ready = 1;
   uint64_t minimum_generation = 0;
   uint64_t maximum_generation = 0;
-  memset(&copies, 0, sizeof(copies));
-  memset(&raw, 0, sizeof(raw));
   if (bridge == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   *bridge = NULL;
 #ifdef _mpi_use
@@ -410,15 +452,6 @@ MVMCKrylovStatus mvmc_power_lanczos_classic_bridge_create(
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
   status = audit_world_metadata(view, world_communicator);
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
-  if (world_rank == 0) root_raw_ready = build_root_raw(view, &copies, &raw);
-  status = synchronize_status(
-      root_raw_ready ? MVMC_KRYLOV_STATUS_OK
-                     : MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE,
-      world_communicator);
-  if (status != MVMC_KRYLOV_STATUS_OK) {
-    free_raw_copies(&copies);
-    return status;
-  }
   created = (MVMCPowerLanczosClassicBridge *)calloc(1, sizeof(*created));
   status = synchronize_status(
       created == NULL ? MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE
@@ -430,10 +463,9 @@ MVMCKrylovStatus mvmc_power_lanczos_classic_bridge_create(
     }
     goto fail;
   }
-  status = mvmc_classic_krylov_model_workspace_create_from_root(
-      world_rank == 0 ? &raw : NULL, world_communicator,
-      &created->model_workspace);
-  free_raw_copies(&copies);
+  status = create_model_from_rows(view, MVMC_KRYLOV_DOMAIN_FIXED, world_rank,
+                                  world_communicator,
+                                  &created->model_workspace);
   if (status != MVMC_KRYLOV_STATUS_OK) goto fail;
   model = mvmc_classic_krylov_model(created->model_workspace);
   if (model == NULL) {
@@ -487,7 +519,6 @@ MVMCKrylovStatus mvmc_power_lanczos_classic_bridge_create(
   return MVMC_KRYLOV_STATUS_OK;
 
 fail:
-  free_raw_copies(&copies);
   mvmc_power_lanczos_classic_bridge_destroy(created);
   return status;
 }

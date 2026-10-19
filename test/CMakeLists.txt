@@ -316,7 +316,7 @@ add_test(NAME GCSlaterDiff_Unit_MultiQP_OMP4
 set_tests_properties(GCSlaterDiff_Unit_MultiQP_OMP4 PROPERTIES
     ENVIRONMENT
       "OMP_NUM_THREADS=4;OMP_DYNAMIC=FALSE;MVMC_GC_REQUIRE_OMP_THREADS=4;MVMC_GC_OMP_AUDIT=1"
-    TIMEOUT 120)
+    PROCESSORS 4 TIMEOUT 120)
 add_test(NAME GC_AntiPair_SlaterDiff_Unit
     COMMAND gc_slater_diff_unit --antiparallel)
 add_test(NAME GC_SP_SlaterDiff_Unit COMMAND gc_slater_diff_unit --spin)
@@ -475,6 +475,10 @@ add_test(NAME PowerLanczosIndependent_Unit
 add_executable(absolute_pfaffian_unit
     absolute_pfaffian_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+# The capacity scaled-value checks need the bounded-engine scaled API and the
+# Testing-only allocation counter.
+target_compile_definitions(absolute_pfaffian_unit PRIVATE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE MVMC_ENABLE_FAULT_INJECTION)
 target_include_directories(absolute_pfaffian_unit PRIVATE
     ${CMAKE_SOURCE_DIR}/src/mVMC/include)
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -1182,6 +1186,10 @@ add_executable(power_lanczos_stabilized_unit
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gc_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
 target_include_directories(power_lanczos_stabilized_unit PRIVATE
@@ -1213,6 +1221,150 @@ if(MPI_FOUND)
                 $<TARGET_FILE:power_lanczos_stabilized_unit>
                 ${MPIEXEC_POSTFLAGS})
     set_tests_properties(PowerLanczosStabilized_Unit_Rank2_mpi PROPERTIES
+        PROCESSORS 2)
+endif()
+
+# Production sources shared by the GC first-step Lanczos test targets.
+set(MVMC_GC_LANCZOS_CORE_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_matrix.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_pfaffian_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_configuration.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_projection.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_collective.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_matrix_measurement.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_streaming_statistics.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_gevp_solver.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_final_state_chain.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_classic_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_amplitude.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_gc_bridge.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c)
+
+function(mvmc_gc_lanczos_target target)
+    target_include_directories(${target} PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+    target_compile_definitions(${target} PRIVATE
+        MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
+        MVMC_ENABLE_POWER_LANCZOS_P5_CORE MVMC_ENABLE_FAULT_INJECTION)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic
+            -Werror)
+    endif()
+    target_link_libraries(${target} pfapack ltl2inv ${LAPACK_LIBRARIES} m)
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        target_link_libraries(${target} stdc++)
+    endif()
+    if(Require_BLIS)
+        target_link_libraries(${target} blis pthread)
+    endif()
+    if(MPI_FOUND)
+        target_link_libraries(${target} ${MPI_C_LIBRARIES})
+    endif()
+endfunction()
+
+add_executable(gc_krylov_amplitude_unit gc_krylov_amplitude_unit.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES})
+mvmc_gc_lanczos_target(gc_krylov_amplitude_unit)
+add_test(NAME GCLanczos_Amplitude_Unit COMMAND gc_krylov_amplitude_unit)
+if(MPI_FOUND)
+    foreach(np 2 3)
+        add_test(NAME GCLanczos_Amplitude_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS}
+                    $<TARGET_FILE:gc_krylov_amplitude_unit>
+                    ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCLanczos_Amplitude_Unit_np${np}_mpi PROPERTIES
+            PROCESSORS ${np} TIMEOUT 120)
+    endforeach()
+endif()
+
+add_executable(gc_krylov_proposal_unit gc_krylov_proposal_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)
+target_compile_definitions(gc_krylov_proposal_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(gc_krylov_proposal_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(gc_krylov_proposal_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(gc_krylov_proposal_unit m)
+add_test(NAME GCLanczos_Proposal_Unit COMMAND gc_krylov_proposal_unit)
+
+add_executable(gc_lanczos_driver_unit gc_lanczos_driver_unit.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
+mvmc_gc_lanczos_target(gc_lanczos_driver_unit)
+add_test(NAME GCLanczos_Driver_Unit COMMAND gc_lanczos_driver_unit)
+set_tests_properties(GCLanczos_Driver_Unit PROPERTIES TIMEOUT 300)
+if(MPI_FOUND)
+    foreach(np 2 3)
+        add_test(NAME GCLanczos_Driver_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS}
+                    $<TARGET_FILE:gc_lanczos_driver_unit>
+                    ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCLanczos_Driver_Unit_np${np}_mpi PROPERTIES
+            PROCESSORS ${np} TIMEOUT 300)
+    endforeach()
+endif()
+
+# Testing-only enumeration probe for the GC Lanczos oracle.
+add_executable(gc_krylov_probe gc_krylov_probe.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES})
+mvmc_gc_lanczos_target(gc_krylov_probe)
+
+add_executable(gc_krylov_domain_unit
+    gc_krylov_domain_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/classic_krylov_model.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_sampler.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_positive_guide.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_proposal.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/bounded_krylov_engine.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
+target_compile_definitions(gc_krylov_domain_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE
+    MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
+target_include_directories(gc_krylov_domain_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(gc_krylov_domain_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(gc_krylov_domain_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(gc_krylov_domain_unit stdc++)
+endif()
+if(Require_BLIS)
+    target_link_libraries(gc_krylov_domain_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_krylov_domain_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME GCLanczos_Domain_Unit
+    COMMAND gc_krylov_domain_unit)
+if(MPI_FOUND)
+    add_test(NAME GCLanczos_Domain_Unit_np2_mpi
+        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:gc_krylov_domain_unit>
+                ${MPIEXEC_POSTFLAGS})
+    set_tests_properties(GCLanczos_Domain_Unit_np2_mpi PROPERTIES
         PROCESSORS 2)
 endif()
 

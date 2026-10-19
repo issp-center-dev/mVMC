@@ -775,6 +775,7 @@ static void test_generic_engine_integration(void) {
   model.up_electron_count = 1;
   model.down_electron_count = 1;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   if (krylov_workspace != NULL) {
     CHECK(mvmc_krylov_evaluate(
               krylov_workspace, &model, &configuration, 1,

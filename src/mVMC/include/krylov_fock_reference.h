@@ -51,6 +51,18 @@ typedef struct {
   size_t source_index;
 } MVMCKrylovHamiltonianTerm;
 
+/*
+ * Configuration domain of a Fock model.  FIXED (= 0, the zero-initialized
+ * default) keeps the fixed up/down electron counts.  The grand-canonical
+ * domains require up/down counts 0 and pure_spin 0: GC_BALANCED admits every
+ * configuration with Nup == Ndown, GC_EVEN every configuration with even N.
+ */
+typedef enum {
+  MVMC_KRYLOV_DOMAIN_FIXED = 0,
+  MVMC_KRYLOV_DOMAIN_GC_BALANCED = 1,
+  MVMC_KRYLOV_DOMAIN_GC_EVEN = 2
+} MVMCKrylovConfigurationDomain;
+
 typedef struct {
   size_t site_count;
   size_t up_electron_count;
@@ -61,6 +73,7 @@ typedef struct {
   size_t term_count;
   const MVMCKrylovFermionOperator *operators;
   size_t operator_count;
+  MVMCKrylovConfigurationDomain domain;
 } MVMCKrylovFockModel;
 
 typedef struct {

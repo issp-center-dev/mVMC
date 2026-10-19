@@ -98,6 +98,19 @@ void *mvmc_power_lanczos_classic_bridge_amplitude_context(
 uint64_t mvmc_power_lanczos_classic_bridge_generation_hash(
     const MVMCPowerLanczosClassicBridge *bridge);
 
+/*
+ * Model-row conversion shared by the canonical and grand-canonical bridges.
+ * Collective on world_communicator: world rank 0 validates and converts the
+ * view's Transfer/Coulomb/Hund/Exchange rows (other ranks may pass NULL row
+ * pointers) and the classic model creator distributes the immutable model
+ * for the given domain.  Amplitude data in the view is not used here.
+ */
+MVMCKrylovStatus mvmc_power_lanczos_model_create_from_view(
+    const MVMCPowerLanczosClassicView *view,
+    MVMCKrylovConfigurationDomain domain,
+    MVMCClassicPfaffianCommunicator world_communicator,
+    MVMCClassicKrylovModelWorkspace **workspace);
+
 #endif /* bounded engine */
 
 #endif /* MVMC_POWER_LANCZOS_CLASSIC_BRIDGE_H */

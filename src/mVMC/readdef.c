@@ -1219,9 +1219,47 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         info = 1;
       }
       if (bufInt[IdxLanczosMode] > 0) {
-        fprintf(stderr,
-                "Error: NGrandCanonical=1 does not support Lanczos.\n");
-        info = 1;
+        /* GC + Lanczos is the first-step stabilized estimator only; the
+         * count-level contract is checked here, Trans contents later. */
+        if (bufInt[IdxLanczosMode] != 1 || bufInt[IdxLanczosStep] != 1 ||
+            bufInt[IdxLanczosEstimatorMode] != 1 ||
+            bufInt[IdxVMCCalcMode] != 1) {
+          fprintf(stderr,
+                  "Error: NGrandCanonical=1 supports Lanczos only as the "
+                  "first-step stabilized estimator (NLanczosMode=1, "
+                  "NLanczosStep=1, NLanczosEstimatorMode=1, "
+                  "NVMCCalMode=1).\n");
+          info = 1;
+        }
+        if (bufInt[IdxNOneBodyG] > 0 || bufInt[IdxNTwoBodyG] > 0 ||
+            bufInt[IdxNTwoBodyGEx] > 0 || bufInt[IdxNNBodyG] > 0 ||
+            bufInt[IdxNAnomalousG] > 0) {
+          fprintf(stderr,
+                  "Error: NGrandCanonical=1 Lanczos does not measure Green "
+                  "functions; remove OneBodyG/TwoBodyG/TwoBodyGEx/NBodyG/"
+                  "AnomalousG entries.\n");
+          info = 1;
+        }
+        if (bufInt[IdxNPairHop] > 0 || bufInt[IdxNExchange] > 0 ||
+            bufInt[IdxNInterAll] > 0 || bufInt[IdxNNBodyInterAll] > 0 ||
+            bufInt[IdxNAnomalousTerm] > 0) {
+          fprintf(stderr,
+                  "Error: NGrandCanonical=1 Lanczos supports only Trans, "
+                  "CoulombIntra, CoulombInter and Hund terms.\n");
+          info = 1;
+        }
+        if (bufInt[IdxNLsTrans] > 0 || bufInt[IdxNLsInterAll] > 0) {
+          fprintf(stderr,
+                  "Error: NGrandCanonical=1 Lanczos does not support an "
+                  "independent operator (LsTrans/LsInterAll).\n");
+          info = 1;
+        }
+        if (bufInt[IdxNTwist] > 0) {
+          fprintf(stderr,
+                  "Error: NGrandCanonical=1 Lanczos does not support "
+                  "Twist.\n");
+          info = 1;
+        }
       }
       if (FlagRBM > 0) {
         fprintf(stderr,
@@ -2242,6 +2280,39 @@ static int ValidateGCAntiHamiltonian(void) {
   return 0;
 }
 
+/*
+ * Exact Hermiticity of the distributed Trans rows: for every key
+ * (i,s,j,t) the summed coefficient equals the conjugate of the summed
+ * reverse key (j,t,i,s); diagonal sums are real.  Duplicate rows are summed
+ * in input order.  This one-time O(NTransfer^2) scan only gives the input
+ * diagnostic; the Krylov model repeats the check on its compacted rows.
+ */
+static int GCLanczosTransfersHermitian(void) {
+  int k, m;
+  for (k = 0; k < NTransfer; ++k) {
+    const int *key = Transfer[k];
+    double complex forward = 0.0;
+    double complex reverse = 0.0;
+    for (m = 0; m < NTransfer; ++m) {
+      const int *row = Transfer[m];
+      if (row[0] == key[0] && row[1] == key[1] && row[2] == key[2] &&
+          row[3] == key[3]) {
+        forward += ParaTransfer[m];
+      }
+      if (row[0] == key[2] && row[1] == key[3] && row[2] == key[0] &&
+          row[3] == key[1]) {
+        reverse += ParaTransfer[m];
+      }
+    }
+    if (key[0] == key[2] && key[1] == key[3]) {
+      if (cimag(forward) != 0.0) return 0;
+    } else if (forward != conj(reverse)) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
   FILE *fp;
   char defname[D_FileNameMax];
@@ -2772,11 +2843,31 @@ int ReadDefFileIdxPara(char *xNameListFile, MPI_Comm comm) {
     lanczos2Contract.ne = Ne;
     lanczos2Contract.nTransfer = NTransfer;
     lanczos2Contract.nQPFull = NQPFull;
-    lanczos2Status =
-        NLanczosMode > 0 && NLanczosEstimatorMode == 1 && !FlagLsExplicit
-            ? ValidateCorrectedPowerLanczosExecutionContract(
-                  &lanczos2Contract)
-            : ValidateLanczos2Contract(&lanczos2Contract);
+    if (FlagGrandCanonical != 0 && NLanczosMode > 0) {
+      /* GC branch: general pairing is a configuration domain here, so the
+       * canonical contract helper (which rejects it) is not used. */
+      const char *gcLanczosError = NULL;
+      if (reweight != 0) {
+        gcLanczosError = "NGrandCanonical=1 Lanczos requires reweight=0";
+      } else if (nSpinFlipTransfer != 0) {
+        gcLanczosError =
+            "NGrandCanonical=1 Lanczos supports only spin-conserving Trans";
+      } else if (!GCLanczosTransfersHermitian()) {
+        gcLanczosError =
+            "NGrandCanonical=1 Lanczos requires a Hermitian Trans input";
+      }
+      if (gcLanczosError != NULL) {
+        if (rank == 0) fprintf(stderr, "Error: %s.\n", gcLanczosError);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      lanczos2Status = LANCZOS2_CONTRACT_OK;
+    } else {
+      lanczos2Status =
+          NLanczosMode > 0 && NLanczosEstimatorMode == 1 && !FlagLsExplicit
+              ? ValidateCorrectedPowerLanczosExecutionContract(
+                    &lanczos2Contract)
+              : ValidateLanczos2Contract(&lanczos2Contract);
+    }
     if (lanczos2Status != LANCZOS2_CONTRACT_OK) {
       if (rank == 0) {
         fprintf(stderr, "Error: %s.\n",

@@ -616,8 +616,9 @@ Keywords and parameters
    a nonzero ``NMPTrans`` with ``abs(NMPTrans) <= NQPTrans``, and
    ``NQPOptTrans<=1``. General pairing requires ``NSPGaussLeg=1``;
    anti-parallel pairing also accepts the spin projection described below.
-   RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
-   spins, and SR-CG are not supported.
+   RBM, BackFlow, OptTrans, UpdateWeight, local
+   spins, and SR-CG are not supported. Lanczos is supported only as the
+   first-step stabilized estimator (see ``NLanczosEstimatorMode``).
 
    Each quantum-projection component is kept either with its inverse matrix or,
    when its Pfaffian is zero or the factorization is classified singular or
@@ -920,8 +921,9 @@ Keywords and parameters
    explicitly enables the numerically stabilized energy/variance estimator
    in expert mode. It requires ``NVMCCalMode=1``, ``NLanczosMode=1``, and
    ``NLanczosStep=1`` or ``2``. Independent chains determine the coefficients
-   and estimate the final energy. FSZ, BackFlow, RBM, reweighting, and Green's
-   functions are outside this mode. Its only result file is
+   and estimate the final energy. In canonical runs FSZ, BackFlow, RBM,
+   reweighting, and Green's functions are outside this mode; grand-canonical
+   runs are described below. Its only result file is
    ``xxx_pl_out_yyy.dat``. ``NVMCSample`` must be at least 8 and divisible by
    a block count between 4 and 16 with at least two samples per block; a
    multiple of 16 is recommended.
@@ -948,6 +950,84 @@ Keywords and parameters
    reweighting, native model couplings, special updates, and Green's-function
    measurements are rejected. ``NQPFull`` remains a run-time value and is not
    fixed by this feature.
+
+   With ``NGrandCanonical=1`` the estimator is available for the first step
+   only: ``NLanczosMode=1``, ``NLanczosStep=1``, ``NLanczosEstimatorMode=1``,
+   ``NVMCCalMode=1``, ``NExUpdatePath=0``, and ``reweight=0``. Any other
+   Lanczos setting, including the legacy estimator, is rejected when the input
+   is read. The corrected state is
+   :math:`|\Phi\rangle=(c_0+c_1\hat H)|\Psi_{\rm GC}\rangle` with one
+   pair of coefficients for all particle numbers; particle-number sectors are
+   neither projected again nor normalized separately. Both pairing forms of
+   ``NGrandCanonical`` are supported with complex parameters, the correlation
+   factors, and the projections of grand-canonical runs (spin and momentum
+   projection for anti-parallel pairing, momentum projection for general
+   pairing). The Hamiltonian may contain only spin-conserving, Hermitian
+   ``Trans`` rows, ``CoulombIntra``, ``CoulombInter``, and ``Hund``.
+   ``PairHop``, ``Exchange``, ``InterAll``, ``NBodyInterAll``,
+   ``AnomalousTerm``, ``LsTrans``/``LsInterAll``, ``Twist``, and the features
+   excluded for ``NGrandCanonical`` are rejected. The energy is the
+   expectation value of this :math:`H`, including any :math:`-\mu N` written
+   in ``Trans``; no particle-number observable is added and ``zvo_gc.dat`` is
+   not written. Canonical runs accept ``OneBodyG`` and ``TwoBodyG`` entries
+   in this mode without evaluating them, whereas a grand-canonical run
+   rejects ``OneBodyG``, ``TwoBodyG``, ``TwoBodyGEx``, ``NBodyG``, and
+   ``AnomalousG`` files that contain at least one element, so that requested
+   output is never silently missing. Files with zero elements are accepted.
+
+   The sample-count rule above is applied twice: to ``NVMCSample`` of each
+   chain and to the total ``NVMCSample * number_of_chains`` of each stage.
+   For example, ``NVMCSample=9`` is rejected even with two chains; multiples
+   of 16 satisfy both. Configurations are proposed by symmetric moves that
+   change the particle number (local moves with probability 15/16 and a
+   uniform draw over all allowed configurations with probability 1/16), and
+   the transition rule does not depend on whether an amplitude is zero.
+   For the exactly antisymmetric pair function with active :math:`S=0`
+   projection, sectors :math:`N=2\pmod4` are classified as exact zeros after
+   checking component failures. The local mixture is then 8/16 two-pair
+   flips (:math:`N\mathbin{\pm}4`) and 7/16 of the preceding local kernel;
+   the uniform component remains 1/16. Two sites of each spin are chosen
+   uniformly without replacement from all sites; the four occupations are
+   flipped only if they agree, and otherwise the proposal is a self-loop.
+   This keeps forward and reverse proposal probabilities equal. The symmetry
+   proof is frozen with the parameter generation; near-antisymmetric inputs
+   are not rounded to exact zeros. ``NGCInitNelec`` must be a multiple of four
+   for this symmetry (see ``NGrandCanonical``).
+
+   The two-pair moves in GC Lanczos are enabled only for this exact symmetry.
+   Near-antisymmetric pair functions retain the preceding 15/16 local and
+   1/16 uniform mixture to preserve existing random sequences. In such cases,
+   the small weight of intermediate particle-number sectors can suppress local
+   transitions, and the uniform proposals can have low acceptance. Slow
+   particle-number mixing therefore remains possible. Ordinary GC sampling
+   with active spin projection includes two-pair moves even for these inputs,
+   as described under ``NGrandCanonical``. For GC Lanczos, compare independent
+   seeds and different allowed initial particle numbers, and check convergence
+   with longer warm-up and sampling runs before relying on reported errors.
+   Access to all allowed configurations does not guarantee rapid mixing.
+
+   Only the first configuration of the final chain is redrawn, at most 1024
+   times, when :math:`\Phi` is exactly or numerically zero or its local
+   energy cannot be formed; the attempts are reported on standard output as
+   ``GC Lanczos bootstrap: ...``. After that, a proposed configuration whose
+   :math:`\Phi` cannot be distinguished from zero within its floating-point
+   error bound stops the run without a result row and writes
+   ``GC Lanczos failure: stage=... chain=... N=... status=...
+   amplitude_state=...`` to standard error; exactly zero candidates are
+   rejected as usual. An input with nodes, for example a pair table that is
+   nearly singular or singular only up to rounding, can therefore stop even
+   when ordinary grand-canonical sampling of the same input completes. This
+   includes momentum projection with :math:`K\ne0`: the vacuum and fully
+   occupied amplitudes vanish exactly only when the ``TransSym`` weights sum
+   to exactly zero (see ``NGrandCanonical``); otherwise they are numerical
+   zeros and the run stops when such a configuration is proposed, which is
+   likely for small systems.
+   Standard output also prints
+   ``GC Lanczos energy check: E_coeff=... E_final=...``, which compares the
+   energy of the coefficient chain with the final energy.
+   :math:`E_{\rm coeff}` is selected from the same samples as the
+   coefficients and is not a pass/fail criterion. An example is in
+   ``samples/GrandCanonical/FirstLanczos``.
 
 -  ``NLanczosSupportMode``
 

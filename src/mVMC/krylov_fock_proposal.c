@@ -79,12 +79,18 @@ static void invalidate_shell_proposal(
   result->status = status;
 }
 
+/*
+ * Every proposal in this file samples one fixed (Nup, Ndown) sector.  A
+ * grand-canonical domain stores counts 0, so it is rejected explicitly here
+ * instead of being misread as the empty fixed sector.
+ */
 static MVMCKrylovStatus validate_model_only(
     const MVMCKrylovFockModel *model) {
   size_t term_index;
   const size_t word_count =
       model != NULL ? mvmc_krylov_fock_word_count(model->site_count) : 0;
   if (model == NULL || word_count == 0 ||
+      model->domain != MVMC_KRYLOV_DOMAIN_FIXED ||
       model->site_count > SIZE_MAX / 2 ||
       model->up_electron_count > model->site_count ||
       model->down_electron_count > model->site_count ||
