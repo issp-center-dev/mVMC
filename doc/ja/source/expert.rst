@@ -91,11 +91,19 @@
 
     .. math::
 
-       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       V_{ij}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}
 
-    を指定します。また、t-J用の更新経路は ``modpara.def`` の
+    を指定します。
+    :math:`S_i^z S_j^z = \frac{1}{2}(n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})-\frac{1}{4}n_i n_j` なので、
+    ``Hund`` と ``Exchange`` に :math:`V_{ij}=-J_{ij}/4` を合わせたものが
+    :math:`J_{ij}{\boldsymbol S}_i\cdot{\boldsymbol S}_j` を与え、
+    :math:`V_{ij}` の残りの :math:`-J_{ij}/4` が
+    :math:`-\frac{1}{4}J_{ij}n_i n_j` を与えます。
+    :math:`-\frac{1}{4}n_i n_j` の項を含めないt-J模型では
+    :math:`V_{ij}=-J_{ij}/4` を指定します。
+    また、t-J用の更新経路は ``modpara.def`` の
     ``NExUpdatePath`` で指定します。現状のt-J更新経路では
     ``BackFlow`` と ``LocSpin`` は非対応です。また、二重占有を許さないため、
     電子数がサイト数を超える入力は使用できません。 ``NExUpdatePath=4`` では
@@ -553,11 +561,214 @@ ModParaファイル (modpara.def)
    :math:`F_{IJ}=f_{IJ}-f_{JI}` のPfaffianであり、規格化を除いてcanonicalの
    :math:`|\phi_{\rm pair}\rangle` と一致します。粒子数sector間の相対符号は
    この定義に従い、``AnomalousG`` の期待値と ``AnomalousTerm`` のenergy応答の
-   符号を決めます。このmodeでは
-   ``OrbitalGeneral``、複素変分パラメータ、``2Sz=-1``、
-   ``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=1``、
-   ``NQPOptTrans<=1`` が必要です。Phase 1ではRBM、BackFlow、Lanczos、
-   OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。
+   符号を決めます。
+
+   軌道入力によって次の2つのpair形式のどちらかになります。
+
+   * 一般pair：``OrbitalGeneral``、または ``OrbitalAntiParallel`` と
+     ``OrbitalParallel`` の併用。pairの生成・消滅で :math:`S^z` が変わるため
+     ``2Sz=-1`` が必要です。
+   * 反平行pair：``OrbitalAntiParallel`` （またはaliasの ``Orbital``）のみ。
+     波動関数
+
+     .. math::
+
+        |\phi_{\rm GC}\rangle = \exp\Big[\sum_{i,j} F_{ij}\,
+        c_{i\uparrow}^{\dagger} c_{j\downarrow}^{\dagger}\Big]|0\rangle
+
+     は :math:`N_\uparrow=N_\downarrow` の配置にだけ重みを持ち、``2Sz=0`` を
+     明示する必要があります（既定値 ``-1`` やその他の値はエラーです）。
+     このmodeでは ``2Sz`` 行の値はCの ``int`` の範囲内の10進整数1個に限ります。
+     ``0.0`` のような小数表記、非有限値、余剰token、途中で切れた行は、
+     整数への変換前にエラーになります。
+     :math:`F_{ij}` は符号列を含めた反平行入力のパラメータそのものです。
+     同じ状態を ``OrbitalGeneral`` で書くと、:math:`F_{IJ}=f_{IJ}-f_{JI}` が
+     各pairを2回数えるため、上下pairは :math:`F_{ij}/2`、同スピンpairは0に
+     なります。両形式に同じ数値を入れたものは別の状態です。
+     samplerは上下pair 1組の追加・削除と、スピンを変えない電子のhopで
+     :math:`N_\uparrow=N_\downarrow` を保ちます。反平行pairのみであることは
+     スピン（:math:`S=0`）射影を意味しません。``NSPGaussLeg>=2`` と
+     ``NSPStot=0`` でスピン射影を加えられます（後述）。
+     Hamiltonianは各項全体で :math:`S^z` を保存する必要があります。
+     ``Trans`` はスピンを反転できず、``InterAll`` と ``NBodyInterAll`` の項は
+     項全体で :math:`\sum(\sigma_{\rm out}-\sigma_{\rm in})=0` の場合に限り
+     スピン反転因子を含められ、``AnomalousTerm`` のpairは上下である必要が
+     あります。複数行の和で初めて打ち消す項の簡約は行いません。係数0の行は
+     この規則の対象外ですが、indexは検査します。測定入力（``OneBodyG``、
+     ``TwoBodyG``、``NBodyG``、``AnomalousG``）は制限せず、:math:`S^z` を
+     変える演算子の期待値は0になります。:math:`\langle H^2\rangle` は
+     :math:`|E_{\rm loc}|^2` のsample平均です。波動関数が
+     :math:`N_\uparrow=N_\downarrow` sector内に振幅0の配置を持たなければ
+     :math:`\langle\phi|H^2|\phi\rangle/\langle\phi|\phi\rangle` に一致しますが、
+     そのような節を持つ状態では節上の :math:`H|\phi\rangle` の寄与を落とします。
+
+   どちらの形式でも、canonical計算で行うpairパラメータの一様な再スケールは
+   粒子数sector間の重みを変えるため行いません。両形式とも複素変分パラメータ、
+   ``NExUpdatePath=0``、0でなく
+   ``abs(NMPTrans) <= NQPTrans`` を満たす ``NMPTrans``、
+   ``NQPOptTrans<=1`` が必要です。一般pairは ``NSPGaussLeg=1`` が必要で、
+   反平行pairでは後述のスピン射影も使用できます。RBM、BackFlow、
+   OptTrans、UpdateWeight、局在spin、SR-CGは未対応です。Lanczosは
+   1 stepの数値安定化estimatorとしてのみ使用できます（``NLanczosEstimatorMode``
+   を参照）。
+
+   各量子数射影成分は、逆行列を持つ成分か、Pfaffian が 0 または absolute
+   Pfaffian backend の scale-aware な判定で特異・準特異と分類された
+   「Pfaffian のみ」の成分かのどちらかとして保持されます。後者では候補振幅と
+   パラメータ微分を直接（完全な Pfaffian と余因子展開で）評価します。これは
+   エラーではなく、非有限値・引数異常・分解や workspace の失敗・fast-math
+   （例: ``-fno-fast-math`` を伴わない ``-ffast-math`` や ``-Ofast``）を使った
+   build だけが計算を停止します。CMake が C compiler を GNU または Clang と
+   識別する場合、``vmc.out`` target は ``-fno-fast-math`` を追加します。他の
+   toolchain では同等の strict floating-point option が必要です。計算終了時に
+   ``GC component stats: ...`` の1行で各経路の使用回数を出力します。評価できない
+   測定 sample は skip せず全 rank を停止し、射影振幅が 0 になる初期配置は
+   ``NGCInitNelec`` の変更または ``TransSym`` の重みの確認を求める診断で停止します。
+
+   運動量射影は canonical 計算と同様に、``TransSym`` の先頭
+   ``abs(NMPTrans)`` 個のpatternと複素重みを使います。並進 :math:`R` に
+   :math:`e^{-iKR}/N_{\rm T}` を与えると全運動量 :math:`K` を選択し、各成分が
+   並進先siteのpair関数を評価する規約では
+   :math:`\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle` となります。
+   並進不変でないpair関数を
+   使うと射影は非自明になり、並進成分が0になる配置は Pfaffian-only 成分として
+   候補ごとに完全な Pfaffian を評価します。これは正しい処理ですが、逆行列更新より
+   遅くなります。``zvo_out`` の :math:`\langle H^2\rangle` は振幅非零の
+   配置上の :math:`|E_{\rm loc}|^2` のsample平均です。そのためpair生成項と
+   :math:`K\ne0` の真空のような節がある場合、節の寄与だけ
+   :math:`\|H\Psi\|^2/\|\Psi\|^2` より小さくなります。
+
+   読み込んだ ``TransSym`` 重みの和が厳密に0の場合、真空と完全充填配置の
+   射影振幅は厳密に0になります。これは運動量射影のみ（``NSPGaussLeg=1``）でも、
+   スピン射影と併用する場合でも適用されます。この場合は
+   ``0 < NGCInitNelec < 2*Nsite`` を満たす偶数を指定してください。
+   禁止された境界配置から始めると1回で明示errorになります。
+   小さい非零の重み和を0とみなすことはありません。この厳密零の保証は、
+   中間粒子数で打ち消しにより生じる節には拡張されません。有限点数の射影重みと
+   粒子数sectorの規格化は変更しません。
+
+   反平行pairでは ``NSPGaussLeg=G>=2`` と ``NSPStot=0`` を指定すると、
+   canonical計算と同じ :math:`\beta\in[0,\pi]` のGauss-Legendre求積で
+   試行状態を全スピン :math:`S=0` へ射影します。
+
+   .. math::
+
+      \Psi(x)=P_{\rm ch}(x)\sum_{g=1}^{G}a_g\,
+      {\rm Pf}\big[A(\beta_g)\big|_x\big],\qquad
+      a_g=\tfrac12\sin\beta_g\,w_g
+
+   ここで :math:`A(\beta)` は :math:`e^{-i\beta S^y}` で回転したpair行列、
+   :math:`x` は全偶数粒子数の :math:`N_\uparrow=N_\downarrow` 配置、
+   :math:`P_{\rm ch}` はGutzwiller、Jastrow等のスピンscalarな相関因子です。
+   ``NSPGaussLeg=1`` はスピン射影しない状態（:math:`\beta=0`、重み1）です。
+   全粒子数sectorで同じ重みを使います。真空の振幅は :math:`\sum_g a_g` で、
+   :math:`G` が大きい極限でのみ1に近づき、sectorごとの再規格化は行いません。
+   有限の :math:`G` は厳密な射影の近似で、最小点数は課していないため、
+   ``NSPGaussLeg`` を増やして収束を確認してください。GC modeでは
+   ``NSPGaussLeg`` と ``NSPStot`` も ``2Sz`` と同様にCの ``int`` 範囲の
+   10進整数1個に限ります。スピン射影と運動量射影は併用できます。
+   :math:`R=|\mathrm{NMPTrans}|` 個の並進と入力重み :math:`w_r` に対して、
+   和は :math:`\sum_{r,g}w_r a_g\,{\rm Pf}[A_r(\beta_g)|_x]` になります。
+   対応する符号付き ``TransSym`` を使い、周期・反周期境界条件の両方に対応します。
+   workspaceの :math:`2GR+5G` はCの ``int`` 範囲に収まる必要があり、
+   過大な入力はメモリ確保前にエラーにします。
+   :math:`\exp(\sum_{ij}v_{ij}m_im_j)` はスピンscalarでなく :math:`S=0` を
+   壊すため、``NSPGaussLeg>=2`` では ``SpinJastrow`` をエラーにします。
+   一般pairと0でない ``NSPStot`` はスピン射影と併用できず、GC modeでの
+   ``OptTrans`` の禁止も引き続き適用されます。
+
+   実際の未回転対関数が厳密に反対称（:math:`F^T=-F`、純triplet pair）の場合、
+   :math:`S=0` 射影は :math:`N=2\pmod 4` の全sectorを消します。
+   orbitalの符号を含めたparameter値を更新ごとに検査し、QP和が非有限値でないことを
+   確認した後、該当sectorを厳密零として扱います。有限 :math:`G` で対になる求積点の
+   打ち消しに残る丸め誤差も除去します。運動量射影との併用にも適用しますが、
+   ``NSPGaussLeg=1`` には適用しません。この場合の ``NGCInitNelec`` は4の倍数で、
+   射影振幅が非零である必要があります。最適化更新で保存済みの粒子数が禁止された場合は、
+   許されるsectorから初期化してwarm-upをやり直します。反対称に近いだけの対関数を
+   この対称性へ丸めることはしません。
+
+   スピン射影が有効な通常GCの提案には、反平行pairを2対同時に追加・削除するmove
+   （各1/8）と全balanced配置からの一様提案（1/64）を含めます。残り47/64では従来の
+   局所moveを使い、各提案固有のMetropolis比で判定します。不可能なmoveはその場に
+   とどまります。これにより、禁止された中間粒子数を飛び越えてsector間を移動できます。
+   :math:`N\mathbin{\pm}2` のみを使っていた旧版では、初期粒子数に留まったまま
+   エラー無しで終了することがありました。このsampling modeの乱数列は変更されています。
+   粒子数histogram、自己相関、初期配置依存を確認してください。全配置への提案は
+   支持集合への到達可能性を保証しますが、速い混合を保証するものではありません。
+
+   この混合は、:math:`S=0` 射影が有効（``NSPGaussLeg>=2``）な対応範囲内の
+   すべての反平行対関数に適用し、厳密に反対称でない場合も含みます。
+   ``OrbitalGeneral`` とスピン射影の併用を許可するものではありません。
+   2対の追加・削除と一様提案を選ぶ確率は合計17/64です。候補を作れる場合は、
+   すべての求積点・並進点で候補のPfaffianを直接評価し、受理時には行列も再構築します。
+   候補の電子数を :math:`N` とすると、直接評価は低rank更新ではなく
+   1点あたり :math:`O(N^3)` の計算となるため、厳密なtriplet対称性を持たない
+   対関数でもsampling stepあたりの費用が増え得ます。大系での性能は未測定なので、
+   対象の系で実行時間と粒子数の混合をともに確認してください。
+   ``NSPGaussLeg=1`` とcanonical samplingの提案混合・乱数列は変わりません。
+
+   Hamiltonianは :math:`S^z` を保存すればよく、:math:`SU(2)` 対称である
+   必要はありません。測定演算子は演算子全体の :math:`S^z` 変化が0でなければ
+   期待値0になり、:math:`S^+_iS^-_j` のように因子はスピンを反転しても全体で
+   :math:`S^z` を保存する積は評価します。
+   :math:`\langle\mathbf S^2\rangle` は出力から
+   :math:`\langle S_z^2\rangle+\tfrac12\sum_{ij}\langle
+   S^+_iS^-_j+S^-_iS^+_j\rangle` として求められます（``TwoBodyG`` の行
+   ``i 0 i 1 j 1 j 0`` と ``i 1 i 0 j 0 j 1``、および ``zvo_out`` の
+   :math:`\langle S_z^2\rangle` 列）。:math:`SU(2)` 対称性がない場合は
+   :math:`H\Psi` が :math:`\Psi` の支持の外に出ることがあり、
+   :math:`\langle H^2\rangle` は前述の支持内平均です。有限 :math:`G` の
+   波動関数は独立なFock空間oracleで、厳密な :math:`S=0` 射影への収束は
+   4サイト環で検証しています。generator script付きの例は
+   ``samples/GrandCanonical/SpinProjection`` にあります。
+
+   負の ``NMPTrans`` は軌道入力の境界符号列を選び、その絶対値が使用する
+   ``TransSym`` pattern数です。``NMPTrans`` 自体は Hamiltonian を変更しない
+   ため、反周期境界条件（APBC）では次の入力を整合させてください。
+
+   * ``Trans`` 等の Hamiltonian：反周期方向の境界をまたぐ係数に
+     境界位相 :math:`-1` を含める（例: 1次元鎖では
+     :math:`c_{L}=-c_{0}` に対応して境界bondの係数の符号を反転）。
+   * ``OrbitalGeneral``：6列目の符号で :math:`F_{IJ}` に掛かる符号を
+     指定する（:math:`F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}`、
+     :math:`s_{JI}=-s_{IJ}`）。
+   * ``OrbitalAntiParallel`` / ``Orbital`` （反平行pair）：全pair行の4列目に
+     :math:`F_{ij}` に掛かる符号 :math:`\pm1` を指定する。
+   * ``TransSym``：site写像に境界符号を含める。恒等patternは全siteの符号+1で、
+     APBCのために恒等写像へ負符号を付ける必要はありません。
+
+   StdFaceで ``2Sz=-1`` と ``phase0=180`` 等を指定すると、境界位相を含む
+   ``Trans`` と、pairごとに独立な変分パラメータと境界の符号を持つ
+   ``orbitalidxgen.def`` が生成されます。これを使う場合は ``namelist.def``
+   の軌道指定を ``OrbitalGeneral`` だけにし（``Orbital`` /
+   ``OrbitalParallel`` の行を除き、コメントアウトされた ``OrbitalGeneral``
+   の行を有効にする）、``modpara.def`` を ``NGrandCanonical=1``、
+   ``2Sz=-1``、``NExUpdatePath=0``、``NSPGaussLeg=1``、``NMPTrans=-1`` に
+   置き換え、``OptTrans`` は使いません（``2Sz`` を省略して生成した場合に
+   出力される ``NSPGaussLeg=8`` は残さない）。
+   ``Ncond`` はGCでは粒子数を拘束しないため、``NGCInitNelec`` と複素の
+   初期パラメータを明示してください。StdFaceの既定値 ``NMPTrans=-1`` は
+   周期境界の入力にも使われるため、それだけでは物理的なAPBCを意味しません。
+   一般のtwist角とBackFlowとの併用には対応していません。恒等写像だけを使う
+   4サイト鎖の入力例と変換スクリプトは
+   ``samples/GrandCanonical/APBC_chain``、複数並進の例は
+   ``samples/GrandCanonical/MomentumProjection`` にあります。
+
+   反平行pairでは、StdFaceを ``2Sz=0``、``phase0=180`` 等、
+   ``ComplexType=1`` で実行します。境界位相を含む ``Trans`` と、``Orbital``
+   から参照される4列の ``orbitalidx.def`` （行ごとに符号を持つpair表）が
+   生成されます。``namelist.def`` の軌道指定は ``Orbital`` （または
+   ``OrbitalAntiParallel`` へ改名したもの）だけにして ``OrbitalGeneral`` /
+   ``OrbitalParallel`` の行を置かず、``modpara.def`` を ``NGrandCanonical=1``、
+   ``2Sz=0``、``NExUpdatePath=0``、``NMPTrans=-1`` とし、``OptTrans`` は
+   使いません。StdFaceが ``2Sz=0`` で出力する ``NSPGaussLeg=8`` と
+   ``NSPStot=0`` を残すと :math:`S=0` 射影になり、``NSPGaussLeg=1`` では
+   射影しない状態になります。``Trans`` の
+   境界位相と恒等写像の先頭 ``TransSym`` patternはそのまま使い、軌道header
+   が ``ComplexType 1`` であることを確認し、``NGCInitNelec`` と複素の初期
+   パラメータを明示してください。一般pair用の :math:`F/2` 変換を反平行の表へ
+   適用しないでください。4サイトの反平行入力例は
+   ``samples/GrandCanonical/AntiParallel`` にあります。
 
 -  ``NGCInitNelec``
 
@@ -617,8 +828,8 @@ ModParaファイル (modpara.def)
    非自明な :math:`k=\pi` 運動量射影は、real/complexの独立projected ED
    value oracleで検証しています。real oracleはserial、MPI、OpenMP経路を
    対象とし、complex oracleは現時点でserial経路を対象とします。
-   非自明なスピン射影はruntimeおよび構造のsmoke testまでで、
-   projected EDによる独立な値oracleは現時点ではありません。
+   2nd step Lanczos経路の非自明なスピン射影はruntimeおよび構造のsmoke test
+   までで、projected EDによる独立な値oracleは現時点ではありません。
 
    electronic classで ``NQPFull=1`` の場合、:math:`H^3` のlocal powerは
    ``Transfer`` 項に対する
@@ -662,7 +873,8 @@ ModParaファイル (modpara.def)
    energy/variance estimatorを使用します。[1] はexpert modeで明示的に指定し、
    ``NVMCCalMode=1``、``NLanczosMode=1``、``NLanczosStep=1`` または ``2``
    を必要とします。係数決定用chainと最終energy用chainは独立です。
-   FSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
+   canonical計算ではFSZ、BackFlow、RBM、reweight、およびGreen関数は対象外です。
+   grand-canonical計算については後述します。
    出力は ``xxx_pl_out_yyy.dat`` のみです。``NVMCSample`` は8以上かつ、
    各blockに2 sample以上が入る4から16までのblock数で割り切れる値とし、
    16の倍数を推奨します。
@@ -686,6 +898,67 @@ ModParaファイル (modpara.def)
    native model coupling、special update、Green関数測定は対象外です。
    ``NQPFull`` はruntime入力値であり、本機能では固定しません。
 
+   ``NGrandCanonical=1`` では、このestimatorは1 stepに限り使用できます。
+   ``NLanczosMode=1``、``NLanczosStep=1``、``NLanczosEstimatorMode=1``、
+   ``NVMCCalMode=1``、``NExUpdatePath=0``、``reweight=0`` が必要で、従来の
+   estimatorを含むそれ以外のLanczos設定は入力読込み時に拒否します。補正状態は
+   :math:`|\Phi\rangle=(c_0+c_1\hat H)|\Psi_{\rm GC}\rangle` で、全粒子数に
+   共通の1組の係数を使います。粒子数sectorごとの再射影や規格化はしません。
+   ``NGrandCanonical`` の両pair形式を、複素パラメータ、grand-canonical計算の
+   相関因子と射影（反平行pairではスピン射影と運動量射影、一般pairでは運動量射影）
+   とともに使用できます。Hamiltonianはspinを保存するHermiteな ``Trans`` 行、
+   ``CoulombIntra``、``CoulombInter``、``Hund`` のみです。``PairHop``、
+   ``Exchange``、``InterAll``、``NBodyInterAll``、``AnomalousTerm``、
+   ``LsTrans``/``LsInterAll``、``Twist`` と、``NGrandCanonical`` で対象外の機能は
+   拒否します。energyはこの :math:`H` の期待値で、``Trans`` に書いた
+   :math:`-\mu N` を含みます。粒子数observableは追加せず、``zvo_gc.dat`` も
+   出力しません。canonical計算ではこのmodeで ``OneBodyG`` と ``TwoBodyG`` の
+   指定を受理したうえで評価しませんが、grand-canonical計算では指定した出力が
+   黙って欠けることを防ぐため、要素を1件以上含む ``OneBodyG``、``TwoBodyG``、
+   ``TwoBodyGEx``、``NBodyG``、``AnomalousG`` を拒否します。要素0件のfileは
+   受理します。
+
+   上記のsample数の条件は、各chainの ``NVMCSample`` と各stageの総sample数
+   ``NVMCSample * chain数`` の両方に適用します。例えば ``NVMCSample=9`` は
+   chainが2本でも拒否し、16の倍数は両方を満たします。配置は粒子数を変える
+   対称な提案（確率15/16の局所移動と、確率1/16の全許可配置からの一様な選択）で
+   作ります。実際の対関数が厳密に反対称で :math:`S=0` 射影が有効な場合は、
+   成分計算の異常を検査した後で :math:`N=2\pmod4` を厳密な零に分類します。
+   この場合の提案確率は2対の同時追加・削除が8/16、従来の局所移動が7/16、
+   全配置からの一様提案が1/16です。各スピンについて全サイトから異なる2サイトを
+   一様に選び、4軌道がすべて空またはすべて占有の場合だけ反転します。それ以外は
+   自己遷移とするため、順方向と逆方向の提案確率は等しくなります。
+   対称性の証明はパラメータ世代とともに固定し、反対称に近いだけの入力を零へ
+   丸めません。この対称性では ``NGCInitNelec`` は4の倍数を指定します
+   （``NGrandCanonical`` を参照）。提案規則は振幅が零かどうかに依存しません。
+
+   GC Lanczosで2対の同時追加・削除を有効にするのは、この厳密な対称性がある場合
+   だけです。反対称に近い対関数では既存の乱数列を維持するため、局所移動15/16と
+   一様提案1/16の混合を保ちます。この場合、中間の粒子数sectorの重みが小さいために
+   局所移動が通りにくく、一様提案の受理率も低くなり得るので、粒子数の混合が遅い
+   問題は残ります。スピン射影が有効な通常GCは、このような入力にも2対の同時移動を
+   含めます（``NGrandCanonical`` を参照）。GC Lanczosでは独立なseedと異なる
+   許可初期粒子数で結果を比較し、warm-upと採取期間を延ばしたときの収束を確認してから
+   報告誤差を判断してください。全許可配置への到達可能性は、速い混合を保証しません。
+
+   最終chainの最初の配置だけは、
+   :math:`\Phi` がexactまたは数値的に零、あるいは局所energyを作れない場合に
+   最大1024回まで引き直し、その試行を標準出力の ``GC Lanczos bootstrap: ...``
+   に表示します。それ以降に提案された配置の :math:`\Phi` が浮動小数点誤差の
+   範囲で零と区別できない場合は、結果行を出力せずにrunを終了し、標準エラーへ
+   ``GC Lanczos failure: stage=... chain=... N=... status=...
+   amplitude_state=...`` を出力します。exactに零の候補は従来どおり棄却します。
+   このため、特異に近いpair表や丸め誤差の範囲でだけ特異なpair表のように節を持つ入力では、同じ入力の
+   通常のgrand-canonical samplingが完走する場合でも終了することがあります。
+   :math:`K\ne0` の運動量射影もこれに当たります。真空と完全充填の振幅がexactに
+   零になるのは ``TransSym`` の重みの和がexactに零の場合だけで（``NGrandCanonical``
+   を参照）、それ以外は数値的な零になり、その配置が提案された時点でrunが終了します。
+   小さい系ではその可能性が高くなります。
+   標準出力には係数chainのenergyと最終energyを比べる
+   ``GC Lanczos energy check: E_coeff=... E_final=...`` も出力します。
+   :math:`E_{\rm coeff}` は係数と同じsampleから選んだ値であり、合否の基準には
+   しません。入力例は ``samples/GrandCanonical/FirstLanczos`` にあります。
+
 -  ``NLanczosSupportMode``
 
    **形式 :** int型 (デフォルト値 = 0)
@@ -700,6 +973,26 @@ ModParaファイル (modpara.def)
    ``xxx_ls_support_yyy.dat`` に ``biased-diagnostic-only`` と記録します。
    監査の通過は必要条件ですが、全ての高次Krylov supportが完全であることの
    十分条件ではありません。
+
+-  ``DLanczosGuideEps``
+
+   **形式 :** double型 (デフォルト値 = 0.0)
+
+   **説明 :** 従来のPower-Lanczos計算（``NVMCCalMode=1``、
+   ``NLanczosMode=1``、``NLanczosStep=1``、``NLanczosEstimatorMode=0``）で、
+   sampling重みを
+   :math:`q_\varepsilon(x)=|J(x)|^2\max(P(x)^2,\varepsilon A(x)^2)`
+   に置き換える実験的機能です。:math:`P=\sum_q a_q` は量子数射影の成分和、
+   :math:`A=\sum_q |a_q|` です。0では従来どおり
+   :math:`|\psi|^2`でsamplingします。正の値では採否比を
+   :math:`q_\varepsilon`で評価し、測定時に各sampleへ
+   :math:`|\psi|^2/q_\varepsilon=P^2/\max(P^2,\varepsilon A^2)`を掛けます。
+   実変分パラメータで、BackFlow、RBM、reweight、グランドカノニカルを
+   使わない場合だけ指定できます。:math:`P=0`のsampleはguide分布の訪問数に
+   含め、重み0として局所量の評価から除外し、件数を
+   ``xxx_nzguide_yyy.dat`` に記録します。この件数または数値guardによる
+   中止件数が非零のbinはLanczos momentの解析に使用できません。
+   :math:`\varepsilon`の推奨値は定めていません。
 
 -  ``NDataIdxStart``
 
@@ -732,7 +1025,9 @@ ModParaファイル (modpara.def)
 
    **形式 :** int型 (0以上)
 
-   **説明 :** 伝導電子の数。
+   **説明 :** 伝導電子の数。局在スピンの電子は数えないため、
+   純粋なスピン系では0を指定します。2 (``Nsite`` - ``NlocalSpin``)
+   を超える値は指定できません。
 
 -  ``2Sz``
 
@@ -1330,6 +1625,10 @@ InterAll指定ファイル
 
 -  [ int02 ]-[ int09 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
 
+-  反平行grand-canonical modeでは、:math:`\sigma_1-\sigma_2+\sigma_3-\sigma_4=0`
+   の場合に限り項がスピン反転因子を含められます。係数が0でない項で
+   :math:`S^z` を変えるものはエラー終了します。
+
 独立Lanczos演算子指定ファイル(lstrans.def, lsinterall.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1435,7 +1734,9 @@ NBodyInterAll指定ファイル(nbodyinterall.def)
 
 -  サイト番号またはスピン番号に範囲外の整数を指定した場合、または係数が非有限値の場合はエラー終了します。
 
--  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードでのみ指定できます。
+-  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モード、
+   または項全体で :math:`S^z` を保存する（:math:`\sum_a(\sigma_a-\tau_a)=0`）
+   反平行grand-canonical mode（``NGrandCanonical`` を参照）でのみ指定できます。
    それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
 
 -  ``NBodyInterAll`` は通常のエネルギー出力へ寄与し、相互作用専用の出力ファイルは生成しません。
@@ -2282,6 +2583,7 @@ Tocchio ら [Tocchio2008_], [Tocchio2011_] も参照してください。
      \eta^{\mu\nu}_{\tau\tau'}
      \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
      \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     \phi(i_n,i_n+\tau)\phi(i_m,i_m+\tau')
      f_{i_n+\tau,i_m+\tau'} .
 
 :math:`\tau,\tau'` は ``BFRange`` で列挙した近傍サイトを表し、
@@ -2319,6 +2621,25 @@ mVMC の ``ProjBF`` はこの :math:`\eta` を平坦化して格納したもの�
 BackFlow 無しの極限は
 :math:`\eta^{00}_{0,0}=1` かつその他の :math:`\eta=0` です。
 mVMC の入力ではこれが ``ProjBF[0]=1``、``ProjBF[k>0]=0`` に対応します。
+
+結合の位相 :math:`\phi(i,k)=\pm1` は hopping と同じゲージで
+``BFRange`` に指定します。有向の中心→近傍チャネルのそれぞれに掛け、
+ペアの正逆両方向に適用します。base 項は :math:`\phi(i,i)=1` で、
+占有数の count と base 項の活性化条件には位相を混ぜません。
+
+符号付き変換 :math:`U` の評価では、変換後の結合
+:math:`\phi(Ui,Uk)\phi(Uj,Ul)` と、従来の **中心サイト** の符号
+:math:`s_U(i)s_U(j)` を使用します。reader は使用する各変換に対して
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` を検査します。
+この関係に含まれる近傍サイトの符号を軌道符号としてもう一度掛けてはいけません。
+FSZ では ``TransSym`` と ``OptTrans`` の合成写像・合成符号を用います。
+
+物理的な契約は三つに分かれます。局所 Z2 ゲージ変換
+:math:`f_{ij}\mapsto g_i g_j f_{ij}`、
+:math:`\phi(i,k)\mapsto g_i g_k\phi(i,k)` に対して BackFlow 軌道も共変です。
+射影前の ansatz の並進共変性には、元軌道が指定した並進部分群に対して共変である
+という追加の前提が必要です。射影演算では、一般の元軌道に対しても変換後の配置と
+結合を評価し、そのような元軌道の対称性は仮定しません。
 
 パラメータ数
 ^^^^^^^^^^^^
@@ -2388,7 +2709,7 @@ BackFlow 用の追加ヘッダです。7 行目の ``Nrange`` 行は読み飛ば
    7 行目にも ``Nrange`` [int01] [int02] を書くことを推奨します。
 
 -  11 - (10 + :math:`N_s \times` [int01]) 行:
-   [int03] [int04] [int05]
+   [int03] [int04] [int05] [int06]
 
 パラメータ
 ^^^^^^^^^^
@@ -2444,6 +2765,28 @@ BackFlow 用の追加ヘッダです。7 行目の ``Nrange`` 行は読み飛ば
    BackFlow の増分更新は、Theta の個数が変化し得る anchor サイトを集めるときに
    この相互性を仮定しているため、非対称な ``BFRange`` は入力時に
    ``BFRange must be mutual`` というエラーで拒否されます。
+
+第 4 列 [int06] は結合の境界位相 :math:`\phi(i,j)`（整数 +1 または -1）です。
+AP 入力（``NMPTrans`` が負）では全行に必須です。PBC は全行 3 列（位相を +1 と解釈）、
+または全行 4 列・位相全 +1 を受理します。上の例は互換 PBC 形式です。
+4 サイト AP 鎖では ``0 3 1`` と ``3 0 1`` の行に -1、その他の行に +1 を追加します。
+
+本文は 1 物理行に空白区切りの整数を 3 個または 4 個記載し、全行の列数を統一します。
+空行・コメント・余分な列や行・数値への接尾辞・整数 overflow は拒否します。
+最終行の改行は省略可能です。自サイトの位相は +1、逆向き結合の位相は同じ値とします。
+
+位相は pair 軌道と同じゲージの境界接続を表し、hopping 振幅の符号ではありません。
+境目の横断が一意に定まる結合を使います。AP 方向の変位が L/2 の antipodal 結合は
+対象外です。``abs(NMPTrans)`` で実際に使用する全並進は range・shell と
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` を保存する必要があります。
+orbital-general では使用する OptTrans との合成および両者の符号を含めて検査します。
+未使用の並進行は BackFlow に追加の対称性を課しません。恒等変換のみでは非自明な
+境界の周回位相を検査できないため、物理的に正しい境目は入力生成側で保証してください。
+使用変換と不整合な入力は sampling 前に拒否します。
+
+旧来の位相なし AP 入力とその最適化 parameter は別の波動関数を表します。
+互換スイッチはありません。旧結果の再現には旧 binary、source/submodule revision、
+入力・parameter の hash を保持し、新定義では再最適化してください。
 
 BF ファイル (bf.def)
 ^^^^^^^^^^^^^^^^^^^^
@@ -2628,9 +2971,26 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
    rejectし、FSZでは ``NQPOptTrans==1`` の範囲で従来の ``OptTrans`` supportを
    維持します。non-FSZ の ``abs(NMPTrans)>1`` では sampling、Green関数、
    Hamiltonian、1st Lanczos、N体評価を correctness-first の完全
-   Slater/Pfaffian再構築で処理します。反周期入力、および先頭変換が非恒等な
-   単一pattern入力も同じ再構築を使用し、周期・恒等・単一patternの場合だけ
-   従来の増分経路を維持します。再構築経路は従来経路より高コストになる場合があります。
+   Slater/Pfaffian再構築で処理します。単一patternでも変換が非恒等、または
+   変換符号に負値がある場合は同じ再構築を使用します。恒等変換・符号全 +1 の
+   単一patternでは、周期・反周期の両方で Slater の行更新を使用します。
+   non-FSZ の行更新経路の Pfaffian 評価と、両経路の accept 時の Pfaffian・逆行列
+   評価には、以下の block 分解を使います。占有行列 :math:`A` の同スピン block が
+   厳密に 0 であることを検査し、
+   反対スピンの :math:`N_e\times N_e` block :math:`F` から
+   :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)` として評価します。
+   accept 時の逆行列は同じ :math:`F` の LU 分解から再構築して、増分式の桁落ちを
+   避けます。全面再構築経路の proposal・Green 関数の評価、および両経路の sampler
+   回復評価には、従来の :math:`2N_e\times 2N_e` Pfaffian の直接分解を使います。
+   legacy counter は Slater 行更新の
+   実行回数であり、Pfaffian/逆行列の増分計算や速度向上を保証するものではありません。
+   手動退避用の ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` は Slater 全再構築を
+   選択します。この変数は 0/1 のみを受理し、MPI rank 0 で解析して配布します。
+   起動時に経路と理由を表示します。数値失敗時は同じ候補・同じ乱数で検査付きの
+   再評価を行い、回復不能なら計算全体を停止します。数値失敗を通常の Metropolis
+   reject として処理しません。この回復処理は sampler の proposal / commit に
+   限定されます。Hamiltonian と Green 関数の評価中に数値失敗した場合は、sampler
+   状態を変更せず、その場で計算全体を停止します。
 
 -  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
    ``Trans``、number-operator 型の相互作用（``CoulombIntra``,
@@ -3455,6 +3815,25 @@ Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)
 
 -  [ int02 ]-[ int08 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
 
+-  canonical計算の読込みではOptFlag行のindex列を読みますが、flagは行順に
+   代入します。OptFlag行はindex順（``0``, ``1``, ...）に記載してください。
+
+-  反平行のgrand-canonical mode（``NGrandCanonical=1`` で本ファイルだけを
+   軌道入力とする場合）では厳格に読み込み、各行は検査を終えてから格納します。
+
+   * 2行目はパラメータ数が正、3行目の ``ComplexType`` は0か1で、
+     :math:`(2N_s)^2` がsigned intに収まる必要があります。
+   * pair blockはちょうど :math:`N_s^2` 行で、全 :math:`(i,j)` が1回ずつ現れ、
+     パラメータindexが範囲内である必要があります。``NMPTrans>0`` では3列か
+     4列の整数で4列目は無視し、``NMPTrans<0`` では4列が必須で4列目は
+     :math:`\pm1` です。整数でない値、int範囲外の値、余剰列はどちらでも
+     エラーです。
+   * OptFlag blockはちょうど [ int01 ] 行の ``index flag`` で、全indexが1回ずつ
+     現れ、flagは0か1です。このmodeでは行の順序は任意で、これは
+     grand-canonical用readerの拡張です。index順の記載を推奨します。
+   * その後に置けるのは空行だけです。block内の空行、コメント、余剰行は
+     エラーです。
+
 OrbitalParallel指定ファイル
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3678,6 +4057,7 @@ OrbitalGeneral指定ファイル
 
    **説明 :**
    反周期境界条件モードがON( ``ModPara`` ファイルで ``NMPTrans`` が負の場合に有効)の場合、変分パラメータ :math:`f_{ij}` の番号の他に符号を反転するか否かを直接指定する。 [ int08 ] = :math:`\pm1` により符号を指定する。反周期境界条件モードがOFFの場合は省略可能。
+   反周期境界条件モードがONの場合は全行で必須です。
 
 -  [ int09 ]
 
@@ -3703,6 +4083,19 @@ OrbitalGeneral指定ファイル
 -  [ int01 ] と定義されている変分パラメータの種類の総数が異なる場合はエラー終了します。
 
 -  [ int02 ]-[ int10 ] を指定する際、範囲外の整数を指定した場合はエラー終了します。
+
+-  反周期境界条件モード（``NMPTrans`` が負）では、各pair行を読む時点で
+   次を検査し、満たさない場合はエラー終了します（``NGrandCanonical`` の
+   値やBackFlowの有無によらず共通）。各行がちょうど6個の整数であること
+   （欠落・余剰列や小数・整数範囲外の値は不可）、サイト番号が0以上
+   ``Nsite`` 未満、スピンが0または1、変分パラメータ番号が0以上[int01]未満、
+   符号[int08]が :math:`\pm1`、:math:`i+\sigma_1 N_s < j+\sigma_2 N_s`
+   であること、および各pairがちょうど1回ずつ現れること（重複・欠落行や
+   空行は不可）。続く最適化指定の行も、各行がちょうど2個の整数
+   [int09] [int10] であり、[int09]が0以上[int01]未満で各値がちょうど1回
+   現れ（順序は任意）、[int10]が0または1であることを検査し、その後には
+   空行以外を置けません。周期境界条件モードの読み込み（5列または6列）は
+   変わりません。
 
 TransSym指定ファイル(qptransidx.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -4174,7 +4567,9 @@ NBodyG指定ファイル(nbodyg.def)
 
 -  サイト番号またはスピン番号に範囲外の整数を指定した場合はエラー終了します。
 
--  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードでのみ指定できます。
+-  スピンを変える因子 :math:`\sigma_a \neq \tau_a` は orbital-general モードと
+   反平行grand-canonical modeで指定できます。後者では :math:`S^z` を変える項も
+   受け付け、その期待値は0になります。
    それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
 
 -  本出力はBackFlowの有無によらず物理量計算で使用できます。BackFlow
@@ -4263,8 +4658,12 @@ Hermiticityとmode制約
    ``NVMCCalMode=1`` 専用で、mode 0でkeywordを指定すると入力errorになります。
 
 -  grand-canonical samplingは偶数粒子数sectorを対象とし、``NGrandCanonical`` の
-   制約を継承します。``OrbitalGeneral`` と複素変分パラメータが必要で、real-only GC、
-   RBM、BackFlow、Lanczos経路は引き続き非対応です。
+   制約を継承します。複素変分パラメータが必要で、real-only GC、RBM、BackFlow、
+   Lanczos経路は引き続き非対応です。一般pair（``OrbitalGeneral``）では任意の
+   spinの組合せを指定できます。反平行pair（``OrbitalAntiParallel`` / ``Orbital``
+   のみ、``2Sz=0``）では、係数が0でない ``AnomalousTerm`` のpairは上下spinの
+   演算子の組である必要があります。``AnomalousG`` の行は任意のspinを指定でき、
+   同スピンの行の期待値は0になります。
 
 
 Twist指定ファイル(twist.def)

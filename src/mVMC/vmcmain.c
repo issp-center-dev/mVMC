@@ -31,6 +31,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "physcal_lanczos2.h"
 #include "power_lanczos_stabilized.h"
 #include "power_lanczos_independent.h"
+#include "near_zero_guide.h"
 
 // #define _DEBUG
 // #define _DEBUG_DUMP_SROPTO_STORE
@@ -42,6 +43,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 void outputData();
 void printUsageError();
 void printOption();
+void printVersionRank0();
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1);
 
 static void DumpGCSROpt(const int step, const int rank) {
@@ -70,7 +72,114 @@ static void DumpGCSROpt(const int step, const int rank) {
   }
   fclose(fp);
 }
+
+/* Optional read-back of the sign-bearing GC inputs.  Only world rank 0 writes,
+ * after ReadDefFileIdxPara() has validated and broadcast the tables. */
+static void DumpGCInputAudit(void) {
+  const char *path;
+  FILE *fp;
+  int worldRank = 0;
+  int negativeOrbitalInputSignCount = 0;
+  int negativeQPTransSignCount = 0;
+  int writeFailed;
+  int i, j, mpidx;
+  if (FlagGrandCanonical == 0) return;
+  MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  if (worldRank != 0) return;
+  path = getenv("MVMC_GC_INPUT_AUDIT");
+  if (path == NULL || *path == '\0') return;
+  fp = fopen(path, "w");
+  if (fp == NULL) {
+    fprintf(stderr, "Error: failed to open MVMC_GC_INPUT_AUDIT '%s'.\n", path);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    /* Anti-parallel tables are Nsite x Nsite (up site i, down site j). */
+    for (i = 0; i < Nsite; i++) {
+      for (j = 0; j < Nsite; j++) {
+        if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+      }
+    }
+  } else {
+    for (i = 0; i < Nsite2; i++) {
+      for (j = i + 1; j < Nsite2; j++) {
+        if (OrbitalSgn[i][j] < 0) negativeOrbitalInputSignCount++;
+      }
+    }
+  }
+  for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
+    for (i = 0; i < Nsite; i++) {
+      if (QPTransSgn[mpidx][i] < 0) negativeQPTransSignCount++;
+    }
+  }
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    fprintf(fp, "orbital_mode antiparallel\n");
+  }
+  fprintf(fp, "ap_flag %d\n", APFlag);
+  fprintf(fp, "nsite %d\n", Nsite);
+  fprintf(fp, "nmptrans %d\n", NMPTrans);
+  fprintf(fp, "nslater %d\n", NSlater);
+  fprintf(fp, "negative_orbital_input_sign_count %d\n",
+          negativeOrbitalInputSignCount);
+  fprintf(fp, "negative_qptrans_sign_count %d\n", negativeQPTransSignCount);
+  if (GCAntiEnabled(FlagGrandCanonical, iFlgOrbitalGeneral)) {
+    /* Spin-orbital numbering: up site i is i, down site j is j+Nsite. */
+    for (i = 0; i < Nsite; i++) {
+      for (j = 0; j < Nsite; j++) {
+        fprintf(fp, "ORBITAL %d %d %d %d\n", i, j + Nsite, OrbitalIdx[i][j],
+                OrbitalSgn[i][j]);
+      }
+    }
+  } else {
+    for (i = 0; i < Nsite2; i++) {
+      for (j = i + 1; j < Nsite2; j++) {
+        fprintf(fp, "ORBITAL %d %d %d %d\n", i, j, OrbitalIdx[i][j],
+                OrbitalSgn[i][j]);
+      }
+    }
+  }
+  for (mpidx = 0; mpidx < NMPTrans; mpidx++) {
+    fprintf(fp, "TRANSWEIGHT %d %.17e %.17e\n", mpidx,
+            creal(ParaQPTrans[mpidx]), cimag(ParaQPTrans[mpidx]));
+    for (i = 0; i < Nsite; i++) {
+      fprintf(fp, "TRANS %d %d %d %d\n", mpidx, i, QPTrans[mpidx][i],
+              QPTransSgn[mpidx][i]);
+    }
+  }
+  /* Buffered write errors (e.g. a full device) surface at ferror/fclose. */
+  writeFailed = ferror(fp) != 0;
+  if (fclose(fp) != 0) writeFailed = 1;
+  if (writeFailed) {
+    fprintf(stderr, "Error: failed to write MVMC_GC_INPUT_AUDIT '%s'.\n", path);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+}
 void StdFace_main(char *fname);
+
+/* Header and the 11-column row shared by the canonical and GC entries. */
+static void WriteStabilizedPowerLanczosResult(
+    const MVMCPowerLanczosStabilizedResult *result) {
+  fprintf(FileLS,
+          "# stabilized_power_lanczos version=%llu order=%d "
+          "chains=%llu samples_per_chain=%d coefficient_samples=%llu "
+          "final_samples=%llu blocks=%zu\n",
+          (unsigned long long)result->version, result->power_step,
+          (unsigned long long)result->sampling_chains, NVMCSample,
+          (unsigned long long)result->coefficient_samples,
+          (unsigned long long)result->final_samples, result->block_count);
+  fprintf(FileLS,
+          "# energy energy_se variance variance_se energy_imag "
+          "variance_imag tau_int effective_samples retained_rank "
+          "condition gevp_residual\n");
+  fprintf(FileLS,
+          "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e "
+          "%d %.18e %.18e\n",
+          result->energy, result->energy_standard_error, result->variance,
+          result->variance_standard_error, result->final_energy_imaginary,
+          result->variance_imaginary, result->energy_tau_int,
+          result->effective_sample_count, result->retained_rank,
+          result->condition_estimate, result->gevp_residual);
+}
 
 static int RunPowerLanczosStabilized(
     int outputIndex, MPI_Comm world_communicator,
@@ -195,28 +304,7 @@ static int RunPowerLanczosStabilized(
   input.interval = sweep;
   status = mvmc_power_lanczos_stabilized_run(&input, &result);
   if (rank == 0 && status == MVMC_KRYLOV_STATUS_OK) {
-    fprintf(FileLS,
-            "# stabilized_power_lanczos version=%llu order=%d "
-            "chains=%llu samples_per_chain=%d coefficient_samples=%llu "
-            "final_samples=%llu blocks=%zu\n",
-            (unsigned long long)result.version, result.power_step,
-            (unsigned long long)result.sampling_chains, NVMCSample,
-            (unsigned long long)result.coefficient_samples,
-            (unsigned long long)result.final_samples,
-            result.block_count);
-    fprintf(FileLS,
-            "# energy energy_se variance variance_se energy_imag "
-            "variance_imag tau_int effective_samples retained_rank "
-            "condition gevp_residual\n");
-    fprintf(FileLS,
-            "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e "
-            "%d %.18e %.18e\n",
-            result.energy, result.energy_standard_error, result.variance,
-            result.variance_standard_error,
-            result.final_energy_imaginary, result.variance_imaginary,
-            result.energy_tau_int, result.effective_sample_count,
-            result.retained_rank, result.condition_estimate,
-            result.gevp_residual);
+    WriteStabilizedPowerLanczosResult(&result);
     fprintf(stdout,
             "Stabilized power-Lanczos: E=%.17g +/- %.6g, "
             "variance=%.17g +/- %.6g\n",
@@ -227,6 +315,369 @@ static int RunPowerLanczosStabilized(
             mvmc_krylov_status_string(status));
   }
   return status == MVMC_KRYLOV_STATUS_OK ? 0 : 1;
+}
+
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+/*
+ * Testing only.  MVMC_GC_LANCZOS_TEST_SUMMARY prints one GC_LANCZOS_SUMMARY
+ * record (frozen physical c0/c1, E_coeff, per-chain bootstrap breakdown and
+ * final samples per N); MVMC_GC_LANCZOS_TEST_FAULT selects one fault.  Both
+ * are read on world rank 0 and broadcast.
+ */
+static int GCLanczosTestingSetup(MPI_Comm world, int *summary) {
+  int values[3] = {0, 0, -1};
+  int rank = 0;
+  MPI_Comm_rank(world, &rank);
+  if (rank == 0) {
+    const char *summaryEnv = getenv("MVMC_GC_LANCZOS_TEST_SUMMARY");
+    const char *faultEnv = getenv("MVMC_GC_LANCZOS_TEST_FAULT");
+    values[0] = summaryEnv != NULL && *summaryEnv != '\0';
+    if (faultEnv != NULL && *faultEnv != '\0') {
+      if (strcmp(faultEnv, "allocation:rank=1") == 0) {
+        values[1] = 1;
+        values[2] = 1;
+      } else if (strcmp(faultEnv, "nonfinite:rank=1") == 0) {
+        values[1] = 2;
+        values[2] = 1;
+      } else if (strcmp(faultEnv, "bootstrap_numeric") == 0) {
+        values[1] = 3;
+      } else if (strcmp(faultEnv, "bootstrap_exhausted") == 0) {
+        values[1] = 4;
+      } else if (strcmp(faultEnv, "final_numeric") == 0) {
+        values[1] = 5;
+      } else {
+        values[1] = -1;
+      }
+    }
+  }
+#ifdef _mpi_use
+  MPI_Bcast(values, 3, MPI_INT, 0, world);
+#endif
+  if (values[1] < 0) {
+    if (rank == 0) {
+      fprintf(stderr, "Error: unknown MVMC_GC_LANCZOS_TEST_FAULT value.\n");
+    }
+    return 1;
+  }
+  switch (values[1]) {
+    case 1:
+      mvmc_gc_krylov_amplitude_testing_set_fault(
+          MVMC_GC_KRYLOV_AMPLITUDE_FAULT_ALLOCATION, values[2]);
+      break;
+    case 2:
+      mvmc_gc_krylov_amplitude_testing_set_fault(
+          MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONFINITE, values[2]);
+      break;
+    case 3:
+      mvmc_power_lanczos_gc_testing_set_fault(
+          MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_NUMERIC);
+      break;
+    case 4:
+      mvmc_power_lanczos_gc_testing_set_fault(
+          MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_EXHAUSTED);
+      break;
+    case 5:
+      mvmc_power_lanczos_gc_testing_set_fault(
+          MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC);
+      break;
+    default:
+      break;
+  }
+  *summary = values[0];
+  return 0;
+}
+
+static void GCLanczosTestingClear(void) {
+  mvmc_gc_krylov_amplitude_testing_set_fault(
+      MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE, -1);
+  mvmc_power_lanczos_gc_testing_set_fault(MVMC_POWER_LANCZOS_GC_FAULT_NONE);
+}
+
+/* One stdout record on world rank 0; a failed write fails every rank. */
+static int GCLanczosTestingSummary(
+    MPI_Comm world, const MVMCPowerLanczosGCDiagnostics *diagnostics,
+    const uint64_t *sectors, size_t sector_count) {
+  int rank = 0;
+  int failed = 0;
+  MPI_Comm_rank(world, &rank);
+  if (rank == 0) {
+    uint64_t chain;
+    size_t n;
+    const uint64_t reported =
+        diagnostics->chain_count < MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS
+            ? diagnostics->chain_count
+            : MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS;
+    failed |= fprintf(stdout,
+                      "GC_LANCZOS_SUMMARY v1 c0=%.17e,%.17e c1=%.17e,%.17e "
+                      "ecoeff=%.17e,%.17e chains=%llu bootstrap=",
+                      creal(diagnostics->coefficient[0]),
+                      cimag(diagnostics->coefficient[0]),
+                      creal(diagnostics->coefficient[1]),
+                      cimag(diagnostics->coefficient[1]),
+                      creal(diagnostics->coefficient_energy),
+                      cimag(diagnostics->coefficient_energy),
+                      (unsigned long long)diagnostics->chain_count) < 0;
+    for (chain = 0; chain < reported; ++chain) {
+      failed |= fprintf(stdout, "%s%llu:%llu:%llu:%llu:%d",
+                        chain == 0 ? "" : ";",
+                        (unsigned long long)diagnostics->bootstrap_attempts[chain],
+                        (unsigned long long)
+                            diagnostics->bootstrap_exact_zero[chain],
+                        (unsigned long long)
+                            diagnostics->bootstrap_numeric_zero[chain],
+                        (unsigned long long)
+                            diagnostics->bootstrap_local_energy[chain],
+                        diagnostics->bootstrap_exhausted[chain]) < 0;
+    }
+    failed |= fprintf(stdout, " sectors=") < 0;
+    for (n = 0; n < sector_count; ++n) {
+      failed |= fprintf(stdout, "%s%llu", n == 0 ? "" : ",",
+                        (unsigned long long)sectors[n]) < 0;
+    }
+    failed |= fprintf(stdout, "\n") < 0;
+    failed |= fflush(stdout) != 0;
+  }
+#ifdef _mpi_use
+  MPI_Bcast(&failed, 1, MPI_INT, 0, world);
+#endif
+  if (failed && rank == 0) {
+    fprintf(stderr, "Error: failed to write the GC Lanczos test summary.\n");
+  }
+  return failed;
+}
+#endif
+
+/* Numerical class of the failing candidate's Phi (-1: not evaluated). */
+static const char *GCLanczosAmplitudeStateName(int state) {
+  switch (state) {
+    case MVMC_SCALED_COMPLEX_FINITE_NONZERO:
+      return "finite";
+    case MVMC_SCALED_COMPLEX_EXACT_ZERO:
+      return "exact_zero";
+    case MVMC_SCALED_COMPLEX_NUMERIC_ZERO:
+      return "numeric_zero";
+    case MVMC_SCALED_COMPLEX_NONFINITE:
+      return "nonfinite";
+    default:
+      return "unavailable";
+  }
+}
+
+/* Grand-canonical first-step stabilized Lanczos (same 11 columns). */
+static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
+                             MPI_Comm chain_communicator) {
+  MVMCPowerLanczosGCView view;
+  MVMCPowerLanczosGCInput input;
+  MVMCPowerLanczosStabilizedResult result;
+  MVMCPowerLanczosGCDiagnostics diagnostics;
+  MVMCKrylovStatus status;
+  uint64_t *sectors = NULL;
+  size_t sweep;
+  long long qp_start, qp_end;
+  int rank = 0;
+  int chain_rank = 0;
+  int chain_size = 1;
+  int summary = 0;
+  int allocation_failed = 0;
+  int any_allocation_failed = 0;
+  int write_failed = 0;
+  MPI_Comm_rank(world_communicator, &rank);
+  MPI_Comm_rank(chain_communicator, &chain_rank);
+  MPI_Comm_size(chain_communicator, &chain_size);
+  if (NVMCInterval <= 0 || Nsite <= 0 || NVMCWarmUp < 0 ||
+      NVMCSample < 0 ||
+      (size_t)NVMCInterval > SIZE_MAX / (size_t)Nsite) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: invalid stabilized power-Lanczos chain controls.\n");
+    }
+    return 1;
+  }
+  if (mvmc_power_lanczos_stabilized_block_count((size_t)NVMCSample) == 0) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: stabilized power-Lanczos requires NVMCSample >= 8 "
+              "and a divisor between 4 and 16 with at least two samples "
+              "per block "
+              "(a multiple of 16 is recommended; got %d).\n",
+              NVMCSample);
+    }
+    return 1;
+  }
+  sweep = (size_t)NVMCInterval * (size_t)Nsite;
+  if ((size_t)NVMCWarmUp > SIZE_MAX / sweep) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: stabilized power-Lanczos warm-up overflows size_t.\n");
+    }
+    return 1;
+  }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if (GCLanczosTestingSetup(world_communicator, &summary) != 0) return 1;
+#endif
+  qp_start = (long long)NQPFull * (long long)chain_rank / chain_size;
+  qp_end = (long long)NQPFull * (long long)(chain_rank + 1) / chain_size;
+  memset(&view, 0, sizeof(view));
+  view.data.site_count = Nsite;
+  view.data.arithmetic = MVMC_POWER_LANCZOS_CLASSIC_COMPLEX;
+  view.data.transfer_count = NTransfer;
+  view.data.transfer_indices = rank == 0 ? Transfer : NULL;
+  view.data.transfer_parameters = rank == 0 ? ParaTransfer : NULL;
+  view.data.coulomb_intra_count = NCoulombIntra;
+  view.data.coulomb_intra_indices = rank == 0 ? CoulombIntra : NULL;
+  view.data.coulomb_intra_parameters = rank == 0 ? ParaCoulombIntra : NULL;
+  view.data.coulomb_inter_count = NCoulombInter;
+  view.data.coulomb_inter_indices = rank == 0 ? CoulombInter : NULL;
+  view.data.coulomb_inter_parameters = rank == 0 ? ParaCoulombInter : NULL;
+  view.data.hund_count = NHundCoupling;
+  view.data.hund_indices = rank == 0 ? HundCoupling : NULL;
+  view.data.hund_parameters = rank == 0 ? ParaHundCoupling : NULL;
+  view.data.exchange_count = NExchangeCoupling;
+  view.data.exchange_indices = rank == 0 ? ExchangeCoupling : NULL;
+  view.data.exchange_parameters = rank == 0 ? ParaExchangeCoupling : NULL;
+  view.data.pair_hopping_count = NPairHopping;
+  view.data.inter_all_count = NInterAll;
+  view.data.nbody_inter_all_count = NNBodyInterAll;
+  view.data.nbody_g_count = NNBodyG;
+  view.data.qp_total = NQPFull;
+  view.data.qp_start = (int)qp_start;
+  view.data.qp_end = (int)qp_end;
+  view.data.scaled_pivot_tolerance = 0.0;
+  view.data.nproj = NProj;
+  view.data.ngutzwiller_idx = NGutzwillerIdx;
+  view.data.njastrow_idx = NJastrowIdx;
+  view.data.nspin_jastrow_idx = NSpinJastrowIdx;
+  view.data.ndoublon_holon_2site_idx = NDoublonHolon2siteIdx;
+  view.data.ndoublon_holon_4site_idx = NDoublonHolon4siteIdx;
+  view.data.gutzwiller_idx = GutzwillerIdx;
+  view.data.jastrow_idx = JastrowIdx;
+  view.data.spin_jastrow_idx = SpinJastrowIdx;
+  view.data.doublon_holon_2site_idx = DoublonHolon2siteIdx;
+  view.data.doublon_holon_4site_idx = DoublonHolon4siteIdx;
+  view.data.projection_parameters = Proj;
+  view.data.qp_weights = QPFullWeight;
+  view.data.slater_complex = SlaterElm;
+  if (FlagRBM != 0) {
+    view.data.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_RBM;
+  }
+  if (NProjBF != 0) {
+    view.data.unsupported_amplitude_features |=
+        MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BACKFLOW;
+  }
+#ifdef _pf_block_update
+  view.data.unsupported_amplitude_features |=
+      MVMC_CLASSIC_KRYLOV_UNSUPPORTED_BLOCK_UPDATE;
+#endif
+  /* General pairing is a configuration domain, not an unsupported bit. */
+  view.domain = iFlgOrbitalGeneral != 0 ? MVMC_KRYLOV_DOMAIN_GC_EVEN
+                                        : MVMC_KRYLOV_DOMAIN_GC_BALANCED;
+  view.translation_count = NMPTrans;
+  view.translation_weights = ParaQPTrans;
+  GCRequireSpinSupport(world_communicator);
+  if (GCForbiddenSpinSector(Ncur)) {
+    if (rank == 0)
+      fprintf(stderr, "Error: NGCInitNelec=%d is forbidden by S=0 spin "
+              "projection of an exactly antisymmetric pair function "
+              "(N must be a multiple of 4).\n", Ncur);
+    return 1;
+  }
+  view.spin_triplet_s0 = GCActiveSpinProjection() && GCSpinTriplet == 1;
+  memset(&input, 0, sizeof(input));
+  input.gc_view = &view;
+  input.world_communicator = world_communicator;
+  input.chain_communicator = chain_communicator;
+  input.seed =
+      ((uint64_t)(uint32_t)RndSeed << 32) ^
+      (uint64_t)(unsigned)(outputIndex + 1) ^
+      UINT64_C(0x504c534c494d5631);
+  if (input.seed == 0) input.seed = UINT64_C(1);
+  input.warm_up = (size_t)NVMCWarmUp * sweep;
+  input.sample_count = (size_t)NVMCSample;
+  input.interval = sweep;
+  /* NGCInitNelec after the reader's range check and even rounding. */
+  input.initial_electron_count = Ncur;
+  memset(&diagnostics, 0, sizeof(diagnostics));
+  if (summary) {
+    sectors = (uint64_t *)calloc((size_t)Nsite2 + 1, sizeof(*sectors));
+    allocation_failed = sectors == NULL;
+    diagnostics.final_sector_samples = sectors;
+    diagnostics.final_sector_capacity = sectors == NULL ? 0 : (size_t)Nsite2 + 1;
+  }
+#ifdef _mpi_use
+  MPI_Allreduce(&allocation_failed, &any_allocation_failed, 1, MPI_INT,
+                MPI_MAX, world_communicator);
+#else
+  any_allocation_failed = allocation_failed;
+#endif
+  if (any_allocation_failed) {
+    if (rank == 0) {
+      fprintf(stderr, "Error: GC Lanczos summary allocation failed.\n");
+    }
+    free(sectors);
+    return 1;
+  }
+  status = mvmc_power_lanczos_gc_run_diagnosed(&input, &result,
+                                               &diagnostics);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  GCLanczosTestingClear();
+#endif
+  if (rank == 0) {
+    fprintf(stdout,
+            "GC Lanczos bootstrap: chains=%llu attempts=%llu "
+            "exact_zero=%llu numeric_zero=%llu local_energy=%llu "
+            "exhausted=%d\n",
+            (unsigned long long)diagnostics.chain_count,
+            (unsigned long long)diagnostics.total_bootstrap_attempts,
+            (unsigned long long)diagnostics.total_bootstrap_exact_zero,
+            (unsigned long long)diagnostics.total_bootstrap_numeric_zero,
+            (unsigned long long)diagnostics.total_bootstrap_local_energy,
+            diagnostics.any_bootstrap_exhausted);
+    if (status == MVMC_KRYLOV_STATUS_OK && result.valid) {
+      WriteStabilizedPowerLanczosResult(&result);
+      fprintf(stdout,
+              "Stabilized power-Lanczos (grand canonical): E=%.17g +/- "
+              "%.6g, variance=%.17g +/- %.6g\n",
+              result.energy, result.energy_standard_error, result.variance,
+              result.variance_standard_error);
+      if (result.coefficient_energy_available) {
+        fprintf(stdout,
+                "GC Lanczos energy check: E_coeff=%.17g%+.17gi "
+                "E_final=%.17g%+.17gi E_final-E_coeff=%.6g energy_se=%.6g\n",
+                creal(result.coefficient_energy),
+                cimag(result.coefficient_energy), result.energy,
+                result.final_energy_imaginary,
+                result.energy - creal(result.coefficient_energy),
+                result.energy_standard_error);
+      }
+    } else {
+      fprintf(stderr, "Error: stabilized power-Lanczos failed: %s.\n",
+              mvmc_krylov_status_string(status));
+      if (diagnostics.failure_recorded) {
+        fprintf(stderr,
+                "GC Lanczos failure: stage=%s chain=%llu N=%d status=%s "
+                "amplitude_state=%s log_abs=%.17g log_error_bound=%.17g\n",
+                mvmc_power_lanczos_gc_stage_name(diagnostics.failure_stage),
+                (unsigned long long)diagnostics.failure_chain,
+                diagnostics.failure_electron_count,
+                mvmc_krylov_status_string(diagnostics.failure_status),
+                GCLanczosAmplitudeStateName(
+                    diagnostics.failure_amplitude_state),
+                diagnostics.failure_log_abs,
+                diagnostics.failure_log_error_bound);
+      }
+    }
+  }
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if (summary && status == MVMC_KRYLOV_STATUS_OK && result.valid) {
+    write_failed = GCLanczosTestingSummary(world_communicator, &diagnostics,
+                                           sectors, (size_t)Nsite2 + 1);
+  }
+#endif
+  free(sectors);
+  return status == MVMC_KRYLOV_STATUS_OK && result.valid && !write_failed
+             ? 0
+             : 1;
 }
 
 static int RunPowerLanczosIndependent(
@@ -361,6 +812,9 @@ int main(int argc, char* argv[])
   int nMultiDef = 1;
   /* for Standard mode (-s option)*/
   int flagStandard = 0;
+  /* for --version */
+  int flagVersion = 0;
+  int iarg;
   /* for getopt() */
   int option;
   extern char *optarg;
@@ -373,7 +827,8 @@ int main(int argc, char* argv[])
   /* for MPI */
   int rank0=0,size0=1;
   int group1=0,group2=0,rank1=0,rank2=0,size1=1,size2=1;
-  MPI_Comm comm0,comm1,comm2;
+  MPI_Comm comm0 = MPI_COMM_WORLD, comm1 = MPI_COMM_WORLD,
+           comm2 = MPI_COMM_WORLD;
 
   MPI_Init(&argc, &argv);
   NThread = omp_get_max_threads();
@@ -382,6 +837,20 @@ int main(int argc, char* argv[])
   StartTimer(0);
   StartTimer(1);
   StartTimer(10);
+
+  /* --version is the same as -v (getopt() reads short options only) */
+  for(iarg=1;iarg<argc;iarg++) {
+    if(strcmp(argv[iarg],"--")==0) break;
+    if(strcmp(argv[iarg],"--version")==0) {
+      flagVersion = 1;
+      break;
+    }
+  }
+  if(flagVersion) {
+    printVersionRank0();
+    MPI_Finalize();
+    return 0;
+  }
 
   /* read options */
   while((option=getopt(argc,argv,"bhm:oF:esv"))!=-1) {
@@ -462,7 +931,7 @@ int main(int argc, char* argv[])
       break;
 
     case 'v': /* Print version */
-      printVersion();
+      printVersionRank0();
       MPI_Finalize();
       return 0;
 
@@ -530,6 +999,7 @@ int main(int argc, char* argv[])
   ReadDefFileIdxPara(fileDefList, comm0);
   if(rank0==0) fprintf(stdout,"End  : Read parameters from *def files.\n");
   StopTimer(11);
+  DumpGCInputAudit();
 
   if(NProjBF > 0 && AllComplexFlag == 0 && NQPFull > 1) {
     /* The real BackFlow MultiQP path is kept serial for OpenMP stability. */
@@ -540,6 +1010,11 @@ int main(int argc, char* argv[])
   StartTimer(12);
   if(rank0==0) fprintf(stdout,"Start: Set memories.\n");
   SetMemory();
+  if (FlagGrandCanonical != 0 && GCComponentInit() != GC_MALL_OK) {
+    if (rank0 == 0)
+      fprintf(stderr, "Error: GC component initialization failed.\n");
+    MPI_Abort(comm0, EXIT_FAILURE);
+  }
   if(rank0==0) fprintf(stdout,"End  : Set memories.\n");
   StopTimer(12);
 
@@ -591,6 +1066,9 @@ int main(int argc, char* argv[])
   /* initialize variables for quantum projection */
   if(rank0==0) fprintf(stdout,"Start: Initialize variables for quantum projection.\n");
   InitQPWeight();
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  GCTestDumpSpinQP(comm0);
+#endif
   if(rank0==0) fprintf(stdout,"End  : Initialize variables for quantum projection.\n");
   /* initialize output files */
   if(rank0==0) InitFile(fileDefList, rank0);
@@ -630,6 +1108,7 @@ int main(int argc, char* argv[])
   if(rank0==0) CloseFile(rank0);
 
   if(rank0==0) fprintf(stdout,"Start: Free Memory.\n");
+  if (FlagGrandCanonical != 0) GCComponentFinalize(comm0);
   FreeMemory();
   FreeMemoryDef();
   if(rank0==0) fprintf(stdout,"End: Free Memory.\n");
@@ -884,17 +1363,22 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     }
   }
 
+  SamplerRepairInit(comm_parent);
   if(rank==0) fprintf(stdout, "Start: Sampling.\n");
   for(ismp=0;ismp<NDataQtySmp;ismp++) {
     if(rank==0) OutputTime(ismp);
+    SamplerRepairSetBin(ismp);
     FlushFile(0,rank);
     InitFilePhysCal(ismp, rank);
     if (NLanczosMode == 1 && NLanczosEstimatorMode == 1) {
       correctedInfo = FlagLsExplicit
           ? RunPowerLanczosIndependent(
                 ismp + NDataIdxStart, comm_parent, comm_child1)
-          : RunPowerLanczosStabilized(
-                ismp + NDataIdxStart, comm_parent, comm_child1);
+          : FlagGrandCanonical != 0
+                ? RunPowerLanczosGC(ismp + NDataIdxStart, comm_parent,
+                                    comm_child1)
+                : RunPowerLanczosStabilized(
+                      ismp + NDataIdxStart, comm_parent, comm_child1);
       CloseFilePhysCal(rank);
       if (correctedInfo != 0) return correctedInfo;
       continue;
@@ -974,6 +1458,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StartTimer(21);
 
     WeightAverageWE(comm_parent);
+    if(FlagLanczosGuide) WeightAverageNearZeroGuide(comm_parent);
     WeightAverageGreenFunc(comm_parent);
     ReduceCounter(comm_child2);
 
@@ -987,6 +1472,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StopTimer(5);
   }
 
+  SamplerRepairFinalize();
   if(rank==0) OutputTime(NDataQtySmp);
 
   return 0;
@@ -1085,6 +1571,28 @@ void outputData() {
 
     if (NLanczosMode > 0 && NLanczosEstimatorMode == 0) {
       if (NLanczosStep == 1) {
+      if (FlagLanczosGuide) {
+        fprintf(FileNZGuide,
+                "% .18e % .0f % .0f % .0f % .0f % .18e % .18e % .18e % .18e\n",
+                DLanczosGuideEps,
+                NearZeroGuideStat[NZG_SAMPLES],
+                NearZeroGuideStat[NZG_FLOORED],
+                NearZeroGuideStat[NZG_EXACT_ZERO],
+                NearZeroGuideStat[NZG_NUMERIC_SKIPPED],
+                NearZeroGuideStat[NZG_SUM_W],
+                NearZeroGuideStat[NZG_SUM_W2],
+                NearZeroGuideStat[NZG_MIN_W],
+                NearZeroGuideStat[NZG_MAX_RATIO]);
+        if(NearZeroGuideStat[NZG_EXACT_ZERO] != 0.0 ||
+           NearZeroGuideStat[NZG_NUMERIC_SKIPPED] != 0.0) {
+          fprintf(stderr,
+                  "warning: near-zero guide bin has %.0f exact-zero and "
+                  "%.0f numerical-skip samples; do not use its Lanczos "
+                  "moments\n",
+                  NearZeroGuideStat[NZG_EXACT_ZERO],
+                  NearZeroGuideStat[NZG_NUMERIC_SKIPPED]);
+        }
+      }
       if (AllComplexFlag == 0) { //real
         lanczosStatus = PhysCalLanczos_real(
           QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQDC_real,
@@ -1139,6 +1647,15 @@ void printOption() {
   fprintf(stderr,"  -s     Standard mode\n");
   fprintf(stderr,"  -e     Expert mode\n");
   fprintf(stderr,"  -h     show this message\n");
+  fprintf(stderr,"  -v, --version  print version\n");
+  return;
+}
+
+/* Print the version once, also in a run with MPI */
+void printVersionRank0() {
+  int rank=0;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+  if(rank==0) MVMC_PrintVersion();
   return;
 }
 
@@ -1207,7 +1724,11 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
 
   if(group2==0) { /* rank1==0 */
     /* scatter and broadcast dirName */
+#ifdef _mpi_use
     MPI_Scatter(dirNameList,D_FileNameMax,MPI_CHAR,dirName,D_FileNameMax,MPI_CHAR,0,comm_child2);
+#else
+    memcpy(dirName, dirNameList, D_FileNameMax);
+#endif
 
     /* change current working directory */
     if( chdir(dirName) != 0) {

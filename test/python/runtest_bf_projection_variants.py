@@ -8,7 +8,6 @@ import sys
 
 MODEL = "BackFlow_Optimization_Complex_MultiQP"
 TOL = 5.0e-10
-MUTATION_MIN_DELTA = 1.0e-8
 
 
 def safe_suffix(value):
@@ -50,6 +49,11 @@ def run_variant(rootdir, mode, variant):
         text=True,
         env=os.environ.copy(),
     )
+    if variant == "mutation":
+        if (proc.returncode == 0 or
+                "BackFlow seam transform mismatch" not in proc.stdout):
+            raise RuntimeError("inconsistent AP projection signs were not rejected: " + proc.stdout)
+        return None
     if proc.returncode != 0:
         print(proc.stdout)
         raise RuntimeError("{} {} variant failed".format(mode, variant))
@@ -154,16 +158,8 @@ def main():
         return 1
 
     if mode == "ap":
-        mutation = run_variant(rootdir, mode, "mutation")
-        assert_fixture(mutation, mode, mutated=True)
-        mutation_delta = max_payload_difference(base, mutation)
-        if (not math.isfinite(mutation_delta) or
-                mutation_delta <= MUTATION_MIN_DELTA):
-            print("ERROR: AP all-positive-sign mutation was not detected: "
-                  "max_abs_delta={:.3e}".format(mutation_delta))
-            return 1
-        print("AP projection variants: order_delta={:.3e} "
-              "mutation_delta={:.3e}".format(order_delta, mutation_delta))
+        run_variant(rootdir, mode, "mutation")
+        print("AP projection variants: order_delta={:.3e}; inconsistent signs rejected".format(order_delta))
     else:
         print("PBC projection variants: order_delta={:.3e}".format(order_delta))
     return 0

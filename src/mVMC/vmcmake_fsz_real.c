@@ -499,50 +499,18 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
 
 int makeInitialSample_fsz_real(int *eleIdx, int *eleCfg, int *eleNum, int *eleProjCnt,int *eleSpn,
                       const int qpStart, const int qpEnd, MPI_Comm comm) {
-  const int nsize = Nsize;
   const int nsite2 = Nsite2;
   int flag=1,flagRdc,loop=0;
-  int ri,si,msi,rsi;
-  int X_mi,tmp_TwoSz;
+  int ri,si,rsi;
+  int X_mi;
   int rank,size;
   MPI_Comm_size(comm,&size);
   MPI_Comm_rank(comm,&rank);
 
   do {
-    /* initialize */
-    #pragma omp parallel for default(shared) private(msi)
-    for(msi=0;msi<nsize;msi++) eleIdx[msi] = -1;
-    #pragma omp parallel for default(shared) private(msi)
-    for(msi=0;msi<nsize;msi++) eleSpn[msi] = -1;
-    #pragma omp parallel for default(shared) private(rsi)
-    for(rsi=0;rsi<nsite2;rsi++) eleCfg[rsi] = -1;
-    
-    if(TwoSz==-1){
-      tmp_TwoSz = 0;  //note: Sz is not conserved quantity but initially we take Sz=0 
-    }else{
-      tmp_TwoSz = TwoSz/2; // if TwoSz is not even, mVMC does not work 
-    }
-    //note:  2Sz=TwoSz X_mi=0-2*Ne=Nsize
-    for(X_mi=0;X_mi<Nsize;X_mi++) {
-      if(X_mi<Ne+tmp_TwoSz){
-        eleSpn[X_mi]   = 0;
-      }else{
-        eleSpn[X_mi]   = 1;
-      }
-    }  
-    /* local spin */
-    for(ri=0;ri<Nsite;ri++) {
-      if(LocSpn[ri]==1) {
-        do {
-          X_mi = gen_rand32()%Nsize;
-          si = eleSpn[X_mi];
-          //si = (genrand_real2()<0.5) ? 0 : 1;
-        } while(eleIdx[X_mi]!=-1); // seeking empty site
-        eleCfg[ri+si*Nsite] = X_mi;//;+si*Ne;
-        eleIdx[X_mi]        = ri;
-        //eleSpn[mi]    = si;
-      }
-    }
+    /* initialize and local spin */
+    initSampleWithLocalSpin(eleIdx,eleCfg,eleSpn);
+
     /* itinerant electron */
     if (NExUpdatePath == 4 || NExUpdatePath == 5){ //for t-J
       for(X_mi=0;X_mi<Nsize;X_mi++) {

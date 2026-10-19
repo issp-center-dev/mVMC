@@ -27,6 +27,7 @@ BackflowDefinition = namedtuple(
         "rangebf_text",
         "bf_text",
         "bf_compact_text",
+        "seam_phases",
     ],
 )
 
@@ -52,9 +53,13 @@ def _body_header(keyword, values):
     ]
 
 
-def _render_rangebf(nrange, nzbf, rows):
+def _render_rangebf(nrange, nzbf, rows, seam_phases=None):
     lines = _body_header("Nrange", [nrange, nzbf])
-    lines.extend("{} {} {}".format(i, j, shell) for i, j, shell in rows)
+    for i, j, shell in rows:
+        row = "{} {} {}".format(i, j, shell)
+        if seam_phases is not None:
+            row += " {}".format(seam_phases[i, j])
+        lines.append(row)
     return "\n".join(lines) + "\n"
 
 
@@ -72,8 +77,13 @@ def _render_bf_compact(n_backflow_idx, opt_rows):
     return "\n".join(lines) + "\n"
 
 
-def build_chain_nn_backflow(length=4, optimize=False):
-    """Build minimal 1D PBC nearest-neighbor BackFlow definition text."""
+def build_chain_nn_backflow(length=4, optimize=False, antiperiodic=False,
+                           phase_column=False):
+    """Build chain NN BackFlow; AP always writes explicit bond phases.
+
+    PBC keeps the historical three-column output unless phase_column is set.
+    range_rows remains a list of (center, neighbor, shell) geometry tuples.
+    """
     if length < 4:
         raise ValueError("length must be at least 4 for the NN helper")
 
@@ -101,6 +111,8 @@ def build_chain_nn_backflow(length=4, optimize=False):
 
     flag = 1 if optimize else 0
     opt_rows = [(idx, flag) for idx in range(n_proj_bf)]
+    seam_phases = dict(((i, j), -1 if antiperiodic and abs(i-j) == length-1 else 1)
+                      for i, j, _ in range_rows)
 
     definition = BackflowDefinition(
         length=length,
@@ -114,16 +126,20 @@ def build_chain_nn_backflow(length=4, optimize=False):
         range_rows=range_rows,
         bf_rows=bf_rows,
         opt_rows=opt_rows,
-        rangebf_text=_render_rangebf(nrange, nzbf, range_rows),
+        rangebf_text=_render_rangebf(nrange, nzbf, range_rows,
+                                    seam_phases if antiperiodic or phase_column else None),
         bf_text=_render_bf(n_backflow_idx, bf_rows, opt_rows),
         bf_compact_text=_render_bf_compact(n_backflow_idx, opt_rows),
+        seam_phases=seam_phases,
     )
     verify_definition(definition, expected_opt_flag=flag)
     return definition
 
 
-def write_chain_nn_backflow(output_dir, length=4, optimize=False, compact=False):
-    definition = build_chain_nn_backflow(length=length, optimize=optimize)
+def write_chain_nn_backflow(output_dir, length=4, optimize=False, compact=False,
+                           antiperiodic=False, phase_column=False):
+    definition = build_chain_nn_backflow(length=length, optimize=optimize,
+                                        antiperiodic=antiperiodic, phase_column=phase_column)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
@@ -179,6 +195,9 @@ def verify_definition(definition, expected_opt_flag=0):
         _require((i, j) not in range_seen, "duplicated BFRange pair")
         range_seen.add((i, j))
         per_center[i] += 1
+        _require(definition.seam_phases[i, j] in (-1, 1), "invalid seam phase")
+        _require(definition.seam_phases[i, j] == definition.seam_phases[j, i],
+                 "asymmetric seam phase")
     for site in range(length):
         _require(per_center[site] == nrange, "BFRange center row count mismatch")
         _require(positions[site] == [site, (site - 1) % length, (site + 1) % length],
@@ -206,8 +225,19 @@ def self_test():
     verify_definition(definition, expected_opt_flag=0)
     optimized = build_chain_nn_backflow(length=4, optimize=True)
     verify_definition(optimized, expected_opt_flag=1)
+    for length in (4, 5, 6):
+        ap = build_chain_nn_backflow(length=length, antiperiodic=True)
+        verify_definition(ap)
+        _require(ap.seam_phases[0, length-1] == -1, "AP seam missing")
+        _require(sum(v == -1 for v in ap.seam_phases.values()) == 2, "AP bond count")
+        _require(all(len(row.split()) == 4 for row in ap.rangebf_text.splitlines()[10:]),
+                 "AP requires four columns")
+    twin = build_chain_nn_backflow(phase_column=True)
+    _require([line.rsplit(" ", 1)[0] for line in twin.rangebf_text.splitlines()[10:]]
+             == definition.rangebf_text.splitlines()[10:], "PBC three/four column geometry")
 
-    tmpdir = tempfile.mkdtemp(prefix="backflow_def_helper_")
+    os.makedirs("tmp", exist_ok=True)
+    tmpdir = tempfile.mkdtemp(prefix="backflow_def_helper_", dir="tmp")
     try:
         range_path, bf_path = write_chain_nn_backflow(tmpdir, length=4, optimize=False)
         with open(range_path) as fp:
@@ -232,6 +262,8 @@ def main(argv=None):
                         help="write BF OptFlag=1 instead of the identity-test default OptFlag=0")
     parser.add_argument("--compact", action="store_true",
                         help="write compact bf.def with BFCompact marker and OptFlag rows only")
+    parser.add_argument("--antiperiodic", action="store_true", help="write AP seam phases")
+    parser.add_argument("--phase-column", action="store_true", help="write four columns also for PBC")
     parser.add_argument("--self-test", action="store_true",
                         help="run helper contract checks")
     args = parser.parse_args(argv)
@@ -246,6 +278,8 @@ def main(argv=None):
             length=args.length,
             optimize=args.optimize,
             compact=args.compact,
+            antiperiodic=args.antiperiodic,
+            phase_column=args.phase_column,
         )
         print("wrote {}".format(range_path))
         print("wrote {}".format(bf_path))

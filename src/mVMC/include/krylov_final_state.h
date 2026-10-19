@@ -152,6 +152,58 @@ MVMCKrylovStatus mvmc_krylov_final_state_sampler_step(
     MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
     MVMCKrylovFinalStateStepResult *result);
 
+/*
+ * Why an initialization candidate may be drawn again.  Only a completed
+ * evaluation whose Phi is EXACT_ZERO or NUMERIC_ZERO, or whose finite
+ * H Phi / Phi cannot be formed safely (local energy unavailable), is
+ * recoverable; a failing amplitude callback, nonfinite values and every
+ * other status are NO_RETRY.
+ */
+typedef enum {
+  MVMC_KRYLOV_BOOTSTRAP_NO_RETRY = 0,
+  MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO,
+  MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO,
+  MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY
+} MVMCKrylovBootstrapReason;
+
+/*
+ * Diagnostic copy of the last final-state evaluation.  evaluation_available
+ * means that evaluation.amplitude (Phi) and evaluation.hamiltonian_amplitude
+ * (H Phi) are meaningful; it never makes evaluation.valid or sampleable true
+ * and never validates a failed snapshot or step result.
+ */
+typedef struct {
+  int evaluation_available;
+  MVMCKrylovBootstrapReason retry_reason;
+  MVMCKrylovStatus status;
+  MVMCKrylovFinalStateEvaluation evaluation;
+} MVMCKrylovFinalDiagnostic;
+
+/*
+ * Diagnosed forms of initialize/step.  diagnostic may be NULL; the legacy
+ * entries are these with NULL and keep their snapshot/result contracts.
+ * A NUMERIC_ZERO proposal or an unavailable proposal local energy is still
+ * an error of the step; EXACT_ZERO proposals are still rejected.
+ */
+MVMCKrylovStatus mvmc_krylov_final_state_sampler_initialize_diagnosed(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const MVMCKrylovFinalStatePolicy *policy,
+    const uint64_t *words, size_t word_count,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *context,
+    MVMCKrylovFinalStateSnapshot *snapshot,
+    MVMCKrylovFinalDiagnostic *diagnostic);
+
+MVMCKrylovStatus mvmc_krylov_final_state_sampler_step_diagnosed(
+    MVMCKrylovBoundedWorkspace *workspace,
+    const MVMCKrylovFinalStatePolicy *policy,
+    uint64_t *words, size_t word_count,
+    MVMCKrylovFinalStateSnapshot *current,
+    const uint64_t *proposal_words, size_t proposal_word_count,
+    double log_proposal_ratio, double uniform,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *context,
+    MVMCKrylovFinalStateStepResult *result,
+    MVMCKrylovFinalDiagnostic *diagnostic);
+
 MVMCKrylovStatus mvmc_krylov_final_state_sampler_step_selected_neighbor(
     MVMCKrylovBoundedWorkspace *workspace,
     const MVMCKrylovFinalStatePolicy *policy,

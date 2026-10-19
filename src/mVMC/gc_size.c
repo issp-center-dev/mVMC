@@ -65,3 +65,9 @@ int GCCheckedSizeToInt(const size_t value, const char *name) {
   }
   return (int)value;
 }
+
+int GCProjectionWorkspaceFitsInt(const int gauss, const int translations) {
+  /* Division also avoids overflow when both arguments equal INT_MAX. */
+  return gauss > 0 && translations > 0 &&
+         (long long)gauss <= INT_MAX / (2LL * translations + 5LL);
+}

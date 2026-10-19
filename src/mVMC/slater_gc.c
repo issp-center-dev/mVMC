@@ -10,6 +10,7 @@ version.
 
 #include <complex.h>
 
+#include "include/gc_component.h"
 #include "include/gc_size.h"
 #include "include/global.h"
 #include "include/slater.h"
@@ -26,13 +27,20 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
       GCCheckedSizeToInt(bufferCount, "GC Slater derivative workspace");
   const size_t inverseStride =
       GCCheckedMulSize((size_t)NsizeMax, (size_t)NsizeMax);
+  const int inverseWorkCount =
+      GCCheckedSizeToInt(inverseStride, "GC gradient matrix");
+  const int totalWorkCount = GCCheckedSizeToInt(
+      GCCheckedAddSize(bufferCount, inverseStride),
+      "GC Slater derivative workspace total");
   const double complex invIP = 1.0 / ip;
   double complex *buffer;
+  double complex *gradient;
   int orbital;
   int qpidx;
 
-  RequestWorkSpaceComplex(bufferWorkCount);
+  RequestWorkSpaceComplex(totalWorkCount);
   buffer = GetWorkSpaceComplex(bufferWorkCount);
+  gradient = GetWorkSpaceComplex(inverseWorkCount);
   for (orbital = 0; orbital < bufferWorkCount; orbital++) buffer[orbital] = 0.0;
 
   for (qpidx = 0; qpidx < NQPFull; qpidx++) {
@@ -42,17 +50,36 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
     const int *xqpOptSgn = QPOptTransSgn[optidx];
     const int *xqp = QPTrans[mpidx];
     const int *xqpSgn = QPTransSgn[mpidx];
-    const double complex pfaffian = PfM[qpidx];
-    const double complex *inverse = InvM + (size_t)qpidx * inverseStride;
     double complex *qpBuffer = buffer + (size_t)qpidx * (size_t)NSlater;
+    /* Coefficient of the direct F_ij term in the rotated spin block
+     * (s_i, s_j) of UpdateSlaterElm_fcmp: up-up -cs, up-down cc,
+     * down-up -ss, down-down cs.  G=1 leaves only up-down (cc=1). */
+    double alpha[2][2] = {{0.0, 1.0}, {0.0, 0.0}};
     int msi;
+
+    if (iFlgOrbitalGeneral == 0) {
+      const int spidx = qpidx % NSPGaussLeg;
+      alpha[0][0] = -creal(SPGLCosSin[spidx]);
+      alpha[0][1] = creal(SPGLCosCos[spidx]);
+      alpha[1][0] = -creal(SPGLSinSin[spidx]);
+      alpha[1][1] = creal(SPGLCosSin[spidx]);
+    }
+
+    /* The measurement path owns every projection component locally, so its
+     * global and local qp indices coincide here. */
+    if (GCComponentGradient(qpidx, qpidx, ncur, eleIdx, gradient,
+                            GCComponentThreadCache()) != GC_MALL_OK) {
+      fprintf(stderr, "Error: GC Slater derivative failed at qp=%d.\n",
+              qpidx);
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
 
     for (msi = 0; msi < ncur; msi++) {
       const int rsi = eleIdx[msi];
       const int ri = rsi % Nsite;
       const int si = rsi / Nsite;
       const int ori = xqpOpt[ri];
-      const int tri = xqp[ori] + si * Nsite;
+      const int ti = xqp[ori];
       const int sgni = xqpSgn[ori] * xqpOptSgn[ri];
       int msj;
       for (msj = 0; msj < ncur; msj++) {
@@ -60,14 +87,31 @@ void SlaterElmDiffGC_fcmp(double complex *srOptO, const double complex ip,
         const int rj = rsj % Nsite;
         const int sj = rsj / Nsite;
         const int orj = xqpOpt[rj];
-        const int trj = xqp[orj] + sj * Nsite;
+        const int tj = xqp[orj];
         const int sgnj = xqpSgn[orj] * xqpOptSgn[rj];
-        const int orbitalIndex = OrbitalIdx[tri][trj];
         /* matrix_gc stores (-SlaterElm)^-1, while the legacy fixed-Sz
          * derivative receives the opposite inverse convention. */
-        qpBuffer[orbitalIndex] +=
-            inverse[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
-            pfaffian * (double)(sgni * sgnj * OrbitalSgn[tri][trj]);
+        if (iFlgOrbitalGeneral == 0) {
+          /* Anti-parallel table F_ij (Nsite x Nsite) enters the rotated
+           * block (s_i, s_j) directly with alpha and the transposed slot
+           * A_{j,i} = -A_{i,j}; the 1/2 of d Pf = (1/2) sum C dA cancels that
+           * pair, so every ordered electron pair contributes alpha once.
+           * Spins come from the fused orbital index, not electron order. */
+          const double coefficient = alpha[si][sj];
+          if (coefficient != 0.0) {
+            const int orbitalIndex = OrbitalIdx[ti][tj];
+            qpBuffer[orbitalIndex] +=
+                gradient[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
+                coefficient * (double)(sgni * sgnj * OrbitalSgn[ti][tj]);
+          }
+        } else {
+          const int tri = ti + si * Nsite;
+          const int trj = tj + sj * Nsite;
+          const int orbitalIndex = OrbitalIdx[tri][trj];
+          qpBuffer[orbitalIndex] +=
+              gradient[(size_t)msi * (size_t)NsizeMax + (size_t)msj] *
+              (double)(sgni * sgnj * OrbitalSgn[tri][trj]);
+        }
       }
     }
   }

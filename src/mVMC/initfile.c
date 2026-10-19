@@ -36,7 +36,8 @@ void InitFile(char *xNameListFile, int rank) {
   if(rank!=0) return;
 
   FileGC = NULL;
-  if(FlagGrandCanonical != 0) {
+  /* GC Lanczos writes only xxx_pl_out; no particle-number record. */
+  if(FlagGrandCanonical != 0 && NLanczosMode == 0) {
     FileGC = fopen("zvo_gc.dat", "w");
     if(FileGC == NULL) {
       fprintf(stderr, "Error: failed to open grand-canonical output 'zvo_gc.dat'.\n");
@@ -153,6 +154,11 @@ void InitFilePhysCal(int i, int rank) {
     sprintf(fileName, "%s_ls_qqqq_%03d.dat", CDataFileHead, idx);
     FileLSQQQQ = fopen(fileName, "w");
 
+    if(FlagLanczosGuide){
+      sprintf(fileName, "%s_nzguide_%03d.dat", CDataFileHead, idx);
+      FileNZGuide = fopen(fileName, "w");
+    }
+
     if(NLanczosMode>1){
 #ifdef _DEBUG
       sprintf(fileName, "%s_ls_qcisajsq_%03d.dat",
@@ -260,6 +266,7 @@ void CloseFilePhysCal(int rank) {
 
   if(NLanczosMode>0 && NLanczosStep==1){
     fclose(FileLS);
+    if(FlagLanczosGuide) fclose(FileNZGuide);
     fclose(FileLSQQQQ);
 
     if(NLanczosMode>1){

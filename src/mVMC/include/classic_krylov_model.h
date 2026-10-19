@@ -86,6 +86,19 @@ MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_from_root(
     MVMCClassicPfaffianCommunicator communicator,
     MVMCClassicKrylovModelWorkspace **workspace);
 
+/*
+ * Same collective creation with an explicit configuration domain.  The legacy
+ * creator above is this entry with MVMC_KRYLOV_DOMAIN_FIXED.  Grand-canonical
+ * domains require raw up/down counts 0, pure_spin 0 and no Exchange.  Rank 0's
+ * domain is distributed with the metadata; a rank that passes a different
+ * domain makes the creation fail with INVALID_ARGUMENT on every rank.
+ */
+MVMCKrylovStatus mvmc_classic_krylov_model_workspace_create_domain_from_root(
+    const MVMCClassicKrylovRawModel *raw,
+    MVMCKrylovConfigurationDomain domain,
+    MVMCClassicPfaffianCommunicator communicator,
+    MVMCClassicKrylovModelWorkspace **workspace);
+
 void mvmc_classic_krylov_model_workspace_destroy(
     MVMCClassicKrylovModelWorkspace *workspace);
 

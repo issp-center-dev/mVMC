@@ -91,9 +91,17 @@ listed in parentheses correspond to the file made by vmcdry.out.
 
     .. math::
 
-       V_{ij}=-\frac{J_{ij}}{4}, \qquad
+       V_{ij}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Hund}=-\frac{J_{ij}}{2}, \qquad
        J_{ij}^{\rm Ex}=-\frac{J_{ij}}{2}.
+
+    Here ``Hund`` and ``Exchange`` together with
+    :math:`V_{ij}=-J_{ij}/4` give
+    :math:`J_{ij}{\boldsymbol S}_i\cdot{\boldsymbol S}_j`, because
+    :math:`S_i^z S_j^z = \frac{1}{2}(n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})-\frac{1}{4}n_i n_j`, and the
+    remaining :math:`-J_{ij}/4` of :math:`V_{ij}` gives
+    :math:`-\frac{1}{4}J_{ij}n_i n_j`. For a t-J model without the
+    :math:`-\frac{1}{4}n_i n_j` term, use :math:`V_{ij}=-J_{ij}/4`.
 
     The t-J update path must also be selected by ``NExUpdatePath`` in
     ``modpara.def``. The current t-J update paths do not support
@@ -557,10 +565,249 @@ Keywords and parameters
    normalization. The relative sign between particle-number sectors follows
    this definition; it fixes the sign of the ``AnomalousG`` expectation
    values and of the ``AnomalousTerm`` energy response.
-   This mode requires ``OrbitalGeneral``, complex variational parameters,
-   ``2Sz=-1``, ``NExUpdatePath=0``, ``NSPGaussLeg=1``, ``NMPTrans=1``, and
-   ``NQPOptTrans<=1``. RBM, BackFlow, Lanczos, OptTrans, UpdateWeight, local
-   spins, and SR-CG are not supported in this first phase.
+
+   The orbital input selects one of two pairing forms.
+
+   * General pairing: ``OrbitalGeneral``, or ``OrbitalAntiParallel``
+     together with ``OrbitalParallel``. Pair additions and removals change
+     :math:`S^z`, so ``2Sz=-1`` is required.
+   * Anti-parallel pairing: ``OrbitalAntiParallel`` (or its alias
+     ``Orbital``) alone. The wave function
+
+     .. math::
+
+        |\phi_{\rm GC}\rangle = \exp\Big[\sum_{i,j} F_{ij}\,
+        c_{i\uparrow}^{\dagger} c_{j\downarrow}^{\dagger}\Big]|0\rangle
+
+     has weight only on configurations with :math:`N_\uparrow=N_\downarrow`,
+     and ``2Sz=0`` must be given explicitly (the default ``-1`` and other
+     values are rejected). In this mode, the ``2Sz`` line must contain one
+     complete base-10 integer in the C ``int`` range; decimal notation such
+     as ``0.0``, nonfinite values, trailing tokens, and truncated lines are
+     rejected before conversion. :math:`F_{ij}` is the anti-parallel parameter
+     itself, including the sign column. The same state written as
+     ``OrbitalGeneral`` uses :math:`F_{ij}/2` for the up-down pairs and 0 for
+     the same-spin pairs, because :math:`F_{IJ}=f_{IJ}-f_{JI}` counts each
+     pair twice; equal numbers in the two formats are different states.
+     The sampler keeps :math:`N_\uparrow=N_\downarrow` by adding or removing
+     one up-down pair and by hopping electrons without changing their spin.
+     Anti-parallel pairing alone is not a spin (:math:`S=0`) projection;
+     ``NSPGaussLeg>=2`` with ``NSPStot=0`` adds one (see below).
+     Every Hamiltonian term must conserve :math:`S^z` as a whole: ``Trans``
+     must not flip a spin, an ``InterAll`` or ``NBodyInterAll`` term may
+     contain spin-flip factors only when
+     :math:`\sum(\sigma_{\rm out}-\sigma_{\rm in})=0` over the term, and
+     ``AnomalousTerm`` pairs must be up-down. Terms that would cancel only
+     after summing several rows are not simplified, and rows with a zero
+     coefficient are exempt from the rule but still checked for indices.
+     Measurement inputs (``OneBodyG``, ``TwoBodyG``, ``NBodyG``,
+     ``AnomalousG``) are not restricted; operators that change :math:`S^z`
+     have zero expectation value. :math:`\langle H^2\rangle` is the sample
+     average of :math:`|E_{\rm loc}|^2`; it equals
+     :math:`\langle\phi|H^2|\phi\rangle/\langle\phi|\phi\rangle` when the
+     wave function has no zero amplitude inside the
+     :math:`N_\uparrow=N_\downarrow` sector, while for a state with such nodes
+     the part of :math:`H|\phi\rangle` on the nodes is missed.
+
+   In both forms the uniform rescaling of the pair parameters used in
+   canonical runs is not applied, because it would change the relative
+   weights of particle-number sectors. Both forms require complex
+   variational parameters, ``NExUpdatePath=0``,
+   a nonzero ``NMPTrans`` with ``abs(NMPTrans) <= NQPTrans``, and
+   ``NQPOptTrans<=1``. General pairing requires ``NSPGaussLeg=1``;
+   anti-parallel pairing also accepts the spin projection described below.
+   RBM, BackFlow, OptTrans, UpdateWeight, local
+   spins, and SR-CG are not supported. Lanczos is supported only as the
+   first-step stabilized estimator (see ``NLanczosEstimatorMode``).
+
+   Each quantum-projection component is kept either with its inverse matrix or,
+   when its Pfaffian is zero or the factorization is classified singular or
+   near-singular by the scale-aware tests of the absolute Pfaffian backend, as a
+   Pfaffian-only component whose candidate amplitudes and parameter derivatives
+   are evaluated directly (full Pfaffian and cofactor expansion). Such components
+   are not errors; the run stops only on nonfinite values, invalid arguments,
+   factorization or workspace failures, and builds compiled with fast-math
+   (for example, ``-ffast-math`` or ``-Ofast`` without ``-fno-fast-math``).
+   When CMake identifies the C compiler as GNU or Clang, the ``vmc.out``
+   target adds ``-fno-fast-math``; other toolchains require an equivalent
+   strict floating-point option. At the end of a run one line
+   ``GC component stats: ...`` reports how often each path was used. A
+   measurement sample that cannot be evaluated now stops every rank instead
+   of being skipped, and an initial configuration whose projected amplitude
+   is zero is reported with a request to change ``NGCInitNelec`` or to check
+   the ``TransSym`` weights. Acceptance is decided in the log domain for both
+   pairing forms, so a finite but large amplitude ratio is accepted rather
+   than rejected by an overflowing weight.
+
+   Momentum projection uses the first ``abs(NMPTrans)`` patterns of
+   ``TransSym`` with their complex weights, as in canonical runs: for a
+   translation by :math:`R` the weight :math:`e^{-iKR}/N_{\rm T}` selects
+   the total momentum :math:`K`. Because the component for a translation
+   :math:`R` evaluates the pair function at the translated sites, the
+   projected state satisfies
+   :math:`\hat T_1|\Psi_K\rangle=e^{-iK}|\Psi_K\rangle`.
+   A pair function that is not translation invariant
+   makes the projection nontrivial. Configurations whose translated
+   components vanish are handled as Pfaffian-only components (a direct
+   Pfaffian per candidate), which is correct but slower than the inverse
+   update. :math:`\langle H^2\rangle` in ``zvo_out`` remains the sample
+   average of :math:`|E_{\rm loc}|^2` over configurations with nonzero
+   amplitude. Thus, with pair-creation terms and an exact node such as the
+   :math:`K\ne0` vacuum, it is smaller than
+   :math:`\|H\Psi\|^2/\|\Psi\|^2` by the nodal contribution.
+
+   If the sum of the parsed ``TransSym`` weights is exactly zero, the vacuum
+   and fully occupied configurations have exactly zero projected amplitude.
+   This applies both to momentum projection alone (``NSPGaussLeg=1``) and
+   to combined spin/momentum projection. Choose an even particle number
+   with ``0 < NGCInitNelec < 2*Nsite`` in that case; starting at either
+   forbidden boundary produces an explicit error after one attempt.
+   Small nonzero weight sums are not treated as zero. This exact-zero
+   guarantee does not extend to cancellation nodes at intermediate particle
+   numbers. It does not change the finite-quadrature weights or renormalize
+   particle-number sectors.
+
+   With anti-parallel pairing, ``NSPGaussLeg=G>=2`` and ``NSPStot=0``
+   project the trial state onto total spin :math:`S=0` with the
+   Gauss-Legendre quadrature in :math:`\beta\in[0,\pi]` used in canonical
+   runs:
+
+   .. math::
+
+      \Psi(x)=P_{\rm ch}(x)\sum_{g=1}^{G}a_g\,
+      {\rm Pf}\big[A(\beta_g)\big|_x\big],\qquad
+      a_g=\tfrac12\sin\beta_g\,w_g,
+
+   where :math:`A(\beta)` is the pair matrix rotated by
+   :math:`e^{-i\beta S^y}`, :math:`x` runs over the
+   :math:`N_\uparrow=N_\downarrow` configurations of every even particle
+   number, and :math:`P_{\rm ch}` collects the spin-scalar correlation
+   factors such as Gutzwiller and Jastrow. ``NSPGaussLeg=1`` omits the
+   spin projection (:math:`\beta=0`, weight 1). The same weights are used
+   in all particle-number sectors: the vacuum amplitude is
+   :math:`\sum_g a_g`, which tends to 1 only for large :math:`G`, and the
+   sectors are not renormalized separately. A finite :math:`G` approximates
+   the exact projection; no minimum number of points is imposed, so check
+   convergence by increasing ``NSPGaussLeg``. In GC mode ``NSPGaussLeg`` and
+   ``NSPStot`` must be single base-10 integers in the C ``int`` range, as
+   for ``2Sz``. Spin and momentum projection can be combined: for
+   :math:`R=|\mathrm{NMPTrans}|` translations with input weights :math:`w_r`,
+   the sum becomes :math:`\sum_{r,g}w_r a_g\,{\rm Pf}[A_r(\beta_g)|_x]`.
+   This supports both periodic and antiperiodic boundary conditions with the
+   corresponding signed ``TransSym`` rows. The workspace requires
+   :math:`2GR+5G` to fit in a C ``int``; oversized input is rejected before
+   allocation. ``SpinJastrow`` is rejected for ``NSPGaussLeg>=2`` because
+   :math:`\exp(\sum_{ij}v_{ij}m_im_j)` is not a spin scalar and would break
+   :math:`S=0`. General pairing and nonzero ``NSPStot`` are not supported
+   with the spin projection. The existing prohibition on ``OptTrans`` in
+   GC mode also remains in effect.
+
+   If the actual unrotated pair function is exactly antisymmetric
+   (:math:`F^T=-F`, pure triplet pairs), the :math:`S=0` projection removes
+   every sector with :math:`N=2\pmod 4`. The code checks the parameter values
+   including orbital signs at every update, and treats these sectors as exact
+   zeros after checking the QP sum for nonfinite values. This also removes
+   roundoff residues of the paired quadrature points at finite :math:`G`.
+   It applies to momentum projection as well, but not to ``NSPGaussLeg=1``.
+   ``NGCInitNelec`` must then be a multiple of four with nonzero projected
+   amplitude. If an optimization update invalidates the saved particle number,
+   the chain is initialized in a permitted sector and warmed up again.
+   Near-antisymmetric functions are not rounded to this symmetry.
+
+   For ordinary GC sampling with active spin projection, the move mixture now
+   includes simultaneous addition/removal of two up-down pairs (probability
+   1/8 each) and a uniform balanced configuration (1/64). The remaining 47/64
+   uses the original local moves. Each proposal uses its own Metropolis ratio;
+   an unavailable move is a self-loop. These moves connect sectors across the
+   forbidden intermediate particle number. Older versions using only
+   :math:`N\mathbin{\pm}2` could silently stay at the initial particle number.
+   Random sequences in this sampling mode have changed. Check particle-number
+   histograms, autocorrelation and dependence on the initial configuration;
+   global proposals guarantee access to the support, not rapid mixing.
+
+   This mixture applies to every supported anti-parallel pair function with
+   active :math:`S=0` projection (``NSPGaussLeg>=2``), including functions
+   that are not exactly antisymmetric. It does not enable ``OrbitalGeneral``
+   with spin projection. The two-pair and uniform proposals together are
+   selected with probability 17/64. Whenever a candidate can be drawn, its
+   Pfaffian is evaluated directly at every quadrature/translation point;
+   an accepted candidate also rebuilds the matrices. The direct evaluation
+   costs :math:`O(N^3)` per point for a candidate with :math:`N` electrons,
+   instead of a low-rank update. This can increase the cost per sampling
+   step, including for pair functions without the exact triplet symmetry.
+   Large-system performance has not been measured; assess both runtime and
+   particle-number mixing for the intended system. The proposal mixture and
+   random sequences for ``NSPGaussLeg=1`` and canonical sampling are unchanged.
+
+   The Hamiltonian needs to conserve only :math:`S^z`; it does not have to be
+   :math:`SU(2)` symmetric. Each measured operator whose total :math:`S^z`
+   change is nonzero has zero expectation value, while a product whose
+   factors flip spins but conserve :math:`S^z` as a whole, such as
+   :math:`S^+_iS^-_j`, is evaluated. :math:`\langle\mathbf S^2\rangle` is
+   obtained from the outputs as
+   :math:`\langle S_z^2\rangle+\tfrac12\sum_{ij}\langle
+   S^+_iS^-_j+S^-_iS^+_j\rangle` with the ``TwoBodyG`` rows
+   ``i 0 i 1 j 1 j 0`` and ``i 1 i 0 j 0 j 1`` and the
+   :math:`\langle S_z^2\rangle` column of ``zvo_out``. Without
+   :math:`SU(2)` symmetry :math:`H\Psi` can leave the support of
+   :math:`\Psi`, and :math:`\langle H^2\rangle` is the support average
+   described above. The finite-:math:`G` wave function is checked against
+   an independent Fock-space oracle, and its convergence to the exact
+   :math:`S=0` projection is checked on a four-site ring. An example with a
+   generator script is in ``samples/GrandCanonical/SpinProjection``.
+
+   A negative ``NMPTrans`` selects the boundary-sign columns in the orbital
+   input, while its absolute value selects the number of ``TransSym``
+   patterns. It does not modify the Hamiltonian, so keep the following
+   inputs consistent for anti-periodic boundary conditions (APBC).
+
+   * The Hamiltonian (``Trans`` etc.): coefficients that cross an
+     anti-periodic boundary carry the boundary phase :math:`-1` (for a
+     chain, :math:`c_{L}=-c_{0}` flips the sign of the boundary bond).
+   * ``OrbitalGeneral``: the sixth column gives the sign that multiplies
+     :math:`F_{IJ}` (:math:`F_{IJ}=s_{IJ}f_{k}-s_{JI}f_{k}` with
+     :math:`s_{JI}=-s_{IJ}`).
+   * ``OrbitalAntiParallel`` / ``Orbital`` (anti-parallel pairing): the
+     fourth column of every pair row is the sign :math:`\pm1` that
+     multiplies :math:`F_{ij}`.
+   * ``TransSym``: its site mappings include the boundary signs. The identity
+     pattern has sign +1 on every site; APBC does not require a negative sign
+     on that pattern.
+
+   With ``2Sz=-1`` and ``phase0=180`` or similar settings, StdFace writes a
+   ``Trans`` file that includes the boundary phases and an
+   ``orbitalidxgen.def`` with one variational parameter and one boundary
+   sign per pair. To use them, keep only ``OrbitalGeneral`` as the orbital
+   entry of ``namelist.def`` (remove the ``Orbital`` and ``OrbitalParallel``
+   lines and enable the commented ``OrbitalGeneral`` line) and set
+   ``NGrandCanonical=1``, ``2Sz=-1``, ``NExUpdatePath=0``,
+   ``NSPGaussLeg=1``, and ``NMPTrans=-1`` in ``modpara.def`` without an
+   ``OptTrans`` file (do not keep the ``NSPGaussLeg=8`` that StdFace writes
+   when ``2Sz`` is omitted). ``Ncond`` does not constrain the particle number
+   in GC mode, so give ``NGCInitNelec`` and explicit complex initial
+   parameters. StdFace uses ``NMPTrans=-1`` by default also for periodic
+   inputs, so that value alone does not indicate a physical APBC. General
+   twist angles and BackFlow are not supported. A four-site identity-only
+   example and its conversion script are in
+   ``samples/GrandCanonical/APBC_chain``; a multi-translation example is in
+   ``samples/GrandCanonical/MomentumProjection``.
+
+   For anti-parallel pairing, run StdFace with ``2Sz=0``, ``phase0=180`` (or
+   similar), and ``ComplexType=1``. It writes the boundary phases into
+   ``Trans`` and a four-column ``orbitalidx.def`` (pair table with one sign
+   per row) referenced by the ``Orbital`` entry. Keep ``Orbital`` (or rename
+   it to ``OrbitalAntiParallel``) as the only orbital entry of
+   ``namelist.def`` with no ``OrbitalGeneral`` or ``OrbitalParallel`` line,
+   and set ``NGrandCanonical=1``, ``2Sz=0``, ``NExUpdatePath=0``, and
+   ``NMPTrans=-1`` in ``modpara.def`` without an ``OptTrans`` file. Keep the
+   ``NSPGaussLeg=8`` and ``NSPStot=0`` that StdFace writes for ``2Sz=0`` to
+   apply the :math:`S=0` projection, or set ``NSPGaussLeg=1`` for the
+   unprojected state. Keep the boundary
+   phases in ``Trans`` and the identity first ``TransSym`` pattern, check
+   that the orbital header has ``ComplexType 1``, and give ``NGCInitNelec``
+   and complex initial parameters. Do not apply the ``OrbitalGeneral``
+   :math:`F/2` conversion to the anti-parallel table. A four-site
+   anti-parallel input is in ``samples/GrandCanonical/AntiParallel``.
 
 -  ``NGCInitNelec``
 
@@ -625,9 +872,9 @@ Keywords and parameters
    ED oracle. A nontrivial :math:`k=\pi` momentum projection is checked
    against independent real and complex projected-ED value oracles.
    The real oracle covers serial, MPI, and OpenMP paths; the complex
-   oracle currently covers the serial path. Nontrivial spin projection
-   has runtime and structural smoke coverage, but not an independent
-   projected-ED value oracle.
+   oracle currently covers the serial path. For the second-step Lanczos
+   path, nontrivial spin projection has runtime and structural smoke
+   coverage, but not an independent projected-ED value oracle.
 
    In the electronic class with ``NQPFull=1``, the :math:`H^3` local
    power is evaluated by nested
@@ -674,8 +921,9 @@ Keywords and parameters
    explicitly enables the numerically stabilized energy/variance estimator
    in expert mode. It requires ``NVMCCalMode=1``, ``NLanczosMode=1``, and
    ``NLanczosStep=1`` or ``2``. Independent chains determine the coefficients
-   and estimate the final energy. FSZ, BackFlow, RBM, reweighting, and Green's
-   functions are outside this mode. Its only result file is
+   and estimate the final energy. In canonical runs FSZ, BackFlow, RBM,
+   reweighting, and Green's functions are outside this mode; grand-canonical
+   runs are described below. Its only result file is
    ``xxx_pl_out_yyy.dat``. ``NVMCSample`` must be at least 8 and divisible by
    a block count between 4 and 16 with at least two samples per block; a
    multiple of 16 is recommended.
@@ -703,6 +951,84 @@ Keywords and parameters
    measurements are rejected. ``NQPFull`` remains a run-time value and is not
    fixed by this feature.
 
+   With ``NGrandCanonical=1`` the estimator is available for the first step
+   only: ``NLanczosMode=1``, ``NLanczosStep=1``, ``NLanczosEstimatorMode=1``,
+   ``NVMCCalMode=1``, ``NExUpdatePath=0``, and ``reweight=0``. Any other
+   Lanczos setting, including the legacy estimator, is rejected when the input
+   is read. The corrected state is
+   :math:`|\Phi\rangle=(c_0+c_1\hat H)|\Psi_{\rm GC}\rangle` with one
+   pair of coefficients for all particle numbers; particle-number sectors are
+   neither projected again nor normalized separately. Both pairing forms of
+   ``NGrandCanonical`` are supported with complex parameters, the correlation
+   factors, and the projections of grand-canonical runs (spin and momentum
+   projection for anti-parallel pairing, momentum projection for general
+   pairing). The Hamiltonian may contain only spin-conserving, Hermitian
+   ``Trans`` rows, ``CoulombIntra``, ``CoulombInter``, and ``Hund``.
+   ``PairHop``, ``Exchange``, ``InterAll``, ``NBodyInterAll``,
+   ``AnomalousTerm``, ``LsTrans``/``LsInterAll``, ``Twist``, and the features
+   excluded for ``NGrandCanonical`` are rejected. The energy is the
+   expectation value of this :math:`H`, including any :math:`-\mu N` written
+   in ``Trans``; no particle-number observable is added and ``zvo_gc.dat`` is
+   not written. Canonical runs accept ``OneBodyG`` and ``TwoBodyG`` entries
+   in this mode without evaluating them, whereas a grand-canonical run
+   rejects ``OneBodyG``, ``TwoBodyG``, ``TwoBodyGEx``, ``NBodyG``, and
+   ``AnomalousG`` files that contain at least one element, so that requested
+   output is never silently missing. Files with zero elements are accepted.
+
+   The sample-count rule above is applied twice: to ``NVMCSample`` of each
+   chain and to the total ``NVMCSample * number_of_chains`` of each stage.
+   For example, ``NVMCSample=9`` is rejected even with two chains; multiples
+   of 16 satisfy both. Configurations are proposed by symmetric moves that
+   change the particle number (local moves with probability 15/16 and a
+   uniform draw over all allowed configurations with probability 1/16), and
+   the transition rule does not depend on whether an amplitude is zero.
+   For the exactly antisymmetric pair function with active :math:`S=0`
+   projection, sectors :math:`N=2\pmod4` are classified as exact zeros after
+   checking component failures. The local mixture is then 8/16 two-pair
+   flips (:math:`N\mathbin{\pm}4`) and 7/16 of the preceding local kernel;
+   the uniform component remains 1/16. Two sites of each spin are chosen
+   uniformly without replacement from all sites; the four occupations are
+   flipped only if they agree, and otherwise the proposal is a self-loop.
+   This keeps forward and reverse proposal probabilities equal. The symmetry
+   proof is frozen with the parameter generation; near-antisymmetric inputs
+   are not rounded to exact zeros. ``NGCInitNelec`` must be a multiple of four
+   for this symmetry (see ``NGrandCanonical``).
+
+   The two-pair moves in GC Lanczos are enabled only for this exact symmetry.
+   Near-antisymmetric pair functions retain the preceding 15/16 local and
+   1/16 uniform mixture to preserve existing random sequences. In such cases,
+   the small weight of intermediate particle-number sectors can suppress local
+   transitions, and the uniform proposals can have low acceptance. Slow
+   particle-number mixing therefore remains possible. Ordinary GC sampling
+   with active spin projection includes two-pair moves even for these inputs,
+   as described under ``NGrandCanonical``. For GC Lanczos, compare independent
+   seeds and different allowed initial particle numbers, and check convergence
+   with longer warm-up and sampling runs before relying on reported errors.
+   Access to all allowed configurations does not guarantee rapid mixing.
+
+   Only the first configuration of the final chain is redrawn, at most 1024
+   times, when :math:`\Phi` is exactly or numerically zero or its local
+   energy cannot be formed; the attempts are reported on standard output as
+   ``GC Lanczos bootstrap: ...``. After that, a proposed configuration whose
+   :math:`\Phi` cannot be distinguished from zero within its floating-point
+   error bound stops the run without a result row and writes
+   ``GC Lanczos failure: stage=... chain=... N=... status=...
+   amplitude_state=...`` to standard error; exactly zero candidates are
+   rejected as usual. An input with nodes, for example a pair table that is
+   nearly singular or singular only up to rounding, can therefore stop even
+   when ordinary grand-canonical sampling of the same input completes. This
+   includes momentum projection with :math:`K\ne0`: the vacuum and fully
+   occupied amplitudes vanish exactly only when the ``TransSym`` weights sum
+   to exactly zero (see ``NGrandCanonical``); otherwise they are numerical
+   zeros and the run stops when such a configuration is proposed, which is
+   likely for small systems.
+   Standard output also prints
+   ``GC Lanczos energy check: E_coeff=... E_final=...``, which compares the
+   energy of the coefficient chain with the final energy.
+   :math:`E_{\rm coeff}` is selected from the same samples as the
+   coefficients and is not a pass/fail criterion. An example is in
+   ``samples/GrandCanonical/FirstLanczos``.
+
 -  ``NLanczosSupportMode``
 
    **Type :** int-type (default value: 0)
@@ -719,6 +1045,27 @@ Keywords and parameters
    failed audit as ``biased-diagnostic-only`` in
    ``xxx_ls_support_yyy.dat``. A passing audit is necessary but not
    sufficient to prove complete support at every higher Krylov order.
+
+-  ``DLanczosGuideEps``
+
+   **Type :** double (default value: 0.0)
+
+   **Description :** Experimental. In the legacy Power-Lanczos calculation
+   (``NVMCCalMode=1``, ``NLanczosMode=1``, ``NLanczosStep=1``, and
+   ``NLanczosEstimatorMode=0``), this replaces the sampling weight by
+   :math:`q_\varepsilon(x)=|J(x)|^2\max(P(x)^2,\varepsilon A(x)^2)`, where
+   :math:`P=\sum_q a_q` is the quantum-number-projected sum and
+   :math:`A=\sum_q |a_q|`. With 0, the sampler uses :math:`|\psi|^2` as
+   before. With a positive value, the acceptance ratio uses
+   :math:`q_\varepsilon` and each measured sample carries the weight
+   :math:`|\psi|^2/q_\varepsilon=P^2/\max(P^2,\varepsilon A^2)`.
+   This is allowed only with real variational parameters and without
+   BackFlow, RBM, reweighting, or grand-canonical sampling. Samples with
+   :math:`P=0` remain in the guide-distribution visit count, carry zero
+   weight, and are excluded before evaluating local quantities. They are
+   counted in ``xxx_nzguide_yyy.dat``. A bin with a nonzero exact-zero or
+   numerical-skip count cannot be used for Lanczos moments. No recommended
+   value of :math:`\varepsilon` is given.
 
 -  ``NDataIdxStart``
 
@@ -752,9 +1099,12 @@ Keywords and parameters
 
 -  ``Ncond``
 
-   **Type :** int-type (greater than 0)
+   **Type :** int-type (greater than or equal to 0)
 
-   **Description :** The number of conduction electrons.
+   **Description :** The number of conduction electrons. Electrons of
+   localized spins are not counted, so that ``Ncond`` is 0 for a pure
+   spin system. ``Ncond`` must not exceed
+   2 (``Nsite`` - ``NlocalSpin``).
 
 -  ``2Sz``
 
@@ -1401,6 +1751,10 @@ Use rules
    [ int02 ]-[ int09 ] are out of
    range from the defined values.
 
+-  In the anti-parallel grand-canonical mode a term may contain spin-flip
+   factors when :math:`\sigma_1-\sigma_2+\sigma_3-\sigma_4=0`; a term with a
+   nonzero coefficient that changes :math:`S^z` is rejected.
+
 Independent Lanczos operator files (lstrans.def, lsinterall.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1515,7 +1869,9 @@ Use rules
 
 -  In orbital modes that do not allow spin-changing contractions, each
    factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
-   require orbital-general mode.
+   require orbital-general mode, or the anti-parallel grand-canonical mode
+   in which the whole term must conserve :math:`S^z`
+   (:math:`\sum_a(\sigma_a-\tau_a)=0`, see ``NGrandCanonical``).
 
 -  ``NBodyInterAll`` contributes to the normal energy output; it does
    not create a separate interaction-output file.
@@ -2395,6 +2751,7 @@ following configuration-dependent pair orbital :math:`f^b_{ij}(x)`:
      \eta^{\mu\nu}_{\tau\tau'}
      \Theta^{\mu\uparrow}_{i_n,i_n+\tau}(x)
      \Theta^{\nu\downarrow}_{i_m,i_m+\tau'}(x)
+     \phi(i_n,i_n+\tau)\phi(i_m,i_m+\tau')
      f_{i_n+\tau,i_m+\tau'} .
 
 :math:`\tau` and :math:`\tau'` run over the neighbor sites listed in
@@ -2434,6 +2791,29 @@ patterns in the configuration :math:`x`. With
 The no-BackFlow limit is :math:`\eta^{00}_{0,0}=1` and zero for the
 other :math:`\eta` values. In mVMC input, this corresponds to
 ``ProjBF[0]=1`` and ``ProjBF[k>0]=0``.
+
+The connection :math:`\phi(i,k)=\pm1` is specified by ``BFRange`` in
+the same gauge as the hopping amplitudes. It multiplies each directed
+center-to-neighbor channel, including both orientations of a pair.
+The base term has :math:`\phi(i,i)=1`; occupation counts and the base-term
+activation rule do not depend on the phase.
+
+For a signed transformation :math:`U`, the evaluated channels use
+:math:`\phi(Ui,Uk)\phi(Uj,Ul)`, together with the existing **center**
+signs :math:`s_U(i)s_U(j)`. The reader checks
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)` for every used transformation.
+The neighbor signs that enter this identity must not be inserted a second
+time as orbital signs. FSZ uses the composition of ``TransSym`` and
+``OptTrans`` and its composed signs.
+
+These statements express three distinct contracts. Local Z2 gauge changes
+:math:`f_{ij}\mapsto g_i g_j f_{ij}` and
+:math:`\phi(i,k)\mapsto g_i g_k\phi(i,k)` give the same transformation
+of the BackFlow pair orbital. Translation covariance of an unprojected
+ansatz additionally requires the original orbitals to be covariant under
+the declared translation subgroup. Evaluation of a projected state uses
+the transformed configuration and transformed bonds even for arbitrary
+original orbitals; it does not assume that additional orbital symmetry.
 
 Number of parameters
 ^^^^^^^^^^^^^^^^^^^^
@@ -2508,7 +2888,7 @@ File format
    line 7 also contains ``Nrange`` [int01] [int02].
 
 -  Lines 11 - (10 + :math:`N_s \times` [int01]):
-   [int03] [int04] [int05]
+   [int03] [int04] [int05] [int06]
 
 Parameters
 ^^^^^^^^^^
@@ -2569,6 +2949,36 @@ User rules
    collects the anchor sites whose Theta counts can change, so an
    asymmetric ``BFRange`` is rejected at input time with
    ``BFRange must be mutual``.
+
+The optional fourth field [int06] is the boundary seam phase
+:math:`\phi(i,j)`, an integer +1 or -1. For AP input (negative
+``NMPTrans``), all rows must contain this field. For PBC, either all rows
+have three fields (implicit +1) or all have four fields with +1. The
+example above is the compatible PBC format. For an AP four-site chain,
+append -1 to rows ``0 3 1`` and ``3 0 1``, and +1 to every other row.
+
+Each physical body line must contain exactly three or four whitespace-separated
+integers, with a uniform field count throughout the file. Blank lines,
+comments, trailing fields or rows, numeric suffixes, and integer overflow
+are rejected. A final newline is optional. Self phases must be +1 and
+reverse bonds must have the same phase.
+
+The phase specifies the boundary connection in the same gauge as the pair
+orbitals, not the sign of the hopping amplitude. Use bonds with an unambiguous
+boundary crossing; antipodal bonds along an AP direction (displacement L/2)
+are outside this format's supported scope. Every translation row actually
+used by ``abs(NMPTrans)`` must preserve the range, shell and phase according to
+:math:`\phi(Ui,Uk)=s_U(i)s_U(k)\phi(i,k)`. In orbital-general mode this
+includes the composition with every used OptTrans and its signs. Unused
+translation rows impose no additional BackFlow symmetry. Identity-only
+projection cannot verify the nontrivial boundary holonomy: the input generator
+is responsible for the physical seam. Inconsistent used transforms are
+rejected before sampling.
+
+AP inputs and optimized parameters from the old phase-free definition describe
+a different wavefunction. There is no compatibility switch; retain the old
+binary, source/submodule revisions, inputs and parameter hashes to reproduce
+those results, and reoptimize for the seam-phase definition.
 
 BF file (bf.def)
 ^^^^^^^^^^^^^^^^
@@ -2770,10 +3180,30 @@ Inputs outside this range are rejected.
    ``NQPOptTrans==1``. For non-FSZ ``abs(NMPTrans)>1``, sampling,
    Green functions, Hamiltonian, first Lanczos, and N-body evaluation
    use a correctness-first full Slater/Pfaffian rebuild. The same
-   rebuild is used for anti-periodic inputs and for a single-pattern
-   input whose first transformation is nonidentity; only the periodic,
-   identity, single-pattern case retains the legacy incremental path.
-   The rebuild path can be more expensive than that legacy path.
+   rebuild is used for a single-pattern input whose transformation is
+   nonidentity or has a negative transformation sign. A single identity
+   transformation with all-positive signs uses local Slater row updates
+   for both periodic and anti-periodic boundaries. Pfaffian evaluation on
+   the row-update route, and accepted Pfaffian/inverse evaluation on both
+   non-FSZ routes, use the following block factorization. For the occupied
+   matrix :math:`A`, the same-spin blocks are checked to be exactly zero and
+   the opposite-spin :math:`N_e\times N_e` block :math:`F` is used through
+   :math:`\operatorname{Pf}(A)=(-1)^{N_e(N_e-1)/2}\det(F)`. Accepted inverses
+   are rebuilt from the same LU factorization of :math:`F` to avoid unstable
+   rank-update cancellation. Proposal and Green-function evaluations on
+   the full-rebuild route, and sampler recovery evaluations on either route,
+   retain the direct :math:`2N_e\times 2N_e` Pfaffian factorization.
+   Thus the legacy route counters describe Slater row updates, not an
+   incremental Pfaffian/inverse formula or a guaranteed speedup.
+   ``MVMC_BF_FORCE_CANONICAL_NONFSZ=1`` selects the full Slater rebuild as
+   a manual fallback. This flag accepts only 0 or 1, is read on MPI rank 0
+   and broadcast, and the chosen route and reason are printed at startup.
+   Numerical failures are recovered with a checked evaluation of the same
+   proposal and the same random number, or terminate the calculation if
+   recovery fails; they are not treated as ordinary Metropolis rejections.
+   This recovery applies only to sampler proposal/commit transactions. A
+   numerical failure while evaluating a Hamiltonian or Green function stops
+   the calculation immediately without changing the sampler state.
 
 -  With the normal ``Orbital`` / ``OrbitalAntiParallel`` format, the
    Hamiltonian may contain ``Trans``, number-operator interactions
@@ -3659,6 +4089,29 @@ User rules
 -  A program is terminated, when [ int02 ] -
    [ int09 ] are out of range from the defined values.
 
+-  The canonical reader reads the index column of the OptFlag rows but
+   assigns the flags in row order. Write the OptFlag rows in index order
+   (``0``, ``1``, ...).
+
+-  In the anti-parallel grand-canonical mode (``NGrandCanonical=1`` with
+   this file as the only orbital input) the file is read strictly, and every
+   check is made before the row is stored:
+
+   * Line 2 gives a positive number of parameters, line 3 gives
+     ``ComplexType`` 0 or 1, and :math:`(2N_s)^2` must fit in a signed int.
+   * The pair block has exactly :math:`N_s^2` rows, every :math:`(i,j)`
+     appears once, and the parameter index is in range. With ``NMPTrans>0``
+     a row has three or four integer columns and a fourth column is
+     ignored; with ``NMPTrans<0`` four columns are required and the fourth
+     must be :math:`\pm1`. Non-integer, out-of-int-range, or extra columns
+     are rejected in both cases.
+   * The OptFlag block has exactly [ int01 ] rows ``index flag``; every
+     index appears once and the flag is 0 or 1. In this mode the rows may be
+     given in any order, which is an extension of the grand-canonical
+     reader; index order is still recommended.
+   * Only blank lines may follow. Blank lines, comments, or surplus rows
+     inside the blocks are errors.
+
 OrbitalParallel file
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -3915,7 +4368,8 @@ Parameters
    on (the mode turns on when the value of ``NMPTrans`` in ``ModPara``
    file is negative), the sign of :math:`f_{i\sigma_1j\sigma_2}` is
    specified by setting [ int08 :math:`]=\pm1`. This term can
-   be omitted when the mode of the anti-periodic condition is off.
+   be omitted when the mode of the anti-periodic condition is off, and
+   it is required on every row when the mode is on.
 
 -  [ int09 ]
 
@@ -3943,6 +4397,20 @@ User rules
 
 -  A program is terminated, when [ int02 ] -
    [ int10 ] are out of range from the defined values.
+
+-  In the anti-periodic mode (negative ``NMPTrans``), each pair row is
+   validated as it is read, independently of ``NGrandCanonical`` and
+   BackFlow, and the program is terminated unless: the row has exactly six
+   integer columns (no missing or extra column, no fractional or
+   out-of-range value); the site indices are in [0, ``Nsite``); the spins
+   are 0 or 1; the parameter index is in [0, [ int01 ]); the sign
+   [ int08 ] is :math:`\pm1`;
+   :math:`i+\sigma_1 N_s < j+\sigma_2 N_s`; and every pair appears exactly
+   once (no duplicated, missing, or blank row). The optimization rows that
+   follow must each be exactly two integers [ int09 ] [ int10 ], with every
+   [ int09 ] in [0, [ int01 ]) appearing exactly once (in any order) and
+   [ int10 ] equal to 0 or 1; only blank lines may follow them. The periodic
+   reader (five or six columns) is unchanged.
 
 TransSym file (qptransidx.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -4450,7 +4918,9 @@ Use rules
 
 -  In orbital modes that do not allow spin-changing contractions, each
    factor must satisfy :math:`\sigma_a = \tau_a`. Spin-changing factors
-   require orbital-general mode.
+   require orbital-general mode or the anti-parallel grand-canonical mode;
+   in the latter, terms that change :math:`S^z` are accepted and average to
+   zero.
 
 -  This output is supported for physical-quantity calculations with or
    without BackFlow. BackFlow N-body measurement requires complex
@@ -4543,9 +5013,14 @@ Hermiticity and mode restrictions
    ``NVMCCalMode=1``; supplying its keyword in mode 0 is an input error.
 
 -  Grand-canonical sampling covers even particle-number sectors and inherits
-   the constraints documented for ``NGrandCanonical``: ``OrbitalGeneral``
-   and complex variational parameters are required, while real-only GC,
-   RBM, BackFlow, and Lanczos paths remain unsupported.
+   the constraints documented for ``NGrandCanonical``: complex variational
+   parameters are required, while real-only GC, RBM, BackFlow, and Lanczos
+   paths remain unsupported. With general pairing (``OrbitalGeneral``) any
+   spin combination is allowed. With anti-parallel pairing
+   (``OrbitalAntiParallel`` / ``Orbital`` alone, ``2Sz=0``) every
+   ``AnomalousTerm`` pair with a nonzero coefficient must combine an up and a
+   down operator; ``AnomalousG`` rows may use any spins, and same-spin rows
+   average to zero.
 
 
 Twist file (twist.def)

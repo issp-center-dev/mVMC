@@ -43,6 +43,10 @@ void SafeMpiReduce_fcmp(double complex *send, double complex *recv, int nData, M
     idx += nSend;
   }
 
+  #else
+  (void)comm;
+  if (nData > 0 && send != recv)
+    memcpy(recv, send, (size_t)nData * sizeof(double complex));
   #endif
   return;
 }
@@ -58,6 +62,10 @@ void SafeMpiAllReduce_fcmp(double complex *send, double complex *recv, int nData
     idx += nSend;
   }
 
+  #else
+  (void)comm;
+  if (nData > 0 && send != recv)
+    memcpy(recv, send, (size_t)nData * sizeof(double complex));
   #endif
   return;
 }

@@ -1,6 +1,6 @@
 #ifndef _VMCMAKE_FSZ_REAL
 #define _VMCMAKE_FSZ_REAL
-#include <mpi.h>
+#include "mvmc_mpi.h"
 
 void VMCMakeSample_fsz_real(MPI_Comm comm);
 

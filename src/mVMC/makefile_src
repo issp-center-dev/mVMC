@@ -16,11 +16,13 @@ endif
 
 OBJS = \
 	absolute_pfaffian.o \
+	gc_exact_sum.o \
 	classic_pfaffian_matrix.o \
 	classic_pfaffian_state.o \
 	classic_pfaffian_collective.o \
 	physcal_lanczos.o \
 	splitloop.o \
+	version.o \
 	vmcmain.o \
 	$(PFAPACK) $(SFMT) $(STDFACE) \
 	$(PFUPDATES) $(LTL2INV)
@@ -36,6 +38,7 @@ backflow_nbody.c \
 backflow_nbody_scratch.c \
 backflow_nbody_oracle.c \
 backflow_pf.c \
+backflow_stable.c \
 backflow_slater.c \
 backflow_vmc.c \
 average.c \
@@ -47,10 +50,15 @@ calham.c \
 calham_real.c \
 calham_fsz.c \
 calham_gc.c \
+gc_antiparallel.c \
+gc_antiparallel_input.c \
 gc_config.c \
+gc_component.c \
 gc_size.c \
+gc_exact_sum.c \
 gauleg.c \
 initfile.c \
+initial_sample.c \
 legendrepoly.c \
 locgrn.c \
 locgrn_real.c \
@@ -110,11 +118,16 @@ HEADERS = \
 ./include/calgrn.h \
 ./include/calham.h \
 ./include/calham_real.h \
+./include/gc_antiparallel.h \
+./include/gc_antiparallel_input.h \
 ./include/gc_config.h \
+./include/gc_component.h \
 ./include/gc_size.h \
+./include/gc_exact_sum.h \
 ./include/gauleg.h \
 ./include/global.h \
 ./include/initfile.h \
+./include/initial_sample.h \
 ./include/legendrepoly.h \
 ./include/locgrn.h \
 ./include/locgrn_fsz.h \
@@ -167,7 +180,7 @@ all :
 vmc.out : $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(OPTION) $(CFLAGS) $(LIBS)
 
-vmcdry.out : vmcdry.o $(STDFACE)
+vmcdry.out : vmcdry.o version.o $(STDFACE)
 	$(CXX) -o $@ $^ $(OPTION) $(CFLAGS) $(LIBS)
 
 SUFFIXES: .o .c
@@ -186,5 +199,7 @@ clean :
 
 physcal_lanczos.o:$(SOURCES) $(HEADERS)
 splitloop.o:$(SOURCES) $(HEADERS)
+gc_exact_sum.o:./include/gc_exact_sum.h
+version.o:./include/version.h
 vmcdry.o:$(SOURCES) $(HEADERS)
 vmcmain.o:$(SOURCES) $(HEADERS)

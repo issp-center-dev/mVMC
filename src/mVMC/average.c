@@ -30,6 +30,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "global.h"
 #include "average.h"
 #include "physcal_lanczos2.h"
+#include "near_zero_guide.h"
 #ifndef _SRC_AVERAGE
 #define _SRC_AVERAGE
 
@@ -506,6 +507,24 @@ void weightAverageReduce_real(int n, double *vec, MPI_Comm comm) {
     }
 
     return;
+}
+
+/* Entries before NZG_MIN_W are sums; the last two are a minimum and a
+ * maximum.  Keep these diagnostics unnormalized. */
+void WeightAverageNearZeroGuide(MPI_Comm comm) {
+  int size;
+  MPI_Comm_size(comm, &size);
+  if(size > 1) {
+    double send[NZG_COUNT], recv[NZG_COUNT];
+    int i;
+    for(i=0; i<NZG_COUNT; i++) send[i] = NearZeroGuideStat[i];
+    MPI_Allreduce(send, recv, NZG_MIN_W, MPI_DOUBLE, MPI_SUM, comm);
+    MPI_Allreduce(send + NZG_MIN_W, recv + NZG_MIN_W, 1,
+                  MPI_DOUBLE, MPI_MIN, comm);
+    MPI_Allreduce(send + NZG_MAX_RATIO, recv + NZG_MAX_RATIO, 1,
+                  MPI_DOUBLE, MPI_MAX, comm);
+    for(i=0; i<NZG_COUNT; i++) NearZeroGuideStat[i] = recv[i];
+  }
 }
 
 #endif

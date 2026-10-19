@@ -5,6 +5,7 @@
 #error "power_lanczos_stabilized.c requires the production Krylov core"
 #endif
 
+#include "gc_krylov_proposal.h"
 #include "krylov_final_state_chain.h"
 #include "krylov_gevp_solver.h"
 #include "krylov_matrix_measurement.h"
@@ -219,6 +220,399 @@ static MVMCKrylovStatus final_step(
       word_count, &step);
 }
 
+/*
+ * Grand-canonical run state.  NULL selects the canonical fixed-sector
+ * proposals; otherwise the chain root draws the symmetric GC proposal and
+ * the acceptance uniform and broadcasts them before every candidate step.
+ */
+typedef struct {
+  const MVMCKrylovFockModel *model;
+  MVMCClassicPfaffianCommunicator chain_communicator;
+  int topology_ready;
+  int chain_rank;
+  uint64_t chain_index;
+  MVMCPowerLanczosGCStage stage;
+  int initial_electron_count;
+  int spin_triplet_s0;
+  uint64_t bootstrap_attempts;
+  uint64_t bootstrap_exact_zero;
+  uint64_t bootstrap_numeric_zero;
+  uint64_t bootstrap_local_energy;
+  int bootstrap_exhausted;
+  int failure_recorded;
+  MVMCPowerLanczosGCStage failure_stage;
+  MVMCKrylovStatus failure_status;
+  int failure_electron_count;
+  int failure_amplitude_state;
+  double failure_log_abs;
+  double failure_log_error_bound;
+  int coefficient_available;
+  double complex coefficient[2];
+  int coefficient_energy_available;
+  double complex coefficient_energy;
+  uint64_t *sector_samples;
+  size_t sector_capacity;
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  int final_sample_seen;
+#endif
+} MVMCPowerLanczosGCRun;
+
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+static MVMCPowerLanczosGCTestingCounters gc_testing_counters;
+static MVMCPowerLanczosGCFault gc_testing_fault =
+    MVMC_POWER_LANCZOS_GC_FAULT_NONE;
+
+void mvmc_power_lanczos_gc_testing_counters(
+    MVMCPowerLanczosGCTestingCounters *counters) {
+  if (counters != NULL) *counters = gc_testing_counters;
+}
+
+void mvmc_power_lanczos_gc_testing_set_fault(MVMCPowerLanczosGCFault fault) {
+  gc_testing_fault = fault;
+}
+#define GC_COUNT(field) (++gc_testing_counters.field)
+#else
+#define GC_COUNT(field) ((void)0)
+#endif
+
+const char *mvmc_power_lanczos_gc_stage_name(MVMCPowerLanczosGCStage stage) {
+  switch (stage) {
+    case MVMC_POWER_LANCZOS_GC_STAGE_NONE:
+      return "none";
+    case MVMC_POWER_LANCZOS_GC_STAGE_COEFFICIENT_INITIAL:
+      return "coefficient-initial";
+    case MVMC_POWER_LANCZOS_GC_STAGE_PILOT_WARM_UP:
+      return "pilot-warm-up";
+    case MVMC_POWER_LANCZOS_GC_STAGE_PILOT_SAMPLE:
+      return "pilot-sample";
+    case MVMC_POWER_LANCZOS_GC_STAGE_COEFFICIENT_WARM_UP:
+      return "coefficient-warm-up";
+    case MVMC_POWER_LANCZOS_GC_STAGE_COEFFICIENT_SAMPLE:
+      return "coefficient-sample";
+    case MVMC_POWER_LANCZOS_GC_STAGE_FINAL_BOOTSTRAP:
+      return "final-bootstrap";
+    case MVMC_POWER_LANCZOS_GC_STAGE_FINAL_WARM_UP:
+      return "final-warm-up";
+    case MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE:
+      return "final-sample";
+    case MVMC_POWER_LANCZOS_GC_STAGE_COUNT:
+      break;
+  }
+  return "invalid";
+}
+
+static int popcount_words(const uint64_t *words, size_t word_count) {
+  int count = 0;
+  size_t index;
+  for (index = 0; index < word_count; ++index) {
+    uint64_t value = words[index];
+    while (value != 0) {
+      count += (int)(value & UINT64_C(1));
+      value >>= 1;
+    }
+  }
+  return count;
+}
+
+/* The first failure of a chain: stage, candidate N and classification. */
+static void gc_record_failure(MVMCPowerLanczosGCRun *gc,
+                              MVMCKrylovStatus status,
+                              const uint64_t *words, size_t word_count,
+                              const MVMCKrylovFinalDiagnostic *diagnostic) {
+  if (gc == NULL || gc->failure_recorded ||
+      status == MVMC_KRYLOV_STATUS_OK) {
+    return;
+  }
+  gc->failure_recorded = 1;
+  gc->failure_stage = gc->stage;
+  gc->failure_status = status;
+  gc->failure_electron_count =
+      words != NULL ? popcount_words(words, word_count) : -1;
+  gc->failure_amplitude_state = -1;
+  gc->failure_log_abs = NAN;
+  gc->failure_log_error_bound = NAN;
+  if (diagnostic != NULL && diagnostic->evaluation_available) {
+    gc->failure_amplitude_state = (int)diagnostic->evaluation.amplitude.state;
+    gc->failure_log_abs = diagnostic->evaluation.amplitude.log_abs;
+    gc->failure_log_error_bound =
+        diagnostic->evaluation.amplitude.log_abs_error_bound;
+  }
+}
+
+/* Root status first, then the candidate words and the uniform. */
+static MVMCKrylovStatus gc_broadcast(const MVMCPowerLanczosGCRun *gc,
+                                     MVMCKrylovStatus root_status,
+                                     uint64_t *words, size_t word_count,
+                                     double *uniform) {
+#ifdef _mpi_use
+  int encoded = (int)root_status;
+  if (MPI_Bcast(&encoded, 1, MPI_INT, 0, gc->chain_communicator) !=
+      MPI_SUCCESS) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  if (encoded != (int)MVMC_KRYLOV_STATUS_OK) {
+    return (MVMCKrylovStatus)encoded;
+  }
+  if (word_count > (size_t)INT_MAX ||
+      MPI_Bcast(words, (int)word_count, MPI_UINT64_T, 0,
+                gc->chain_communicator) != MPI_SUCCESS ||
+      (uniform != NULL &&
+       MPI_Bcast(uniform, 1, MPI_DOUBLE, 0, gc->chain_communicator) !=
+           MPI_SUCCESS)) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  return MVMC_KRYLOV_STATUS_OK;
+#else
+  (void)gc;
+  (void)words;
+  (void)word_count;
+  (void)uniform;
+  return root_status;
+#endif
+}
+
+/* Chain root: 1/16 whole-domain uniform, 15/16 local; log ratio is 0. */
+static MVMCKrylovStatus gc_propose(MVMCPowerLanczosGCRun *gc,
+                                   MVMCKrylovPositiveSamplerRng *rng,
+                                   const uint64_t *current,
+                                   uint64_t *proposal, size_t word_count,
+                                   double *uniform) {
+  MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_OK;
+  *uniform = 0.0;
+  if (gc->chain_rank == 0) {
+    size_t kind = 0;
+    status = mvmc_krylov_positive_sampler_rng_draw_bounded(rng, 16, &kind);
+    if (status == MVMC_KRYLOV_STATUS_OK) {
+      if (kind == 0) {
+        status = mvmc_gc_krylov_draw_uniform(gc->model, draw_bounded, rng,
+                                            proposal, word_count);
+      } else if (gc->spin_triplet_s0 && kind <= 8) {
+        status = mvmc_gc_krylov_draw_two_pairs(gc->model, current,
+                         draw_bounded, rng, proposal, word_count);
+      } else {
+        status = mvmc_gc_krylov_draw_local(gc->model, current,
+                         draw_bounded, rng, proposal, word_count);
+      }
+    }
+    if (status == MVMC_KRYLOV_STATUS_OK) {
+      status = mvmc_krylov_positive_sampler_rng_draw_uniform(rng, uniform);
+    }
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    if (gc->stage < MVMC_POWER_LANCZOS_GC_STAGE_COUNT) {
+      ++gc_testing_counters.generated[gc->stage];
+    }
+#endif
+  }
+  return gc_broadcast(gc, status, proposal, word_count, uniform);
+}
+
+/* Chain root: a start configuration (initial N or the whole domain). */
+static MVMCKrylovStatus gc_draw_start(MVMCPowerLanczosGCRun *gc,
+                                      MVMCKrylovPositiveSamplerRng *rng,
+                                      uint64_t *words, size_t word_count,
+                                      int initial_n) {
+  MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_OK;
+  if (gc->chain_rank == 0) {
+    status = initial_n
+                 ? mvmc_gc_krylov_draw_initial(
+                       gc->model, gc->initial_electron_count, draw_bounded,
+                       rng, words, word_count)
+                 : mvmc_gc_krylov_draw_uniform(gc->model, draw_bounded, rng,
+                                               words, word_count);
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    if (gc->stage < MVMC_POWER_LANCZOS_GC_STAGE_COUNT) {
+      ++gc_testing_counters.generated[gc->stage];
+    }
+#endif
+  }
+  return gc_broadcast(gc, status, words, word_count, NULL);
+}
+
+static MVMCKrylovStatus coefficient_step_any(
+    MVMCPowerLanczosGCRun *gc, MVMCKrylovBoundedWorkspace *workspace,
+    const MVMCKrylovPositiveGuidePolicy *guide,
+    const MVMCKrylovFockModel *model,
+    const MVMCKrylovPositiveSamplerProposalPolicy *proposal_policy,
+    uint64_t *words, size_t word_count,
+    MVMCKrylovPositiveSamplerSnapshot *snapshot,
+    MVMCKrylovPositiveSamplerRng *rng,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    uint64_t *proposal_words) {
+  MVMCKrylovPositiveSamplerStepResult step;
+  double uniform = 0.0;
+  MVMCKrylovStatus status;
+  if (gc == NULL) {
+    GC_COUNT(fixed_sector_calls);
+    return coefficient_step(workspace, guide, model, proposal_policy, words,
+                            word_count, snapshot, rng, amplitude,
+                            amplitude_context, proposal_words);
+  }
+  status = gc_propose(gc, rng, words, proposal_words, word_count, &uniform);
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    ++gc_testing_counters.steps[gc->stage];
+#endif
+    status = mvmc_krylov_positive_sampler_step(
+        workspace, guide, words, word_count, snapshot, proposal_words,
+        word_count, 0.0, uniform, amplitude, amplitude_context, &step);
+  }
+  gc_record_failure(gc, status, proposal_words, word_count, NULL);
+  return status;
+}
+
+static MVMCKrylovStatus final_step_any(
+    MVMCPowerLanczosGCRun *gc, MVMCKrylovBoundedWorkspace *workspace,
+    const MVMCKrylovFinalStatePolicy *policy,
+    const MVMCKrylovFockModel *model,
+    const MVMCKrylovPositiveSamplerProposalPolicy *proposal_policy,
+    uint64_t *words, size_t word_count,
+    MVMCKrylovFinalStateSnapshot *snapshot,
+    MVMCKrylovPositiveSamplerRng *rng,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    uint64_t *proposal_words) {
+  MVMCKrylovFinalStateStepResult step;
+  MVMCKrylovFinalDiagnostic diagnostic;
+  double uniform = 0.0;
+  MVMCKrylovStatus status;
+  if (gc == NULL) {
+    GC_COUNT(fixed_sector_calls);
+    return final_step(workspace, policy, model, proposal_policy, words,
+                      word_count, snapshot, rng, amplitude,
+                      amplitude_context, proposal_words);
+  }
+  memset(&diagnostic, 0, sizeof(diagnostic));
+  status = gc_propose(gc, rng, words, proposal_words, word_count, &uniform);
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    ++gc_testing_counters.steps[gc->stage];
+#endif
+    status = mvmc_krylov_final_state_sampler_step_diagnosed(
+        workspace, policy, words, word_count, snapshot, proposal_words,
+        word_count, 0.0, uniform, amplitude, amplitude_context, &step,
+        &diagnostic);
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    /* A genuine numeric zero with a finite error bound, never EXACT_ZERO. */
+    if (status == MVMC_KRYLOV_STATUS_OK &&
+        gc_testing_fault == MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC &&
+        gc->stage == MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE &&
+        !gc->final_sample_seen &&
+        mvmc_scaled_complex_make_numeric_zero(
+            -30.0, -INFINITY, -INFINITY, 0.0,
+            &diagnostic.evaluation.amplitude) == MVMC_PFAFFIAN_STATUS_OK) {
+      diagnostic.evaluation_available = 1;
+      diagnostic.retry_reason = MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO;
+      status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+    }
+    if (gc->stage == MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE) {
+      gc->final_sample_seen = 1;
+    }
+#endif
+  }
+  gc_record_failure(gc, status, proposal_words, word_count, &diagnostic);
+  return status;
+}
+
+/* Reasons and statuses must agree inside the chain. */
+static MVMCKrylovStatus gc_agree(const MVMCPowerLanczosGCRun *gc,
+                                 MVMCKrylovStatus status,
+                                 MVMCKrylovBootstrapReason reason) {
+#ifdef _mpi_use
+  int local[2];
+  int minimum[2];
+  int maximum[2];
+  local[0] = (int)status;
+  local[1] = (int)reason;
+  if (MPI_Allreduce(local, minimum, 2, MPI_INT, MPI_MIN,
+                    gc->chain_communicator) != MPI_SUCCESS ||
+      MPI_Allreduce(local, maximum, 2, MPI_INT, MPI_MAX,
+                    gc->chain_communicator) != MPI_SUCCESS) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  if (minimum[0] != maximum[0] || minimum[1] != maximum[1]) {
+    return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+  }
+#else
+  (void)gc;
+  (void)reason;
+#endif
+  return status;
+}
+
+/*
+ * Final-chain start: attempt a uses an initial-N configuration for even a
+ * and a whole-domain configuration for odd a.  Only EXACT_ZERO,
+ * NUMERIC_ZERO and an unavailable local energy are redrawn; everything else
+ * ends the run.  The transition kernel and the target are not changed.
+ */
+static MVMCKrylovStatus gc_final_bootstrap(
+    MVMCPowerLanczosGCRun *gc, MVMCKrylovBoundedWorkspace *workspace,
+    const MVMCKrylovFinalStatePolicy *policy, uint64_t *words,
+    size_t word_count, MVMCKrylovPositiveSamplerRng *rng,
+    MVMCKrylovScaledAmplitudeCallback amplitude, void *amplitude_context,
+    MVMCKrylovFinalStateSnapshot *snapshot) {
+  MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+  MVMCKrylovFinalDiagnostic diagnostic;
+  size_t attempt;
+  gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_FINAL_BOOTSTRAP;
+  for (attempt = 0; attempt < MVMC_POWER_LANCZOS_BOOTSTRAP_ATTEMPTS;
+       ++attempt) {
+    MVMCKrylovBootstrapReason reason = MVMC_KRYLOV_BOOTSTRAP_NO_RETRY;
+    /* A failed draw must not report the previous candidate. */
+    memset(&diagnostic, 0, sizeof(diagnostic));
+    status = gc_draw_start(gc, rng, words, word_count, attempt % 2 == 0);
+    if (status != MVMC_KRYLOV_STATUS_OK) break;
+    ++gc->bootstrap_attempts;
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    ++gc_testing_counters.steps[gc->stage];
+#endif
+    status = mvmc_krylov_final_state_sampler_initialize_diagnosed(
+        workspace, policy, words, word_count, amplitude, amplitude_context,
+        snapshot, &diagnostic);
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    if ((gc_testing_fault ==
+             MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_NUMERIC &&
+         attempt == 0) ||
+        gc_testing_fault ==
+            MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_EXHAUSTED) {
+      if (status == MVMC_KRYLOV_STATUS_OK ||
+          status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE) {
+        memset(snapshot, 0, sizeof(*snapshot));
+        mvmc_scaled_complex_make_numeric_zero(
+            -30.0, -INFINITY, -INFINITY, 0.0,
+            &diagnostic.evaluation.amplitude);
+        diagnostic.evaluation_available = 1;
+        diagnostic.retry_reason = MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO;
+        status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+      }
+    }
+#endif
+    if (status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE) {
+      reason = diagnostic.retry_reason;
+    }
+    status = gc_agree(gc, status, reason);
+    if (status == MVMC_KRYLOV_STATUS_OK) break;
+    if (status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+        reason != MVMC_KRYLOV_BOOTSTRAP_NO_RETRY) {
+      if (reason == MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO) {
+        ++gc->bootstrap_exact_zero;
+      } else if (reason == MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO) {
+        ++gc->bootstrap_numeric_zero;
+      } else {
+        ++gc->bootstrap_local_energy;
+      }
+      GC_COUNT(bootstrap_retries);
+      continue;
+    }
+    break;
+  }
+  if (status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+      attempt == MVMC_POWER_LANCZOS_BOOTSTRAP_ATTEMPTS) {
+    gc->bootstrap_exhausted = 1;
+  }
+  gc_record_failure(gc, status, words, word_count, &diagnostic);
+  return status;
+}
+
 static void log_sum_add(double value, double *maximum, double *scaled_sum) {
   if (value > *maximum) {
     *scaled_sum =
@@ -247,7 +641,7 @@ static uint64_t guide_policy_hash(
 }
 
 static MVMCKrylovStatus scale_pilot(
-    MVMCKrylovBoundedWorkspace *workspace,
+    MVMCPowerLanczosGCRun *gc, MVMCKrylovBoundedWorkspace *workspace,
     const MVMCKrylovFockModel *model,
     const MVMCKrylovPositiveSamplerProposalPolicy *proposal_policy,
     size_t pilot_warm_up, size_t pilot_sample_count,
@@ -270,16 +664,18 @@ static MVMCKrylovStatus scale_pilot(
     local_maximum[index] = -INFINITY;
     local_scaled_sum[index] = 0.0;
   }
+  if (gc != NULL) gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_PILOT_WARM_UP;
   for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                  step < pilot_warm_up; ++step) {
-    status = coefficient_step(
-        workspace, guide, model, proposal_policy, words, word_count,
+    status = coefficient_step_any(
+        gc, workspace, guide, model, proposal_policy, words, word_count,
         snapshot, rng, amplitude, amplitude_context, proposal_words);
   }
+  if (gc != NULL) gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_PILOT_SAMPLE;
   for (sample = 0; status == MVMC_KRYLOV_STATUS_OK &&
                    sample < pilot_sample_count; ++sample) {
-    status = coefficient_step(
-        workspace, guide, model, proposal_policy, words, word_count,
+    status = coefficient_step_any(
+        gc, workspace, guide, model, proposal_policy, words, word_count,
         snapshot, rng, amplitude, amplitude_context, proposal_words);
     for (index = 0; status == MVMC_KRYLOV_STATUS_OK &&
                     index <= guide->order; ++index) {
@@ -585,10 +981,18 @@ static double block_mean_standard_error(
               ((double)block_count * ((double)block_count - 1.0)));
 }
 
-MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
+/*
+ * Shared stabilized core.  gc == NULL is the canonical path with its
+ * historical bridge, proposals, RNG order and failure statuses; otherwise
+ * the GC bridge, initial configurations, proposals and bootstrap are used
+ * and every statistical step is the same code.
+ */
+static MVMCKrylovStatus stabilized_core(
     const MVMCPowerLanczosStabilizedInput *input,
+    const MVMCPowerLanczosGCView *gc_view, MVMCPowerLanczosGCRun *gc,
     MVMCPowerLanczosStabilizedResult *result) {
   MVMCPowerLanczosClassicBridge *bridge = NULL;
+  MVMCPowerLanczosGCBridge *gc_bridge = NULL;
   const MVMCKrylovFockModel *model = NULL;
   MVMCKrylovScaledAmplitudeCallback amplitude = NULL;
   void *amplitude_context = NULL;
@@ -644,6 +1048,8 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
   double energy_standard_error = NAN;
   double second_moment_standard_error = NAN;
   double effective_sample_count = NAN;
+  double complex coefficient_energy = NAN + I * NAN;
+  int coefficient_energy_available = 0;
   MVMCKrylovTauIntResult tau;
   MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_OK;
   size_t step;
@@ -653,7 +1059,9 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
 
   if (result == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
   invalidate_result(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, result);
-  if (input == NULL || input->classic_view == NULL ||
+  if (input == NULL ||
+      (gc == NULL ? input->classic_view == NULL
+                  : (gc_view == NULL || input->power_step != 1)) ||
       (input->power_step != 1 && input->power_step != 2) ||
       input->seed == 0 || input->sample_count < 8 || input->interval == 0 ||
       input->sample_count > SIZE_MAX / sizeof(*energy_series)) {
@@ -678,22 +1086,41 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
       (size_t)sampling.total_samples);
   if (block_count == 0) status = MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
 
-  if (status == MVMC_KRYLOV_STATUS_OK) {
+  if (status == MVMC_KRYLOV_STATUS_OK && gc == NULL) {
     status = mvmc_power_lanczos_classic_bridge_create(
         input->classic_view, input->world_communicator,
         input->chain_communicator, &bridge);
-  }
-  if (status == MVMC_KRYLOV_STATUS_OK) {
-    model = mvmc_power_lanczos_classic_bridge_model(bridge);
-    amplitude = mvmc_power_lanczos_classic_bridge_amplitude(bridge);
-    amplitude_context =
-        mvmc_power_lanczos_classic_bridge_amplitude_context(bridge);
-    generation_hash =
-        mvmc_power_lanczos_classic_bridge_generation_hash(bridge);
-    if (model == NULL || amplitude == NULL || amplitude_context == NULL ||
-        generation_hash == 0) {
-      status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+    if (status == MVMC_KRYLOV_STATUS_OK) {
+      model = mvmc_power_lanczos_classic_bridge_model(bridge);
+      amplitude = mvmc_power_lanczos_classic_bridge_amplitude(bridge);
+      amplitude_context =
+          mvmc_power_lanczos_classic_bridge_amplitude_context(bridge);
+      generation_hash =
+          mvmc_power_lanczos_classic_bridge_generation_hash(bridge);
     }
+  } else if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_power_lanczos_gc_bridge_create(
+        gc_view, input->world_communicator, input->chain_communicator,
+        &gc_bridge);
+    if (status == MVMC_KRYLOV_STATUS_OK) {
+      model = mvmc_power_lanczos_gc_bridge_model(gc_bridge);
+      amplitude = mvmc_power_lanczos_gc_bridge_amplitude(gc_bridge);
+      amplitude_context =
+          mvmc_power_lanczos_gc_bridge_amplitude_context(gc_bridge);
+      generation_hash =
+          mvmc_power_lanczos_gc_bridge_generation_hash(gc_bridge);
+      gc->model = model;
+      gc->spin_triplet_s0 = gc_view->spin_triplet_s0;
+      gc->chain_communicator = input->chain_communicator;
+      gc->chain_rank = sampling.chain_rank;
+      gc->chain_index = sampling.chain_index;
+      gc->topology_ready = 1;
+    }
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK &&
+      (model == NULL || amplitude == NULL || amplitude_context == NULL ||
+       generation_hash == 0)) {
+    status = MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     word_count = mvmc_krylov_fock_word_count(model->site_count);
@@ -748,10 +1175,15 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
                                  sampling.chain_index)),
         UINT64_C(0x504c424f4f545354), &bootstrap_rng);
   }
-  if (status == MVMC_KRYLOV_STATUS_OK) {
+  if (status == MVMC_KRYLOV_STATUS_OK && gc == NULL) {
+    GC_COUNT(fixed_sector_calls);
     status = draw_uniform_sector(
         model, input->chain_communicator, &bootstrap_rng, words,
         word_count);
+  } else if (status == MVMC_KRYLOV_STATUS_OK) {
+    gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_COEFFICIENT_INITIAL;
+    status = gc_draw_start(gc, &bootstrap_rng, words, word_count, 1);
+    gc_record_failure(gc, status, words, word_count, NULL);
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_bounded_krylov_session_begin(
@@ -769,20 +1201,25 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         workspace, &guide, words, word_count, amplitude,
         amplitude_context, &coefficient_snapshot);
   }
+  gc_record_failure(gc, status, words, word_count, NULL);
+  /* The start is chain-local; the pilot below has world collectives, so
+   * every chain must enter it or none. */
+  status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
   pilot_warm_up = input->warm_up < 256 ? input->warm_up : 256;
   pilot_sample_count =
       input->sample_count < 256 ? input->sample_count : 256;
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = scale_pilot(
-        workspace, model, &proposal_policy, pilot_warm_up,
+        gc, workspace, model, &proposal_policy, pilot_warm_up,
         pilot_sample_count, words, word_count, &coefficient_snapshot,
         &coefficient_rng, amplitude, amplitude_context, proposal_words,
         &guide, &matrix_policy, &sampling);
   }
+  if (gc != NULL) gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_COEFFICIENT_WARM_UP;
   for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                  step < input->warm_up; ++step) {
-    status = coefficient_step(
-        workspace, &guide, model, &proposal_policy, words, word_count,
+    status = coefficient_step_any(
+        gc, workspace, &guide, model, &proposal_policy, words, word_count,
         &coefficient_snapshot, &coefficient_rng, amplitude,
         amplitude_context, proposal_words);
   }
@@ -793,6 +1230,7 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         hamiltonian_adjoint_entries, hamiltonian_squared_entries);
   }
   status = mvmc_power_lanczos_sampling_synchronize(&sampling, status);
+  if (gc != NULL) gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_COEFFICIENT_SAMPLE;
   for (sample = 0; status == MVMC_KRYLOV_STATUS_OK &&
                    sample < input->sample_count; ++sample) {
     MVMCKrylovMatrixMeasurementSampleDiagnostics diagnostics;
@@ -803,8 +1241,8 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     }
     for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                    step < input->interval; ++step) {
-      status = coefficient_step(
-          workspace, &guide, model, &proposal_policy, words, word_count,
+      status = coefficient_step_any(
+          gc, workspace, &guide, model, &proposal_policy, words, word_count,
           &coefficient_snapshot, &coefficient_rng, amplitude,
           amplitude_context, proposal_words);
     }
@@ -856,6 +1294,27 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     status = solve_gevp(
         &gevp_policy, &matrix_total, (int)dimension, upper_count, &gevp);
   }
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    /* E_coeff with the GEVP's symmetrized K and the same scaled basis. */
+    double complex symmetric[MVMC_POWER_LANCZOS_PACKED_CAPACITY];
+    double complex numerator, denominator;
+    size_t entry;
+    for (entry = 0; entry < upper_count; ++entry) {
+      symmetric[entry] = 0.5 * (matrix_total.hamiltonian[entry] +
+                                conj(matrix_total.hamiltonian_adjoint[entry]));
+    }
+    numerator = packed_quadratic(symmetric, (int)dimension, gevp.coefficient);
+    denominator =
+        packed_quadratic(matrix_total.overlap, (int)dimension,
+                         gevp.coefficient);
+    if (isfinite(creal(numerator)) && isfinite(cimag(numerator)) &&
+        isfinite(creal(denominator)) && creal(denominator) > 0.0) {
+      coefficient_energy = numerator / denominator;
+      coefficient_energy_available =
+          isfinite(creal(coefficient_energy)) &&
+          isfinite(cimag(coefficient_energy));
+    }
+  }
   provenance_hash = hash_u64(generation_hash, input->seed);
   if (provenance_hash == 0) provenance_hash = UINT64_C(1);
   if (status == MVMC_KRYLOV_STATUS_OK) {
@@ -864,6 +1323,13 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         MVMC_KRYLOV_FINAL_COEFFICIENT_PRODUCTION_NOISY,
         provenance_hash, gevp.coefficient, matrix_policy.log_basis_scale,
         dimension, &final_policy);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL) {
+    gc->coefficient_available = 1;
+    gc->coefficient[0] = final_policy.coefficient[0];
+    gc->coefficient[1] = final_policy.coefficient[1];
+    gc->coefficient_energy_available = coefficient_energy_available;
+    gc->coefficient_energy = coefficient_energy;
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_krylov_positive_sampler_rng_seed(
@@ -876,13 +1342,18 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     status = mvmc_bounded_krylov_session_begin(
         workspace, amplitude, amplitude_context, generation_hash);
   }
-  if (status == MVMC_KRYLOV_STATUS_OK) {
+  if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL) {
+    status = gc_final_bootstrap(gc, workspace, &final_policy, words,
+                                word_count, &final_rng, amplitude,
+                                amplitude_context, &final_snapshot);
+  } else if (status == MVMC_KRYLOV_STATUS_OK) {
     size_t attempt;
     status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
     for (attempt = 0;
          status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
          attempt < MVMC_POWER_LANCZOS_BOOTSTRAP_ATTEMPTS;
          ++attempt) {
+      GC_COUNT(fixed_sector_calls);
       status = draw_uniform_sector(
           model, input->chain_communicator, &final_rng, words,
           word_count);
@@ -893,13 +1364,15 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
       }
     }
   }
+  if (gc != NULL) gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_FINAL_WARM_UP;
   for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                  step < input->warm_up; ++step) {
-    status = final_step(
-        workspace, &final_policy, model, &proposal_policy, words,
+    status = final_step_any(
+        gc, workspace, &final_policy, model, &proposal_policy, words,
         word_count, &final_snapshot, &final_rng, amplitude,
         amplitude_context, proposal_words);
   }
+  if (gc != NULL) gc->stage = MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE;
   memset(final_energy_block_sum, 0, sizeof(final_energy_block_sum));
   memset(final_energy_block_count, 0, sizeof(final_energy_block_count));
   for (sample = 0; status == MVMC_KRYLOV_STATUS_OK &&
@@ -913,8 +1386,8 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     }
     for (step = 0; status == MVMC_KRYLOV_STATUS_OK &&
                    step < input->interval; ++step) {
-      status = final_step(
-          workspace, &final_policy, model, &proposal_policy, words,
+      status = final_step_any(
+          gc, workspace, &final_policy, model, &proposal_policy, words,
           word_count, &final_snapshot, &final_rng, amplitude,
           amplitude_context, proposal_words);
     }
@@ -926,6 +1399,13 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
           !isfinite(creal(local_energy)) ||
           !isfinite(cimag(local_energy))) {
         status = MVMC_KRYLOV_STATUS_NONFINITE;
+      }
+    }
+    if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL &&
+        gc->sector_samples != NULL) {
+      const int count = popcount_words(words, word_count);
+      if (count >= 0 && (size_t)count < gc->sector_capacity) {
+        ++gc->sector_samples[count];
       }
     }
     if (status == MVMC_KRYLOV_STATUS_OK) {
@@ -953,6 +1433,11 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
   if (status == MVMC_KRYLOV_STATUS_OK) {
     status = mvmc_power_lanczos_sampling_sum_u64(
         &sampling, final_energy_block_count, block_count);
+  }
+  if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL &&
+      gc->sector_samples != NULL) {
+    status = mvmc_power_lanczos_sampling_sum_u64(
+        &sampling, gc->sector_samples, gc->sector_capacity);
   }
   if (status == MVMC_KRYLOV_STATUS_OK) {
     energy = energy_sum / (double)sampling.total_samples;
@@ -1035,6 +1520,8 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
         (double)sampling.total_samples /
         (2.0 * effective_sample_count);
     result->effective_sample_count = effective_sample_count;
+    result->coefficient_energy_available = coefficient_energy_available;
+    result->coefficient_energy = coefficient_energy;
   } else {
     invalidate_result(status, result);
   }
@@ -1045,5 +1532,181 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
   mvmc_bounded_krylov_workspace_destroy(workspace);
   mvmc_bounded_krylov_plan_destroy(plan);
   mvmc_power_lanczos_classic_bridge_destroy(bridge);
+  mvmc_power_lanczos_gc_bridge_destroy(gc_bridge);
   return status;
+}
+
+MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
+    const MVMCPowerLanczosStabilizedInput *input,
+    MVMCPowerLanczosStabilizedResult *result) {
+  return stabilized_core(input, NULL, NULL, result);
+}
+
+enum {
+  GC_CHAIN_FIELDS = 5,
+  GC_FAILURE_FIELDS = 7,
+  GC_REPORT_VALUES = MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS * GC_CHAIN_FIELDS +
+                     GC_CHAIN_FIELDS + 1 + GC_FAILURE_FIELDS
+};
+
+/*
+ * World aggregation without heap memory: every chain root writes its own
+ * slot (others contribute zero) and the first failing chain (lowest index)
+ * contributes the failure fields; two reductions in a fixed order.
+ */
+static void gc_collect_diagnostics(
+    const MVMCPowerLanczosGCRun *gc,
+    MVMCClassicPfaffianCommunicator world_communicator,
+    MVMCPowerLanczosGCDiagnostics *diagnostics) {
+  double values[GC_REPORT_VALUES];
+  double reduced[GC_REPORT_VALUES];
+  double *totals = values + MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS *
+                                GC_CHAIN_FIELDS;
+  double *failure = totals + GC_CHAIN_FIELDS + 1;
+  uint64_t *sectors = diagnostics->final_sector_samples;
+  const size_t capacity = diagnostics->final_sector_capacity;
+  const int contributes = gc->topology_ready && gc->chain_rank == 0;
+  double local_failure_chain =
+      contributes && gc->failure_recorded ? (double)gc->chain_index
+                                          : INFINITY;
+  double first_failure = local_failure_chain;
+  int rank = 0;
+  size_t chain;
+  memset(values, 0, sizeof(values));
+#ifdef _mpi_use
+  MPI_Comm_rank(world_communicator, &rank);
+  if (MPI_Allreduce(&local_failure_chain, &first_failure, 1, MPI_DOUBLE,
+                    MPI_MIN, world_communicator) != MPI_SUCCESS) {
+    first_failure = INFINITY;
+  }
+#else
+  (void)world_communicator;
+#endif
+  if (contributes) {
+    const double record[GC_CHAIN_FIELDS] = {
+        (double)gc->bootstrap_attempts, (double)gc->bootstrap_exact_zero,
+        (double)gc->bootstrap_numeric_zero,
+        (double)gc->bootstrap_local_energy, (double)gc->bootstrap_exhausted};
+    size_t field;
+    if (gc->chain_index < MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS) {
+      memcpy(values + gc->chain_index * GC_CHAIN_FIELDS, record,
+             sizeof(record));
+    }
+    for (field = 0; field < GC_CHAIN_FIELDS; ++field) {
+      totals[field] = record[field];
+    }
+    totals[GC_CHAIN_FIELDS] = (double)(gc->chain_index + 1);
+    if (gc->failure_recorded &&
+        (double)gc->chain_index == first_failure) {
+      failure[0] = 1.0;
+      failure[1] = (double)gc->failure_stage;
+      failure[2] = (double)gc->failure_status;
+      failure[3] = (double)gc->failure_electron_count;
+      failure[4] = (double)gc->failure_amplitude_state;
+      failure[5] = gc->failure_log_abs;
+      failure[6] = gc->failure_log_error_bound;
+    }
+  }
+  memcpy(reduced, values, sizeof(values));
+#ifdef _mpi_use
+  /* Chain count is a maximum; everything else is a disjoint sum. */
+  {
+    double count = totals[GC_CHAIN_FIELDS];
+    double max_count = count;
+    totals[GC_CHAIN_FIELDS] = 0.0;
+    if (MPI_Reduce(&count, &max_count, 1, MPI_DOUBLE, MPI_MAX, 0,
+                   world_communicator) != MPI_SUCCESS ||
+        MPI_Reduce(values, reduced, GC_REPORT_VALUES, MPI_DOUBLE, MPI_SUM, 0,
+                   world_communicator) != MPI_SUCCESS) {
+      memset(reduced, 0, sizeof(reduced));
+      max_count = 0.0;
+    }
+    reduced[MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS * GC_CHAIN_FIELDS +
+            GC_CHAIN_FIELDS] = max_count;
+  }
+#endif
+  memset(diagnostics, 0, sizeof(*diagnostics));
+  diagnostics->final_sector_samples = sectors;
+  diagnostics->final_sector_capacity = capacity;
+  if (rank != 0) return;
+  totals = reduced + MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS * GC_CHAIN_FIELDS;
+  failure = totals + GC_CHAIN_FIELDS + 1;
+  diagnostics->chain_count = (uint64_t)totals[GC_CHAIN_FIELDS];
+  for (chain = 0; chain < MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS; ++chain) {
+    const double *record = reduced + chain * GC_CHAIN_FIELDS;
+    diagnostics->bootstrap_attempts[chain] = (uint64_t)record[0];
+    diagnostics->bootstrap_exact_zero[chain] = (uint64_t)record[1];
+    diagnostics->bootstrap_numeric_zero[chain] = (uint64_t)record[2];
+    diagnostics->bootstrap_local_energy[chain] = (uint64_t)record[3];
+    diagnostics->bootstrap_exhausted[chain] = record[4] != 0.0;
+  }
+  diagnostics->total_bootstrap_attempts = (uint64_t)totals[0];
+  diagnostics->total_bootstrap_exact_zero = (uint64_t)totals[1];
+  diagnostics->total_bootstrap_numeric_zero = (uint64_t)totals[2];
+  diagnostics->total_bootstrap_local_energy = (uint64_t)totals[3];
+  diagnostics->any_bootstrap_exhausted = totals[4] != 0.0;
+  if (failure[0] != 0.0 && isfinite(first_failure)) {
+    diagnostics->failure_recorded = 1;
+    diagnostics->failure_chain = (uint64_t)first_failure;
+    diagnostics->failure_stage = (MVMCPowerLanczosGCStage)failure[1];
+    diagnostics->failure_status = (MVMCKrylovStatus)failure[2];
+    diagnostics->failure_electron_count = (int)failure[3];
+    diagnostics->failure_amplitude_state = (int)failure[4];
+    diagnostics->failure_log_abs = failure[5];
+    diagnostics->failure_log_error_bound = failure[6];
+  }
+  diagnostics->coefficient_available = gc->coefficient_available;
+  diagnostics->coefficient[0] = gc->coefficient[0];
+  diagnostics->coefficient[1] = gc->coefficient[1];
+  diagnostics->coefficient_energy_available =
+      gc->coefficient_energy_available;
+  diagnostics->coefficient_energy = gc->coefficient_energy;
+  diagnostics->valid = 1;
+}
+
+MVMCKrylovStatus mvmc_power_lanczos_gc_run_diagnosed(
+    const MVMCPowerLanczosGCInput *input,
+    MVMCPowerLanczosStabilizedResult *result,
+    MVMCPowerLanczosGCDiagnostics *diagnostics) {
+  MVMCPowerLanczosStabilizedInput core;
+  MVMCPowerLanczosGCRun gc;
+  MVMCKrylovStatus status;
+  if (result == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  if (input == NULL) {
+    invalidate_result(MVMC_KRYLOV_STATUS_INVALID_ARGUMENT, result);
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  }
+  memset(&gc, 0, sizeof(gc));
+  gc.initial_electron_count = input->initial_electron_count;
+  gc.failure_log_abs = NAN;
+  gc.failure_log_error_bound = NAN;
+  if (diagnostics != NULL && diagnostics->final_sector_samples != NULL &&
+      diagnostics->final_sector_capacity != 0) {
+    gc.sector_samples = diagnostics->final_sector_samples;
+    gc.sector_capacity = diagnostics->final_sector_capacity;
+    memset(gc.sector_samples, 0,
+           gc.sector_capacity * sizeof(*gc.sector_samples));
+  }
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  memset(&gc_testing_counters, 0, sizeof(gc_testing_counters));
+#endif
+  memset(&core, 0, sizeof(core));
+  core.world_communicator = input->world_communicator;
+  core.chain_communicator = input->chain_communicator;
+  core.power_step = 1;
+  core.seed = input->seed;
+  core.warm_up = input->warm_up;
+  core.sample_count = input->sample_count;
+  core.interval = input->interval;
+  status = stabilized_core(&core, input->gc_view, &gc, result);
+  if (diagnostics != NULL) {
+    gc_collect_diagnostics(&gc, input->world_communicator, diagnostics);
+  }
+  return status;
+}
+
+MVMCKrylovStatus mvmc_power_lanczos_gc_run(
+    const MVMCPowerLanczosGCInput *input,
+    MVMCPowerLanczosStabilizedResult *result) {
+  return mvmc_power_lanczos_gc_run_diagnosed(input, result, NULL);
 }

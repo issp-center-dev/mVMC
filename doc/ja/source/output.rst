@@ -63,6 +63,8 @@ Grand-canonical粒子数出力 (zvo\_gc.dat)
 変分最適化ではSR stepごとに1行、物理量計算ではbinごとに1行を書きます。
 ファイル名には ``CDataFileHead`` と ``NDataIdxStart`` を適用しません。同じ
 directoryで別runを開始すると、以前の ``zvo_gc.dat`` は置き換えられます。
+``NLanczosMode=1``（grand-canonical samplingによる1 stepのLanczos）では
+このfileを出力しません。
 
 変分パラメータ出力ファイル(\*\*\*\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,7 +144,10 @@ xxx\_out\_yyy.dat
 
 が順に出力されます。 :math:`\langle H \rangle` については実部と虚部がそれぞれ出力され、それ以外は実部のみ出力されます。
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
-``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。以下に出力例を記載します。
+``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
+反平行のgrand-canonical mode（``NGrandCanonical=1`` で ``OrbitalAntiParallel`` または ``Orbital`` のみ、``2Sz=0``）では
+全sampleが :math:`S^z=0` なので最後の2列は0になり、:math:`\langle H^2\rangle` にはExpert入力の
+``NGrandCanonical`` に記載した制限があります。以下に出力例を記載します。
 
 ::
 
@@ -485,6 +490,23 @@ Power Lanczos法により求めた :math:`\langle H \rangle`,
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
 
+xxx\_nzguide\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~
+
+``DLanczosGuideEps > 0`` のときだけ出力されます。1行9列で、順に
+:math:`\varepsilon`、guide分布から得た全保存sample数、
+:math:`|P| < \sqrt{\varepsilon} A` となったsample数、:math:`P=0` のため
+局所量を評価しなかったsample数、数値guardで評価を中止したsample数、重み
+:math:`|\psi|^2/q_\varepsilon` の和、その二乗和、重みの最小値、有限かつ
+非零の :math:`P` に対する :math:`A/|P|` の最大値です。
+:math:`P=0, A>0` のsampleは最初の2つのsample数に含まれ、重み0として
+重み和へ寄与しません。数値guardによる中止が0なら、全保存sample数を
+重みの和で割った値が :math:`Z_q/Z_\psi` の推定になります。
+:math:`P=0` または数値guardによる中止が1件でもあるbinは、Lanczos momentに
+欠落があるため採用しないでください。両方が0でも、:math:`A=0` または
+:math:`J=0` でguide重み自体が0となる状態のfull supportを証明するものでは
+ありません。
+
 xxx\_ls2\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -529,6 +551,12 @@ variance、そのstandard error、虚部、energyの自己相関時間と有効s
 Green関数やsampleごとのtraceは出力しません。独立chainが複数ある場合、
 ``effective_samples`` はchainごとの有効sample数の合計、``tau_int`` は
 ``total_samples/(2*effective_samples)`` で定義する等価な値です。
+
+``NGrandCanonical=1``（1 stepのみ）でも、headerは ``order=1`` の同じ形式で、
+data行は同じ11項目です。energyとvarianceは :math:`-\mu N` を含む入力
+:math:`H` の全粒子数にわたる値で、粒子数の項目は追加しません。最終chainで
+数値的に零の候補が出た場合などrunが終了したときは結果行を出力せず、理由を
+標準エラーに出力します。
 
 ``LsTrans`` または ``LsInterAll`` で独立 :math:`H'` を選択した場合、1行目の
 headerには ``independent_power_lanczos`` と ``basis={Psi,HprimePsi}`` を

@@ -134,6 +134,7 @@ static MVMCKrylovFockModel diagonal_model(
   model.site_count = 2;
   model.up_electron_count = 1;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   model.terms = terms;
   model.term_count = 2;
   model.operators = operators;
@@ -147,6 +148,7 @@ static MVMCKrylovFockModel proposal_model(void) {
   model.site_count = 2;
   model.up_electron_count = 1;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   return model;
 }
 
@@ -1252,6 +1254,7 @@ static void test_shell_policy_and_draw(void) {
   proposal.up_electron_count = 2;
   proposal.down_electron_count = 2;
   proposal.hermitian = 1;
+  proposal.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   CHECK(mvmc_krylov_positive_sampler_shell_policy_create(
             1, 8, 1, 3, &one_third) == MVMC_KRYLOV_STATUS_OK &&
             one_third.valid &&
@@ -1800,6 +1803,7 @@ static void test_surrogate_policy_weight_and_draw(void) {
       pure_spin.down_electron_count = half;
       pure_spin.pure_spin = 1;
       pure_spin.hermitian = 1;
+      pure_spin.domain = MVMC_KRYLOV_DOMAIN_FIXED;
       table.calls = 0;
       status = mvmc_krylov_positive_sampler_draw_surrogate_rng(
           &pure_spin, policies[case_index], &pure_current, 1,
@@ -1822,6 +1826,7 @@ static void test_surrogate_policy_weight_and_draw(void) {
     multiword.site_count = 40;
     multiword.up_electron_count = 1;
     multiword.hermitian = 1;
+    multiword.domain = MVMC_KRYLOV_DOMAIN_FIXED;
     table.calls = 0;
     status = mvmc_krylov_positive_sampler_draw_surrogate_rng(
         &multiword, &k4_alpha10, multi_current, 2,

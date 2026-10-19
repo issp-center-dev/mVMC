@@ -11,7 +11,7 @@ include_directories("${STDFACE_DIR}/src")
 add_definitions(-DMEXP=19937)
 
 set(SOURCES_vmcmain
-        vmcmain.c absolute_pfaffian.c classic_pfaffian_matrix.c
+        vmcmain.c gc_exact_sum.c absolute_pfaffian.c classic_pfaffian_matrix.c
         classic_pfaffian_state.c
         classic_pfaffian_collective.c
         classic_krylov_configuration.c classic_krylov_projection.c
@@ -22,11 +22,13 @@ set(SOURCES_vmcmain
         krylov_matrix_measurement.c krylov_streaming_statistics.c
         krylov_gevp_solver.c krylov_final_state.c
         krylov_final_state_chain.c power_lanczos_classic_bridge.c
+        gc_krylov_amplitude.c power_lanczos_gc_bridge.c gc_krylov_proposal.c
         power_lanczos_sampling.c power_lanczos_stabilized.c
         power_lanczos_independent.c
         power_lanczos_independent_driver.c
         physcal_lanczos.c physcal_lanczos2.c
-        lanczos2_contract.c splitloop.c
+        lanczos2_contract.c splitloop.c near_zero_guide.c
+        version.c
  )
 
 set(SOURCES_sfmt
@@ -35,7 +37,7 @@ set(SOURCES_sfmt
 
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 
-add_executable(vmcdry.out vmcdry.c)
+add_executable(vmcdry.out vmcdry.c version.c)
 target_link_libraries(vmcdry.out StdFace_mvmc m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
 target_compile_definitions(vmc.out PRIVATE
@@ -53,6 +55,24 @@ if(Testing)
       MVMC_ENABLE_PFAFFIAN_STATE_AUDIT
       MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
 endif(Testing)
+# Hash of the commit, shown by "vmc.out -v". version_git.h is written when
+# cmake is run and is checked again at every build.
+set(MVMC_VERSION_GIT_H ${CMAKE_CURRENT_BINARY_DIR}/version_git.h)
+set(MVMC_GIT_HASH_COMMAND
+  ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUTPUT=${MVMC_VERSION_GIT_H}
+  -P ${PROJECT_SOURCE_DIR}/cmake/git_hash.cmake)
+execute_process(COMMAND ${MVMC_GIT_HASH_COMMAND})
+add_custom_target(mvmc_git_hash
+  COMMAND ${MVMC_GIT_HASH_COMMAND}
+  BYPRODUCTS ${MVMC_VERSION_GIT_H}
+  COMMENT "Checking the hash of the commit"
+  VERBATIM)
+add_dependencies(vmc.out mvmc_git_hash)
+add_dependencies(vmcdry.out mvmc_git_hash)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+set_source_files_properties(version.c PROPERTIES
+  COMPILE_DEFINITIONS MVMC_HAVE_VERSION_GIT_H)
+
 target_link_libraries(vmc.out StdFace_mvmc m)
 target_link_libraries(vmc.out pfapack)
 target_link_libraries(vmc.out ltl2inv)

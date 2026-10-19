@@ -33,6 +33,11 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "legendrepoly.h"
 #include "workspace.h"
 #include "gauleg.h"
+#include "gc_exact_sum.h"
+#include "gc_spin_support.h"
+
+/* Set once from the distributed input coefficients; read-only during a run. */
+static int GCTransWeightSumExactlyZero = 0;
 
 /* calculate SPGLCos, SPGLSin and QPFullWeight */
 void InitQPWeight() {
@@ -40,6 +45,15 @@ void InitQPWeight() {
   double *beta;
   double *weight;
   double w;
+
+  GCTransWeightSumExactlyZero = 0;
+  if (FlagGrandCanonical &&
+      (GCExactComplexSumSelfTest() != 0 ||
+       GCExactComplexSumIsZero(ParaQPTrans, NMPTrans,
+                               &GCTransWeightSumExactlyZero) != 0)) {
+    fprintf(stderr, "Error: GC translation-weight exact-sum initialization failed.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
 
   RequestWorkSpaceDouble(2*NSPGaussLeg);
   beta   = GetWorkSpaceDouble(NSPGaussLeg);
@@ -85,6 +99,48 @@ void InitQPWeight() {
   return;
 }
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+/* Testing only: the production quadrature coefficients, so that independent
+ * oracles can use exactly the binary64 values of this run.  Header
+ * "GC_SPIN_QP_V1 G <G> Q <NQPFull>", then "q spidx cs cc ss w_re w_im". */
+void GCTestDumpSpinQP(MPI_Comm comm) {
+  int rank;
+  int failed = 0;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == 0 && FlagGrandCanonical) {
+    const char *path = getenv("MVMC_GC_SPIN_QP_DUMP");
+    if (path != NULL && *path != '\0') {
+      FILE *fp = fopen(path, "w");
+      if (fp == NULL) {
+        failed = 1;
+      } else {
+        int q;
+        if (fprintf(fp, "GC_SPIN_QP_V1 G %d Q %d\n", NSPGaussLeg, NQPFull) <
+            0)
+          failed = 1;
+        for (q = 0; q < NQPFull; q++) {
+          const int s = q % NSPGaussLeg;
+          if (fprintf(fp, "%d %d %a %a %a %a %a\n", q, s,
+                      creal(SPGLCosSin[s]), creal(SPGLCosCos[s]),
+                      creal(SPGLSinSin[s]), creal(QPFullWeight[q]),
+                      cimag(QPFullWeight[q])) < 0)
+            failed = 1;
+        }
+        if (fclose(fp) != 0) failed = 1;
+      }
+    }
+  }
+  /* No-MPI builds have no MPI_Bcast/MPI_INT stub. */
+#ifdef _mpi_use
+  MPI_Bcast(&failed, 1, MPI_INT, 0, comm);
+#endif
+  if (failed) {
+    if (rank == 0) fprintf(stderr, "Error: GC spin qp dump failed.\n");
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+}
+#endif
+
 
 /* Calculate logarithm of inner product <phi|L|x> */
 double complex CalculateLogIP_fcmp(double complex * const pfM, const int qpStart, const int qpEnd, MPI_Comm comm) {
@@ -124,6 +180,32 @@ double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, c
     ip = ip2;
   }
   return ip;
+}
+
+/* Vacuum/full filling are translation invariant; pure-triplet S=0 states
+ * also exclude odd pair number. Remove only finite roundoff in those proven
+ * sectors, keeping the QP reduction order and nonfinite propagation. */
+int GCProjectionSectorZero(const int newN) {
+  return (FlagGrandCanonical && GCTransWeightSumExactlyZero &&
+          (newN == 0 || newN == Nsite2)) ||
+         GCSpinForbiddenSector(FlagGrandCanonical, iFlgOrbitalGeneral,
+                               NSPGaussLeg, NSPStot, GCSpinTriplet, newN);
+}
+
+double complex CalculateIPGC_fcmp(double complex *const pfM, const int newN,
+                                  const int qpStart, const int qpEnd,
+                                  MPI_Comm comm) {
+  const double complex ip = CalculateIP_fcmp(pfM, qpStart, qpEnd, comm);
+  if (GCProjectionSectorZero(newN) &&
+      isfinite(creal(ip)) && isfinite(cimag(ip)))
+    return 0.0 + 0.0 * I;
+  return ip;
+}
+
+double complex CalculateLogIPGC_fcmp(double complex *const pfM, const int newN,
+                                     const int qpStart, const int qpEnd,
+                                     MPI_Comm comm) {
+  return clog(CalculateIPGC_fcmp(pfM, newN, qpStart, qpEnd, comm));
 }
 
 void UpdateQPWeight() {

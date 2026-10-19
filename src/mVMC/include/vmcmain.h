@@ -39,18 +39,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <string.h>
 #include <complex.h>
 
-#ifdef _mpi_use
-  #include <mpi.h>
-#else
-typedef int MPI_Comm;
-MPI_Comm MPI_COMM_WORLD=0;
-inline void MPI_Init(int argc, char* argv[]) {return;}
-inline void MPI_Finalize() {return;}
-inline void MPI_Abort(MPI_Comm comm, int errorcode) {exit(errorcode); return;}
-inline void MPI_Barrier(MPI_Comm comm) {return;}
-inline void MPI_Comm_size(MPI_Comm comm, int *size) {*size = 1; return;}
-inline void MPI_Comm_rank(MPI_Comm comm, int *rank) {*rank = 0; return;}
-#endif /* _mpi_use */
+#include "mvmc_mpi.h"
 
 extern int omp_get_max_threads(void);
 extern int omp_get_thread_num(void);
@@ -87,8 +76,11 @@ extern void omp_set_num_threads(int);
 #include "../average.c"
 #include "../parameter.c"
 #include "../projection.c"
+#include "../gc_antiparallel.c"
+#include "../gc_antiparallel_input.c"
 #include "../gc_config.c"
 #include "../gc_size.c"
+#include "../gc_component.c"
 #include "../slater.c"
 #include "../backflow_slater.c"
 #include "../slater_fsz.c"
@@ -133,7 +125,9 @@ extern void omp_set_num_threads(int);
 #include "../readdef.c"
 #include "../initfile.c"
 
+#include "../initial_sample.c"
 #include "../vmcmake.c"
+#include "../sampler_repair.c"
 #include "../vmcmake_real.c"
 #include "../vmcmake_fsz.c"
 #include "../vmcmake_fsz_real.c"

@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,38 @@ def make_workdir_name(model, updates):
     for key in sorted(updates):
         pieces.append("{}_{}".format(key, updates[key]))
     return safe_path_component("__".join(pieces))
+
+
+def validate_process_result(returncode, output, expected,
+                            allow_success=False):
+    if returncode < 0 or returncode >= 128:
+        raise AssertionError("signal/abnormal exit: {}".format(returncode))
+    crash = (r"AddressSanitizer|LeakSanitizer|UndefinedBehaviorSanitizer|"
+             r"runtime error:|Segmentation fault|Bus error|core dumped|"
+             r"(?:signal|Signal)\s+(?:6|7|8|9|11)\b")
+    if re.search(crash, output):
+        raise AssertionError("crash or sanitizer report")
+    if (returncode == 0) != allow_success:
+        raise AssertionError("unexpected exit status: {}".format(returncode))
+    for needle in expected:
+        if needle not in output:
+            raise AssertionError("missing diagnostic: {}".format(needle))
+
+
+def validate_rebuild_fault_reason(output):
+    marker = re.search(
+        r"GC fault injected: kind=rebuild_nonfinite "
+        r"world_rank=\d+ sample=\d+ ncur=(\d+)", output)
+    if marker is None:
+        raise AssertionError("missing rebuild fault marker with ncur")
+    ncur = int(marker.group(1))
+    if ncur >= 2:
+        reason = "failed the matrix rebuild"
+    else:
+        reason = "has a zero or nonfinite amplitude"
+    if reason not in output:
+        raise AssertionError(
+            "missing rebuild diagnostic for ncur={}: {}".format(ncur, reason))
 
 
 def update_modpara(filename, updates):
@@ -118,8 +151,133 @@ def set_anomalous_count(filename, keyword, value):
         destination.writelines(lines)
 
 
+def read_orbital_general_rows(filename="orbitalidxgen.def"):
+    with open(filename) as source:
+        lines = source.readlines()
+    header, body = lines[:5], lines[5:]
+    pair_count = 0
+    for line in body:
+        if len(line.split()) != 6:
+            break
+        pair_count += 1
+    if pair_count == 0:
+        raise RuntimeError("OrbitalGeneral fixture has no pair rows")
+    return header, body[:pair_count], body[pair_count:]
+
+
+def write_orbital_general_rows(header, rows, flags,
+                               filename="orbitalidxgen.def"):
+    with open(filename, "w") as destination:
+        destination.writelines(header)
+        destination.writelines(rows)
+        destination.writelines(flags)
+
+
+def replace_orbital_general_field(row, column, value):
+    header, rows, flags = read_orbital_general_rows()
+    words = rows[row].split()
+    words[column] = value
+    rows[row] = " ".join(words) + "\n"
+    write_orbital_general_rows(header, rows, flags)
+
+
+# OrbitalGeneral rows are "I spin_I J spin_J index sign".  The anti-periodic
+# reader validates every column, so each mutation isolates one rejection.
+ORBITAL_GENERAL_FIELD_MUTATIONS = {
+    "gc_orb_sign_zero": (0, 5, "0"),
+    "gc_orb_sign_two": (0, 5, "2"),
+    "gc_orb_negative_sign": (0, 5, "-1"),
+    "gc_orb_nonint": (0, 5, "1.0"),
+    "gc_orb_index_int_wrap": (0, 4, "2147483648"),
+    "gc_orb_int_overflow": (0, 4, "99999999999999999999"),
+    "gc_orb_site_range": (0, 0, "2"),
+    "gc_orb_spin_range": (0, 1, "2"),
+    "gc_orb_index_range": (0, 4, "6"),
+    "gc_orb_negative_index": (0, 4, "-1"),
+}
+
+
+def apply_orbital_general_mutation(action):
+    if action in ORBITAL_GENERAL_FIELD_MUTATIONS:
+        replace_orbital_general_field(*ORBITAL_GENERAL_FIELD_MUTATIONS[action])
+        return
+    header, rows, flags = read_orbital_general_rows()
+    if action == "gc_orb_sign_missing":
+        rows[0] = " ".join(rows[0].split()[:5]) + "\n"
+    elif action == "gc_orb_extra_column":
+        rows[0] = rows[0].rstrip("\n") + " 9\n"
+    elif action == "gc_orb_lower":
+        # (site 0, up)-(site 1, up) written as I=1 > J=0.
+        rows[4] = "1 0 0 0 4 1\n"
+    elif action == "gc_orb_diagonal":
+        rows[4] = "0 0 0 0 4 1\n"
+    elif action == "gc_orb_duplicate":
+        # The row count is unchanged: pair (2,3) is missing, (0,2) repeats.
+        rows[5] = rows[0]
+    elif action == "gc_orb_missing_row":
+        del rows[5]
+    elif action == "gc_orb_truncated":
+        del rows[5]
+        flags = []
+    elif action == "gc_orb_blank_row":
+        rows.insert(2, "\n")
+    elif action == "gc_orb_extra_pair":
+        # A surplus pair row must not be read as OptFlag rows.
+        rows.append(rows[0])
+    elif action == "gc_orb_extra_pair_missing_flags":
+        # Six integers of the surplus row would stand in for three flags.
+        rows.append(rows[0])
+        flags = flags[3:]
+    elif action == "gc_orb_flag_extra":
+        flags.append("5 1\n")
+    elif action == "gc_orb_flag_missing":
+        flags = flags[:-1]
+    elif action == "gc_orb_flag_bad_token":
+        flags[0] = "0 x\n"
+    elif action == "gc_orb_flag_index_range":
+        flags[-1] = "6 1\n"
+    elif action == "gc_orb_flag_duplicate":
+        flags[-1] = "0 1\n"
+    elif action == "gc_orb_flag_value":
+        flags[0] = "0 2\n"
+    elif action == "gc_orb_flag_trailing_blank":
+        flags.extend(["\n", "   \n"])
+    elif action == "gc_orb_flag_permuted":
+        flags = list(reversed(flags))
+    else:
+        raise RuntimeError("unknown OrbitalGeneral mutation: {}".format(action))
+    write_orbital_general_rows(header, rows, flags)
+
+
 def apply_gc_fixture_mutation(action):
-    if action == "gc_locspin":
+    if action.startswith("gc_orb_"):
+        apply_orbital_general_mutation(action)
+    elif action == "gc_qptrans1":
+        with open("qptransidx.def", "w") as stream:
+            stream.write(
+                "=============================================\n"
+                "NQPTrans          1\n"
+                "=============================================\n"
+                "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n"
+                "=============================================\n"
+                "0 1.0 0.0\n"
+                "0 0 0 1\n"
+                "0 1 1 1\n")
+    elif action == "gc_qptrans2":
+        with open("qptransidx.def", "w") as stream:
+            stream.write(
+                "=============================================\n"
+                "NQPTrans          2\n"
+                "=============================================\n"
+                "======== TrIdx_TrWeight_and_TrIdx_i_xi ======\n"
+                "=============================================\n"
+                "0 0.5 0.0\n"
+                "1 0.5 0.0\n"
+                "0 0 0 1\n"
+                "0 1 1 1\n"
+                "1 0 1 1\n"
+                "1 1 0 1\n")
+    elif action == "gc_locspin":
         with open("locspn.def") as source:
             text = source.read()
         text = text.replace("NlocalSpin     0", "NlocalSpin     1")
@@ -246,6 +404,8 @@ def main():
     opttrans_mode = False
     gc_fixture_mutations = []
     modpara_updates = {}
+    work_tag = ""
+    rebuild_fault_reason = False
     for arg in sys.argv[3:]:
         if arg == "allow_success":
             allow_success = True
@@ -259,6 +419,10 @@ def main():
             gc_fixture_mutations.append(arg)
         elif arg.startswith("expect:"):
             expected_substrings.append(arg[len("expect:"):])
+        elif arg.startswith("work_tag:"):
+            work_tag = safe_path_component(arg[len("work_tag:"):])
+        elif arg == "rebuild_fault_reason":
+            rebuild_fault_reason = True
         elif "=" in arg:
             key, value = arg.split("=", 1)
             modpara_updates[key] = value
@@ -269,9 +433,11 @@ def main():
     rootdir = os.getcwd()
     refdir = os.path.join(rootdir, "data", model)
     workroot = os.path.join(rootdir, "work")
-    if not os.path.exists(workroot):
-        os.makedirs(workroot)
+    # Tests which run in parallel may create it at the same time.
+    os.makedirs(workroot, exist_ok=True)
     case_name = make_workdir_name(model, modpara_updates)
+    if work_tag:
+        case_name = "{}__{}".format(case_name, work_tag)
     workdir = os.path.join(workroot, "{}_{}".format(case_name, os.getpid()))
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
@@ -318,19 +484,16 @@ def main():
     with open("invalid_test.log", "w") as f:
         f.write(proc.stdout)
 
-    for expected_substring in expected_substrings:
-        if expected_substring not in proc.stdout:
-            print("ERROR: expected error substring not found: {}".format(
-                expected_substring))
-            print("---- output begin ----")
-            print(proc.stdout)
-            print("---- output end ----")
-            return -1
-    # Default: invalid input must terminate with non-zero.
-    # Some legacy readers only emit error messages and continue;
-    # those cases can opt in to allow_success mode.
-    if not allow_success and proc.returncode == 0:
-        print("ERROR: vmc.out unexpectedly succeeded for invalid input.")
+    try:
+        validate_process_result(proc.returncode, proc.stdout,
+                                expected_substrings, allow_success)
+        if rebuild_fault_reason:
+            validate_rebuild_fault_reason(proc.stdout)
+    except AssertionError as error:
+        print("ERROR: {}".format(error))
+        print("---- output begin ----")
+        print(proc.stdout)
+        print("---- output end ----")
         return -1
     return 0
 

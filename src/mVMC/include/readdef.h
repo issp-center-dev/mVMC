@@ -138,6 +138,7 @@ enum ParamIdxInt{
 enum ParamIdxDouble{
   IdxSROptRedCut, IdxSROptStaDel, IdxSROptStepDt,
   IdxSROptCGTol,
+  IdxLanczosGuideEps,
   ParamIdxDouble_End
 };
 

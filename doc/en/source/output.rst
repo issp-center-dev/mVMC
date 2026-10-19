@@ -68,7 +68,9 @@ When ``NGrandCanonical=1``, this fixed-name file contains three columns:
 :math:`\langle N^2\rangle-\langle N\rangle^2`. Parameter optimization writes
 one line per SR step; physical calculation writes one line per bin. The name
 does not use ``CDataFileHead`` or ``NDataIdxStart``. Starting another run in
-the same directory replaces the previous ``zvo_gc.dat``.
+the same directory replaces the previous ``zvo_gc.dat``. The file is not
+written when ``NLanczosMode=1`` (first-step Lanczos with grand-canonical
+sampling).
 
 Output file for variational parameters (\*\*\*\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,7 +168,12 @@ the others is a real number. Here, xxx is the header indicated by
 ``CDataFileHead`` in ``ModPara`` file and yyy is a number given by
 ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
-``ModPara`` file. An example of outputted file is shown as follows.
+``ModPara`` file. In the anti-parallel grand-canonical mode
+(``NGrandCanonical=1`` with ``OrbitalAntiParallel`` or ``Orbital`` alone,
+``2Sz=0``), every sample has :math:`S^z=0`, so the last two columns are
+zero, and :math:`\langle H^2\rangle` has the limitation described for
+``NGrandCanonical`` in the expert-mode input. An example of outputted file is
+shown as follows.
 
 ::
 
@@ -532,6 +539,25 @@ file and ``NLanczosStep`` = 1. Here, xxx is the header indicated by ``CDataFileH
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
 
+xxx\_nzguide\_yyy.dat
+~~~~~~~~~~~~~~~~~~~~~~
+
+Written only when ``DLanczosGuideEps > 0``. One line has nine columns:
+:math:`\varepsilon`, the total number of saved samples drawn from the guide
+distribution, the number of samples with
+:math:`|P| < \sqrt{\varepsilon} A`, the number of samples whose local
+quantities were not evaluated because :math:`P=0`, the number stopped by a
+numerical guard, the sum of the weights
+:math:`|\psi|^2/q_\varepsilon`, the sum of their squares, the minimum
+weight, and the maximum of :math:`A/|P|` over finite nonzero :math:`P`.
+Samples with :math:`P=0, A>0` are included in the first two counts and
+contribute zero to the weight sum. If the numerical-skip count is zero, the
+total saved-sample count divided by the weight sum estimates
+:math:`Z_q/Z_\psi`. Do not use Lanczos moments from a bin with a nonzero
+exact-zero or numerical-skip count. Zero counts do not prove full support
+for states where :math:`A=0` or :math:`J=0` makes the guide weight itself
+zero.
+
 xxx\_ls2\_out\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -581,6 +607,13 @@ residual of the generalized eigenproblem. It contains no Green's functions or
 per-sample trace. For multiple independent chains, ``effective_samples`` is
 the sum of the per-chain effective sample counts, and ``tau_int`` is the
 equivalent value ``total_samples/(2*effective_samples)``.
+
+With ``NGrandCanonical=1`` (first step only) the file has the same header
+with ``order=1`` and the same 11 fields. Energy and variance are those of the
+input :math:`H`, including :math:`-\mu N`, over all particle numbers; no
+particle-number fields are added. When the run stops, for example on a
+numerically zero candidate in the final chain, no result row is written and
+the reason is given on standard error.
 
 When ``LsTrans`` or ``LsInterAll`` selects an independent :math:`H'`, the
 first header instead contains ``independent_power_lanczos`` and

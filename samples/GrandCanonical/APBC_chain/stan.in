@@ -1,0 +1,10 @@
+model = "Hubbard"
+lattice = "chain"
+L = 4
+t = 1.0
+U = 4.0
+mu = 2.0
+phase0 = 180.0
+ComplexType = 1
+2Sz = -1
+ncond = 4

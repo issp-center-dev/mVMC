@@ -1,0 +1,25 @@
+{
+  "source": "L4 half-filled square Hubbard AP/P fixture; input hashes recorded at import",
+  "numbering": "x-fast",
+  "dimensions": [
+    4,
+    4
+  ],
+  "ap_axes": [
+    "x"
+  ],
+  "subgroup_generators": [
+    [
+      2,
+      0
+    ],
+    [
+      0,
+      2
+    ]
+  ],
+  "sha256": {
+    "rangebf.def": "0e013b3af739a387416914b9d54f09ecb9a69251e668b98e33a54c80c39291b3",
+    "orbitalidx.def": "22a02142e643c5b2930cd60a00902def8a722535aa885120082504fd981d7a7d"
+  }
+}

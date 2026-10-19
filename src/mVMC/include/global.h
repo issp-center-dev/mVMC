@@ -45,6 +45,10 @@ int NLanczosStep; /* polynomial order of the Lanczos wave function: 1 or 2 */
 int NLanczosSupportMode; /* 0: strict support gate, 1: experimental legacy */
 int NLanczosEstimatorMode; /* 0: legacy default, 1: stabilized estimator */
 int FlagLsExplicit; /* independent H' supplied by LsTrans/LsInterAll */
+double DLanczosGuideEps; /* 0: off; >0: q=|J|^2 max(P^2, eps A^2) */
+int FlagLanczosGuide; /* 1 when the near-zero guide input contract passed */
+double LanczosGuideSqrtEps; /* sqrt(DLanczosGuideEps) */
+double NearZeroGuideStat[8]; /* near_zero_guide.h NZG_* per-bin statistics */
 
 int NStoreO; /* choice of store O: 0-> normal other-> store  */
 int NSRCG; /* choice of solver for Sx=g: 0-> (Sca)LAPACK other-> CG  */
@@ -68,6 +72,9 @@ int TwoSz;
 /* GC */
 int FlagGrandCanonical;
 int NGCInitNelec;
+/* Recomputed with each anti-parallel Slater matrix generation. -1 is invalid;
+ * 1 proves F^T=-F exactly, 0 includes every near-antisymmetric general F. */
+int GCSpinTriplet;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
 int NSPStot; /* S of Spin projection */
@@ -245,6 +252,7 @@ double complex **eta;   /* Back Flow correlation factor (eta = 1.0 or ProjBF[0])
 /***** Back Flow ******/
 int NBackFlowIdx, **BackFlowIdx; /* [Nsite] */
 int Nrange, **PosBF, **RangeIdx; /* [Nsite] */
+int **BFSeamPhase; /* [Nsite][Nsite]: +/-1 on BFRange bonds, zero outside */
 int NBFIdxTotal,NrangeIdx;
 int **BFSubIdx; /* [Nsite] */
 double *BFRealProj;   /* BFRealProj[NrangeIdx][NrangeIdx] = -creal(ProjBF[BFSubIdx]) */
@@ -264,11 +272,6 @@ double complex *RBMCnt;
 int *EleProjBFCnt; /* EleProjCnt[sample][proj] */
 //[e] MERGE BY TM
 double *logSqPfFullSlater; /* logSqPfFullSlater[sample] */
-//double complex *SmpSltElmBF; /* logSqPfFullSlater[sample] */
-double *SmpSltElmBF_real; /* logSqPfFullSlater[sample] */
-
-int    *SmpEtaFlag; /* logSqPfFullSlater[sample] */
-double *SmpEta; /* logSqPfFullSlater[sample] */
 
 int *TmpEleIdx;
 int *TmpEleCfg;
@@ -293,6 +296,7 @@ int BurnNcur;
 double complex *SlaterElm; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 double complex *InvM; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
 double complex *PfM; /* PfM[QPidx] */
+int *GCQpState; /* GC_QP_INVERSE or GC_QP_PFONLY per rank-local qp */
 // TBC only for real
 double *SlaterElm_real; /* SlaterElm[QPidx][ri+si*Nsite][rj+sj*Nsite] */
 double *InvM_real; /* InvM[QPidx][mi+si*Ne][mj+sj*Ne] */
@@ -404,6 +408,7 @@ FILE *FileTwist;
 FILE *FileNBodyG;
 FILE *FileAnomalousG;
 FILE *FileLS;
+FILE *FileNZGuide; /* xxx_nzguide_yyy.dat: one line of guide statistics */
 FILE *FileLSQQQQ;
 FILE *FileLSQCisAjsQ;
 FILE *FileLSQCisAjsCktAltQ;
@@ -441,7 +446,7 @@ int Counter_max = 6;
 /* 6: pair spin flip try, 7: pair spin flip accept */
 
 /***** optional BackFlow profiling counters *****/
-#define NBFProfileCounter 50
+#define NBFProfileCounter 53
 #define BFPROF_SAMPLE_ROW_REQUEST        0
 #define BFPROF_SAMPLE_ROW_RECOMPUTE      1
 #define BFPROF_SAMPLE_ROW_REUSE          2
@@ -492,6 +497,9 @@ int Counter_max = 6;
 #define BFPROF_GREEN_DELTA_PAIR_TOTAL      47
 #define BFPROF_FULL_REBUILD                48
 #define BFPROF_MULTI_QP_LEGACY_INCREMENTAL 49
+#define BFPROF_LEGACY_NONFSZ_PROPOSAL       50
+#define BFPROF_LEGACY_NONFSZ_ACCEPT         51
+#define BFPROF_LEGACY_NONFSZ_GREEN_ROWS     52
 int BFProfileEnabled = 0;
 long long BFProfileCounter[NBFProfileCounter];
 

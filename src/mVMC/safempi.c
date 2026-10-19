@@ -44,6 +44,10 @@ void SafeMpiReduce(double *send, double *recv, int nData, MPI_Comm comm) {
     idx += nSend;
   }
 
+  #else
+  (void)comm;
+  if (nData > 0 && send != recv)
+    memcpy(recv, send, (size_t)nData * sizeof(double));
   #endif
   return;
 }
@@ -59,6 +63,10 @@ void SafeMpiAllReduce(double *send, double *recv, int nData, MPI_Comm comm) {
     idx += nSend;
   }
 
+  #else
+  (void)comm;
+  if (nData > 0 && send != recv)
+    memcpy(recv, send, (size_t)nData * sizeof(double));
   #endif
   return;
 }

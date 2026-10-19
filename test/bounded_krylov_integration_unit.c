@@ -95,6 +95,7 @@ static MVMCKrylovFockModel hopping_model(
   model.site_count = 2;
   model.up_electron_count = 1;
   model.hermitian = 1;
+  model.domain = MVMC_KRYLOV_DOMAIN_FIXED;
   model.terms = terms;
   model.term_count = 2;
   model.operators = operators;

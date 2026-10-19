@@ -1,7 +1,7 @@
 #ifndef _VMCMAKE_REAL
 #define _VMCMAKE_REAL
 #include <complex.h>
-#include <mpi.h>
+#include "mvmc_mpi.h"
 
 void VMCMakeSample_real(MPI_Comm comm);
 void VMC_BF_MakeSample_real(MPI_Comm comm);
