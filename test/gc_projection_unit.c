@@ -86,10 +86,10 @@ int main(int argc, char **argv) {
         double complex oldLog = CalculateLogIP_fcmp(values, start, end, MPI_COMM_WORLD);
         double complex now, nowLog;
         reductions = 0;
-        now = CalculateIPGC_fcmp(values, n, start, end, MPI_COMM_WORLD);
+        now = CalculateIPGC_fcmp(values, n, NULL, start, end, MPI_COMM_WORLD);
         CHECK(reductions == (size > 1), "value collective count changed");
         reductions = 0;
-        nowLog = CalculateLogIPGC_fcmp(values, n, start, end, MPI_COMM_WORLD);
+        nowLog = CalculateLogIPGC_fcmp(values, n, NULL, start, end, MPI_COMM_WORLD);
         CHECK(reductions == (size > 1), "log collective count changed");
         if (control == 0 && (n == 0 || n == Nsite2)) {
           CHECK(same_bits(now, 0.0 + 0.0 * I), "boundary is not exact +0");
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
             memcpy(values, parts, sizeof parts);
           }
           for (n = 0; n <= Nsite2; n += Nsite2) {
-            const double complex now = CalculateIPGC_fcmp(values, n, start, end, MPI_COMM_WORLD);
+            const double complex now = CalculateIPGC_fcmp(values, n, NULL, start, end, MPI_COMM_WORLD);
             CHECK(!isfinite(creal(now)) || !isfinite(cimag(now)), "nonfinite hidden");
           }
         }

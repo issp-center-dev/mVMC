@@ -1778,14 +1778,42 @@ endif()
 add_gc_spin_momentum_test(GC_SMP_OMP4 omp)
 set_tests_properties(GC_SMP_OMP4 PROPERTIES PROCESSORS 4)
 
-# Phase 3c Task 1: independent oracle for a finite total spin S>0 (projector
-# algebra, finite-G convergence and the fixture contracts).
+# Phase 3c Task 1/2: finite total spin S>0 with the public input gate closed.
+# The oracle self-test checks projector algebra, finite-G convergence and the
+# fixture contracts; the probe/chain runs compare the Testing-only
+# gc_finite_spin_unit binary with that independent oracle.
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_finite_spin.py
+    DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 add_test(NAME GC_FS_Oracle
     COMMAND ${PYTHON_EXECUTABLE} grandcanonical_spin_oracle.py
         --finite-spin-self-test)
 set_tests_properties(GC_FS_Oracle PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
     TIMEOUT 300)
+function(add_gc_finite_spin_test name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_finite_spin.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+        TIMEOUT 600)
+endfunction()
+foreach(gc_fs_case
+        "L2_S1;2" "L2_S1;4" "L4_S2;4" "L4_S2;8" "L4_S1_triplet;4"
+        "L4_S1_triplet_probe;8" "L4_S1_general;3" "L4_S1_general;8"
+        "L4_S1_near;4" "L5_S2;8" "L6_S3;8")
+    list(GET gc_fs_case 0 gc_fs_fixture)
+    list(GET gc_fs_case 1 gc_fs_gauss)
+    add_gc_finite_spin_test(GC_FS_Probe_${gc_fs_fixture}_g${gc_fs_gauss}
+        probe $<TARGET_FILE:gc_finite_spin_unit>
+        --fixture ${gc_fs_fixture} --gauss ${gc_fs_gauss}
+        --work ${CMAKE_CURRENT_BINARY_DIR}/gc-fs-probe-${gc_fs_fixture}-g${gc_fs_gauss})
+endforeach()
+foreach(gc_fs_fixture L2_S1 L4_S2 L4_S1_triplet_stat L4_S1_general)
+    add_gc_finite_spin_test(GC_FS_Chain_${gc_fs_fixture}
+        chain $<TARGET_FILE:gc_finite_spin_unit>
+        --fixture ${gc_fs_fixture} --gauss 4
+        --work ${CMAKE_CURRENT_BINARY_DIR}/gc-fs-chain-${gc_fs_fixture})
+endforeach()
 
 # Phase 3a: grand-canonical S=0 spin projection.
 add_test(NAME GC_SP_Oracle

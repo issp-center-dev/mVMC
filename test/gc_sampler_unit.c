@@ -320,7 +320,7 @@ static void test_debug_rebuild_preserves_workspace(void) {
   WorkSpaceComplex[complexCount] = -7.0 + 11.0 * I;
   complexCursor = WorkSpaceComplexNow;
 
-  GCDebugCheckFastState(eleIdx, &logIp, 0, 1, MPI_COMM_SELF);
+  GCDebugCheckFastState(eleIdx, eleNum, &logIp, 0, 1, MPI_COMM_SELF);
 
   CHECK(outerInt[0] == 271828 && WorkSpaceInt[NProj] == 314159,
         "debug rebuild changed the caller int workspace");
@@ -2064,7 +2064,7 @@ static void test_boundary_rejection(const char *mode) {
     (void)set_state(5U, eleIdx, eleCfg, eleNum, eleProjCnt);
     CHECK(CalculateMAllGC_fcmp(Ncur, eleIdx, start, end) == GC_MALL_OK,
           "boundary distributed rebuild");
-    logIp = CalculateLogIPGC_fcmp(PfM, Ncur, start, end, MPI_COMM_WORLD);
+    logIp = CalculateLogIPGC_fcmp(PfM, Ncur, NULL, start, end, MPI_COMM_WORLD);
     CHECK(isfinite(creal(logIp)), "boundary current is zero");
     snapshot(&before, eleIdx, eleCfg, eleNum, eleProjCnt, logIp);
     GCComponentCountersTotal(&statsBefore);
@@ -2124,7 +2124,7 @@ static void test_spin_sector(const char *mode) {
   }
   (void)set_state(0, idx, cfg, num, proj);
   CHECK(CalculateMAllGC_fcmp(0, idx, start, end) == GC_MALL_OK, "spin vacuum");
-  logip = CalculateLogIPGC_fcmp(PfM, 0, start, end, MPI_COMM_WORLD);
+  logip = CalculateLogIPGC_fcmp(PfM, 0, NULL, start, end, MPI_COMM_WORLD);
   snapshot(&before, idx, cfg, num, proj, logip);
   if (strcmp(mode, "--spin-sector-bridge") == 0) {
     /* A component failure on rank 1 must reach the whole communicator,
@@ -2137,10 +2137,10 @@ static void test_spin_sector(const char *mode) {
     return;
   }
   for (q = start; q < end; ++q) candidate[q-start] = 1e-16;
-  CHECK(CalculateIPGC_fcmp(candidate, 2, start, end, MPI_COMM_WORLD) == 0,
+  CHECK(CalculateIPGC_fcmp(candidate, 2, NULL, start, end, MPI_COMM_WORLD) == 0,
         "finite forbidden-sector residue removed");
   if (start < end && rank == (size > 1 ? 1 : 0)) candidate[0] = NAN;
-  CHECK(!isfinite(creal(CalculateIPGC_fcmp(candidate, 2, start, end,
+  CHECK(!isfinite(creal(CalculateIPGC_fcmp(candidate, 2, NULL, start, end,
                                            MPI_COMM_WORLD))),
         "rank nonfinite input not hidden by sector mask");
   CHECK(!GCAttemptMove(GC_MOVE_ADD, 0, 3, 0.0, idx, cfg, num, proj,

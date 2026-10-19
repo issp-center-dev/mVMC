@@ -1555,7 +1555,7 @@ static void test_boundary_green(void) {
         for (k = 0; k < ORBITALS; ++k) if (eleNum[k]) sortedIdx[count++] = k;
         CHECK(CalculateMAllGC_fcmp(ncur, eleIdx, 0, QPS) == GC_MALL_OK,
               "boundary Green rebuild");
-        ip = CalculateIPGC_fcmp(PfM, ncur, 0, QPS, MPI_COMM_SELF);
+        ip = CalculateIPGC_fcmp(PfM, ncur, NULL, 0, QPS, MPI_COMM_SELF);
         sortedOverlap = overlap_for_sorted_state(sortedIdx, ncur);
         CHECK(isfinite(cabs(ip)) && cabs(ip) > 1e-12, "boundary Green current");
         anti_snapshot(&before, eleIdx, eleCfg, eleNum, projCnt);

@@ -75,6 +75,9 @@ int NGCInitNelec;
 /* Recomputed with each anti-parallel Slater matrix generation. -1 is invalid;
  * 1 proves F^T=-F exactly, 0 includes every near-antisymmetric general F. */
 int GCSpinTriplet;
+/* Same generation, finite S>0 only: 1 proves F^T=F exactly (no S>0
+ * component), 0 otherwise, -1 invalid. */
+int GCSpinSinglet;
 
 int NSPGaussLeg; /* the number of points for the Gauss-Legendre quadrature */
 int NSPStot; /* S of Spin projection */
