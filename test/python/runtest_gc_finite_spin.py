@@ -13,6 +13,7 @@ Fock-space and rational evaluation); the binary never builds them.
 from __future__ import print_function
 
 import argparse
+import itertools
 import math
 import os
 import subprocess
@@ -69,43 +70,109 @@ def run(command):
     return process.stdout
 
 
+def require_finite(value, label):
+    if not math.isfinite(value.real) or not math.isfinite(value.imag):
+        raise AssertionError("nonfinite {}: {}".format(label, value))
+    return value
+
+
+def comparison_error(actual, expected, label):
+    require_finite(actual, label + " actual")
+    require_finite(expected, label + " reference")
+    return require_finite(abs(actual - expected), label + " error")
+
+
 def hexc(re_text, im_text):
-    return complex(float.fromhex(re_text), float.fromhex(im_text))
+    return require_finite(complex(float.fromhex(re_text),
+                                  float.fromhex(im_text)), "probe value")
+
+
+def add_probe_row(data, kind, key, value):
+    if key in data[kind]:
+        raise AssertionError("duplicate {} key {}".format(kind, key))
+    data[kind][key] = value
 
 
 def parse_probe(path):
     data = {"Q": [], "A": {}, "D": {}, "Z": {}, "G1": {}, "PA": {},
             "PR": {}, "G2": {}}
+    widths = {"Q": 7, "A": 6, "D": 7, "Z": 5, "G1": 6, "PA": 6,
+              "PR": 6, "G2": 8}
+    qp_indices = set()
     with open(path) as stream:
         header = stream.readline().split()
-        if header[0] != "GC_FINITE_SPIN_PROBE_V1":
+        if len(header) != 7 or header[0] != "GC_FINITE_SPIN_PROBE_V1":
             raise AssertionError("bad probe header {}".format(header))
         data["header"] = [int(word) for word in header[1:]]
-        for line in stream:
+        for number, line in enumerate(stream, 2):
             w = line.split()
+            if not w or len(w) != widths.get(w[0]):
+                raise AssertionError("bad probe row {}: {}".format(number, w))
             kind = w[0]
             if kind == "Q":
-                data["Q"].append({"q": int(w[1]),
-                                  "cs": float.fromhex(w[2]),
-                                  "cc": float.fromhex(w[3]),
-                                  "ss": float.fromhex(w[4]),
+                q = int(w[1])
+                if q in qp_indices:
+                    raise AssertionError("duplicate Q key {}".format(q))
+                qp_indices.add(q)
+                data["Q"].append({"q": q,
+                                  "cs": require_finite(float.fromhex(w[2]), "Q cs"),
+                                  "cc": require_finite(float.fromhex(w[3]), "Q cc"),
+                                  "ss": require_finite(float.fromhex(w[4]), "Q ss"),
                                   "weight": hexc(w[5], w[6])})
             elif kind == "A":
-                data["A"][int(w[1])] = (int(w[2]), int(w[3]),
-                                        hexc(w[4], w[5]))
+                add_probe_row(data, kind, int(w[1]),
+                              (int(w[2]), int(w[3]), hexc(w[4], w[5])))
             elif kind == "D":
-                data["D"][(int(w[1]), int(w[2]))] = (hexc(w[3], w[4]),
-                                                     hexc(w[5], w[6]))
+                add_probe_row(data, kind, (int(w[1]), int(w[2])),
+                              (hexc(w[3], w[4]), hexc(w[5], w[6])))
             elif kind == "Z":
-                data["Z"][(int(w[1]), int(w[2]))] = hexc(w[3], w[4])
+                add_probe_row(data, kind, (int(w[1]), int(w[2])),
+                              hexc(w[3], w[4]))
             elif kind in ("G1", "PA", "PR"):
-                data[kind][(int(w[1]), int(w[2]), int(w[3]))] = \
-                    hexc(w[4], w[5])
+                add_probe_row(data, kind, tuple(int(x) for x in w[1:4]),
+                              hexc(w[4], w[5]))
             elif kind == "G2":
-                data[kind][tuple(int(x) for x in w[1:6])] = hexc(w[6], w[7])
-            else:
-                raise AssertionError("unknown probe row {}".format(kind))
+                add_probe_row(data, kind, tuple(int(x) for x in w[1:6]),
+                              hexc(w[6], w[7]))
     return data
+
+
+def check_keys(rows, expected, label):
+    actual = set(rows)
+    if actual != expected:
+        missing, extra = expected - actual, actual - expected
+        raise AssertionError("{} keys differ: {} missing {}, {} extra {}"
+                             .format(label, len(missing), sorted(missing)[:3],
+                                     len(extra), sorted(extra)[:3]))
+
+
+def check_probe_rows(data, nsite, spin, symmetry):
+    """Check the complete probe schema before any ratio conditioning cut.
+
+    The C probe emits D/Green rows for every nonzero A row, including tiny
+    amplitudes. A's full basis and nonzero support are checked separately.
+    Expected operators come from L and the documented probe contract, not
+    from the Green rows that happened to be present in the file.
+    """
+    masks = {mask for mask, row in data["A"].items() if row[2] != 0}
+    parameters = range(nsite * nsite)
+    check_keys(data["D"], set(itertools.product(masks, parameters)), "D")
+    zero_masks = {mask for mask in data["A"] if symmetry == "triplet" and
+                  oracle.configuration_allowed(mask, nsite, spin) and
+                  oracle.triplet_sector_forbidden(oracle.popcount(mask), spin)}
+    check_keys(data["Z"], set(itertools.product(zero_masks, parameters)), "Z")
+    orbitals = range(2 * nsite)
+    expected = set(itertools.product(masks, orbitals, orbitals))
+    for group in ("G1", "PA", "PR"):
+        check_keys(data[group], expected, group)
+    # Both Sz-conserving two-body families emitted by --probe:
+    # (up, up, down, down) and (up, down, down, up).
+    operators = set()
+    for a, b, i, j in itertools.product(range(nsite), repeat=4):
+        operators.add((a, b, i + nsite, j + nsite))
+        operators.add((a, b + nsite, i + nsite, j))
+    expected = {(mask,) + op for mask in masks for op in operators}
+    check_keys(data["G2"], expected, "G2")
 
 
 def doublons(mask, nsite):
@@ -130,13 +197,12 @@ def production_nodes(data, gauss):
 def check_coefficients(data, gauss, spin):
     reference = oracle.independent_spin_nodes(gauss, spin)
     worst = 0.0
-    if len(data["Q"]) != gauss:
-        raise AssertionError("QP count {} != G {}".format(len(data["Q"]),
-                                                          gauss))
+    if [row["q"] for row in data["Q"]] != list(range(gauss)):
+        raise AssertionError("QP indices differ from 0..G-1")
     for row, ref in zip(data["Q"], reference):
-        for key in ("cs", "cc", "ss"):
-            worst = max(worst, abs(row[key] - ref[key]))
-        worst = max(worst, abs(row["weight"] - ref["weight"]))
+        for key in ("cs", "cc", "ss", "weight"):
+            worst = max(worst, comparison_error(row[key], ref[key],
+                                                "Q " + key))
     if worst > COEFFICIENT_TOLERANCE:
         raise AssertionError("production a_g(S) differ from leggauss/legval "
                              "by {}".format(worst))
@@ -149,7 +215,9 @@ def oracle_wave(F, nodes, spin, gutzwiller, exact=False):
                                        exact_arithmetic=exact)
     if exact:
         return masked
-    return dict((mask, value * math.exp(gutzwiller * doublons(mask, nsite)))
+    return dict((mask, require_finite(
+        value * math.exp(gutzwiller * doublons(mask, nsite)),
+        "wave reference mask={}".format(mask)))
                 for mask, value in masked.items())
 
 
@@ -176,7 +244,8 @@ def probe_case(args):
     # proven zeros exact in production, and no legitimate nonzero dropped.
     nodes = production_nodes(data, args.gauss)
     exact = oracle.masked_finite_spin(F, nodes, spin, exact_arithmetic=True)
-    reference = dict((mask, oracle.qfloat(value))
+    reference = dict((mask, require_finite(oracle.qfloat(value),
+                                          "amplitude reference mask={}".format(mask)))
                      for mask, value in exact.items())
     scale = max(abs(value) for value in reference.values())
     if set(data["A"]) != set(reference):
@@ -194,7 +263,7 @@ def probe_case(args):
                 raise AssertionError("proven zero {} is {} in production"
                                      .format(mask, actual))
             continue
-        error = abs(actual - reference[mask])
+        error = comparison_error(actual, reference[mask], "amplitude")
         worst_amplitude = max(worst_amplitude, error)
         if error > AMPLITUDE_TOLERANCE * (1.0 + scale):
             raise AssertionError("amplitude {} differs: {} vs {}".format(
@@ -204,6 +273,8 @@ def probe_case(args):
             if actual == 0:
                 raise AssertionError("nonzero amplitude {} dropped".format(
                     mask))
+
+    check_probe_rows(data, nsite, spin, symmetry)
 
     # Log derivatives at every nonzero configuration (finite differences of
     # the masked state, reclassifying F at each displaced point).
@@ -229,7 +300,7 @@ def probe_case(args):
             for mask in nonzero:
                 actual = data["D"][(mask, k)][imaginary]
                 expect = values[mask] / reference[mask]
-                error = abs(actual - expect)
+                error = comparison_error(actual, expect, "log derivative")
                 worst_derivative = max(worst_derivative,
                                        error / (1.0 + abs(expect)))
                 if error > DERIVATIVE_TOLERANCE * (1.0 + abs(expect)):
@@ -241,20 +312,12 @@ def probe_case(args):
     largest_zero_point = 0.0
     for (mask, k), actual in data["Z"].items():
         expect = derivative(k, 0)[mask]
+        error = comparison_error(actual, expect, "zero-point derivative")
         largest_zero_point = max(largest_zero_point, abs(expect))
-        error = abs(actual - expect)
         worst_zero_point = max(worst_zero_point, error / (1.0 + abs(expect)))
         if error > DERIVATIVE_TOLERANCE * (1.0 + abs(expect)):
             raise AssertionError("zero-point derivative mask={} k={}: {} vs {}"
                                  .format(mask, k, actual, expect))
-    expected_z = set(mask for mask in reference if symmetry == "triplet" and
-                     oracle.configuration_allowed(mask, nsite, spin) and
-                     oracle.triplet_sector_forbidden(oracle.popcount(mask),
-                                                     spin))
-    if set(mask for mask, unused in data["Z"]) != expected_z or \
-            len(data["Z"]) != len(expected_z) * nsite * nsite:
-        raise AssertionError("zero-point derivative rows differ from the "
-                             "triplet parity zeros")
     if data["Z"] and largest_zero_point < 1.0e-3:
         raise AssertionError("zero-point derivatives vanish: the fixture "
                              "does not test the symmetry-breaking direction")
@@ -281,13 +344,13 @@ def probe_case(args):
                 target_zero = exact.get(target, oracle.ZERO) == oracle.ZERO \
                     and oracle.finite_spin_zero(target, nsite, spin, symmetry)
                 expect = moved[1] * (wave[target] / wave[mask]).conjugate()
+            error = comparison_error(actual, expect, group)
             if target_zero:
                 if actual != 0:
                     raise AssertionError("{} {} reaches a proven zero but is "
                                          "{}".format(group, key, actual))
                 exact_virtual_zeros += 1
                 continue
-            error = abs(actual - expect)
             worst_green = max(worst_green, error / (1.0 + abs(expect)))
             if error > GREEN_TOLERANCE * (1.0 + abs(expect)):
                 raise AssertionError("{} {}: {} vs {}".format(group, key,

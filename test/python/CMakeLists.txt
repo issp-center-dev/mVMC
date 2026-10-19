@@ -1783,7 +1783,15 @@ set_tests_properties(GC_SMP_OMP4 PROPERTIES PROCESSORS 4)
 # fixture contracts; the probe/chain runs compare the Testing-only
 # gc_finite_spin_unit binary with that independent oracle.
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_finite_spin.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_finite_spin_validation.py
     DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+add_test(NAME GC_FS_Probe_Validation
+    COMMAND ${PYTHON_EXECUTABLE} runtest_gc_finite_spin_validation.py
+        $<TARGET_FILE:gc_finite_spin_unit>
+        --work ${CMAKE_CURRENT_BINARY_DIR}/gc-fs-probe-validation)
+set_tests_properties(GC_FS_Probe_Validation PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    TIMEOUT 300)
 add_test(NAME GC_FS_Oracle
     COMMAND ${PYTHON_EXECUTABLE} grandcanonical_spin_oracle.py
         --finite-spin-self-test)
