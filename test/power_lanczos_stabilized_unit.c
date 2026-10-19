@@ -136,7 +136,7 @@ static void initialize_view(MVMCPowerLanczosClassicView *view,
 static MVMCPowerLanczosStabilizedResult run_case(
     int power_step, double scale,
     MVMCPowerLanczosClassicArithmetic arithmetic,
-    int sample_parallel) {
+    int sample_parallel, int constant_energy) {
   enum { qp_total = 8 };
   double slater_real[qp_total * 16];
   double complex slater_complex[qp_total * 16];
@@ -159,6 +159,28 @@ static MVMCPowerLanczosStabilizedResult run_case(
     initialize_view(&view, arithmetic, NULL, slater_complex,
                     chain_rank, chain_size);
   }
+  if (constant_energy) {
+    /* H = -N_up is exactly -1 on all four configurations. Constant
+     * pair amplitudes keep the local energy exactly representable.
+     * Check normalization through the driver and across MPI chains. */
+    static int diagonal_rows[2][4] = {{0, 0, 0, 0}, {1, 0, 1, 0}};
+    static int *diagonal_indices[2] = {diagonal_rows[0], diagonal_rows[1]};
+    static const double complex diagonal_value[2] = {1.0, 1.0};
+    static const double complex weight[1] = {1.0};
+    int up, down;
+    view.transfer_count = 2;
+    view.transfer_indices = diagonal_indices;
+    view.transfer_parameters = diagonal_value;
+    view.coulomb_intra_count = 0;
+    view.qp_total = 1;
+    view.qp_start = chain_rank / chain_size;
+    view.qp_end = (chain_rank + 1) / chain_size;
+    view.qp_weights = weight;
+    memset(slater_real, 0, sizeof(slater_real));
+    for (up = 0; up < 2; ++up)
+      for (down = 0; down < 2; ++down)
+        set_real_pair(slater_real, up, down, 1.0);
+  }
   memset(&input, 0, sizeof(input));
   input.classic_view = &view;
   input.world_communicator = world();
@@ -169,6 +191,9 @@ static MVMCPowerLanczosStabilizedResult run_case(
   input.sample_count = 256;
   input.interval = 1;
   status = mvmc_power_lanczos_stabilized_run(&input, &result);
+  if (status != MVMC_KRYLOV_STATUS_OK)
+    fprintf(stderr, "stabilized status: %s (constant=%d)\n",
+            mvmc_krylov_status_string(status), constant_energy);
   CHECK(status == MVMC_KRYLOV_STATUS_OK, "stabilized run status");
   CHECK(result.valid && result.status == MVMC_KRYLOV_STATUS_OK,
         "stabilized result validity");
@@ -263,26 +288,35 @@ int main(int argc, char **argv) {
         "valid sample count block selection");
   CHECK(mvmc_power_lanczos_stabilized_block_count(37) == 0,
         "invalid sample count block selection");
-  base = run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1);
+  {
+    const MVMCPowerLanczosStabilizedResult constant =
+        run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1, 1);
+    CHECK(constant.energy == -1.0 && constant.energy_standard_error == 0.0,
+          "constant-energy fixture");
+    CHECK(constant.energy_tau_int == 0.5 &&
+              constant.effective_sample_count == (double)constant.final_samples,
+          "g=1 means tau=1/2 and one effective sample per saved sample");
+  }
+  base = run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1, 0);
   check_ed(&base, -1.167342721287232, 0.0012031753879899743,
            "real first step");
-  scaled = run_case(1, 1.0e150, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1);
+  scaled = run_case(1, 1.0e150, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1, 0);
   CHECK(fabs(base.energy - scaled.energy) <=
             1.0e-10 * fmax(1.0, fabs(base.energy)) &&
             fabs(base.variance - scaled.variance) <=
             1.0e-9 * fmax(1.0, fabs(base.variance)),
         "global amplitude scaling changes corrected observables");
-  second_step = run_case(2, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1);
+  second_step = run_case(2, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 1, 0);
   check_ed(&second_step, -1.1679611410882096, 0.000163604277214624,
            "real second step");
   complex_first_step =
-      run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_COMPLEX, 1);
+      run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_COMPLEX, 1, 0);
   check_ed(&complex_first_step, -1.1659572960326554,
            0.003155912326888499, "complex first step");
 #ifdef _mpi_use
   if (size > 1) {
     MVMCPowerLanczosStabilizedResult projection_parallel =
-        run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 0);
+        run_case(1, 1.0, MVMC_POWER_LANCZOS_CLASSIC_REAL, 0, 0);
     CHECK(projection_parallel.sampling_chains == UINT64_C(1),
           "projection-parallel run must contain one chain");
     check_ed(&projection_parallel, -1.167342721287232,

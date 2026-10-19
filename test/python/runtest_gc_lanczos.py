@@ -926,7 +926,7 @@ def require_success(label, done, workdir, samples, chains):
             result["condition"] >= 1 and result["gevp_residual"] >= 0,
             "%s: invalid diagnostics %r" % (label, result))
     require(0 < result["effective_samples"] <= total and
-            result["tau_int"] >= 1,
+            result["tau_int"] >= 0.5,
             "%s: ESS/tau %r" % (label, result))
     return result
 
