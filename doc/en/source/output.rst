@@ -679,6 +679,8 @@ builds with ``Testing=OFF``. Ordinary ``zvo_gc.dat`` output is unchanged.
 No chemical potential is inferred from ``Trans``, and no conversion of the
 reported Hamiltonian energy is performed. If a run fails, any partial file
 from that run must not be used as a successful measurement.
+If opening, writing or closing the number file fails, no result row is
+written to the corresponding ``xxx_pl_out_yyy.dat`` and the run exits with status 1.
 
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~

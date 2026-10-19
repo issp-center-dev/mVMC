@@ -1058,6 +1058,8 @@ def statistical_gates(label, result, summary, reference, samples, chains):
     require(number["sectors"] == summary["sectors"] and
             np.array_equal(number["c"], summary["c"]),
             label + ": public final state differs from testing summary")
+    # Match the energy gate's 8-SE sanity check; fixed-N and histogram/block
+    # checks separately enforce deterministic accounting and SE correctness.
     for key, error, power in (("mean", "se", 1), ("mean_square", "square_se", 2)):
         expected = sum(n**power * p for n, p in probability.items())
         require(abs(number[key] - expected) <= 8 * number[error] + 2e-10 * (1 + abs(expected)),

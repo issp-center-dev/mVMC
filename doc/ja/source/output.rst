@@ -611,6 +611,8 @@ blockはchain順の列 ``global_sample = chain_index*samples_per_chain + local_s
 出力し、通常の ``zvo_gc.dat`` の意味は変えません。``Trans`` から化学ポテンシャルを
 推測したり、報告するHamiltonianのenergyを変換したりしません。
 runが失敗した場合、そのrunの途中fileを成功した測定結果として使用しないでください。
+粒子数fileのopen・write・closeに失敗すると、対応する ``xxx_pl_out_yyy.dat`` の
+結果行は出力せず、終了コード1で終了します。
 
 xxx\_ls2\_moment\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~~~~
