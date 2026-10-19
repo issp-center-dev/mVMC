@@ -28,6 +28,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include <complex.h>
 #include "./include/global.h"
 #include "./include/slater.h"
+#include "./include/gc_spin_support.h"
 
 #pragma once
 void UpdateSlaterElm_fcmp() {
@@ -38,6 +39,12 @@ void UpdateSlaterElm_fcmp() {
   double complex slt_ij,slt_ji;
   int *xqp, *xqpSgn, *xqpOpt, *xqpOptSgn;
   double complex *sltE,*sltE_i0,*sltE_i1;
+
+  GCSpinTriplet = 0;
+  if (FlagGrandCanonical && !iFlgOrbitalGeneral && NSPGaussLeg > 1 &&
+      NSPStot == 0)
+    GCSpinTriplet = GCSpinPureTriplet(Nsite, NSlater, OrbitalIdx,
+                                    OrbitalSgn, Slater);
 
   #pragma omp parallel for default(shared)        \
     private(qpidx,optidx,mpidx,spidx,                      \

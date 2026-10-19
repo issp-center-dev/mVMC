@@ -34,6 +34,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "workspace.h"
 #include "gauleg.h"
 #include "gc_exact_sum.h"
+#include "gc_spin_support.h"
 
 /* Set once from the distributed input coefficients; read-only during a run. */
 static int GCTransWeightSumExactlyZero = 0;
@@ -181,15 +182,21 @@ double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, c
   return ip;
 }
 
-/* Vacuum and full filling are translation invariant. If the input character
- * sum is exactly zero, remove only finite roundoff left by the existing QP
- * sum. Keep its reduction order, one collective, and nonfinite propagation. */
+/* Vacuum/full filling are translation invariant; pure-triplet S=0 states
+ * also exclude odd pair number. Remove only finite roundoff in those proven
+ * sectors, keeping the QP reduction order and nonfinite propagation. */
+int GCProjectionSectorZero(const int newN) {
+  return (FlagGrandCanonical && GCTransWeightSumExactlyZero &&
+          (newN == 0 || newN == Nsite2)) ||
+         GCSpinForbiddenSector(FlagGrandCanonical, iFlgOrbitalGeneral,
+                               NSPGaussLeg, NSPStot, GCSpinTriplet, newN);
+}
+
 double complex CalculateIPGC_fcmp(double complex *const pfM, const int newN,
                                   const int qpStart, const int qpEnd,
                                   MPI_Comm comm) {
   const double complex ip = CalculateIP_fcmp(pfM, qpStart, qpEnd, comm);
-  if (FlagGrandCanonical && GCTransWeightSumExactlyZero &&
-      (newN == 0 || newN == Nsite2) &&
+  if (GCProjectionSectorZero(newN) &&
       isfinite(creal(ip)) && isfinite(cimag(ip)))
     return 0.0 + 0.0 * I;
   return ip;
