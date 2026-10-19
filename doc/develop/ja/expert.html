@@ -654,6 +654,33 @@ workspaceの <span class="math notranslate nohighlight">\(2GR+5G\)</span> はC�
 壊すため、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> では <code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> をエラーにします。
 一般pairと0でない <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> はスピン射影と併用できず、GC modeでの
 <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> の禁止も引き続き適用されます。</p>
+<p>実際の未回転対関数が厳密に反対称（<span class="math notranslate nohighlight">\(F^T=-F\)</span>、純triplet pair）の場合、
+<span class="math notranslate nohighlight">\(S=0\)</span> 射影は <span class="math notranslate nohighlight">\(N=2\pmod 4\)</span> の全sectorを消します。
+orbitalの符号を含めたparameter値を更新ごとに検査し、QP和が非有限値でないことを
+確認した後、該当sectorを厳密零として扱います。有限 <span class="math notranslate nohighlight">\(G\)</span> で対になる求積点の
+打ち消しに残る丸め誤差も除去します。運動量射影との併用にも適用しますが、
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> には適用しません。この場合の <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> は4の倍数で、
+射影振幅が非零である必要があります。最適化更新で保存済みの粒子数が禁止された場合は、
+許されるsectorから初期化してwarm-upをやり直します。反対称に近いだけの対関数を
+この対称性へ丸めることはしません。</p>
+<p>スピン射影が有効な通常GCの提案には、反平行pairを2対同時に追加・削除するmove
+（各1/8）と全balanced配置からの一様提案（1/64）を含めます。残り47/64では従来の
+局所moveを使い、各提案固有のMetropolis比で判定します。不可能なmoveはその場に
+とどまります。これにより、禁止された中間粒子数を飛び越えてsector間を移動できます。
+<span class="math notranslate nohighlight">\(N\mathbin{\pm}2\)</span> のみを使っていた旧版では、初期粒子数に留まったまま
+エラー無しで終了することがありました。このsampling modeの乱数列は変更されています。
+粒子数histogram、自己相関、初期配置依存を確認してください。全配置への提案は
+支持集合への到達可能性を保証しますが、速い混合を保証するものではありません。</p>
+<p>この混合は、<span class="math notranslate nohighlight">\(S=0\)</span> 射影が有効（<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code>）な対応範囲内の
+すべての反平行対関数に適用し、厳密に反対称でない場合も含みます。
+<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> とスピン射影の併用を許可するものではありません。
+2対の追加・削除と一様提案を選ぶ確率は合計17/64です。候補を作れる場合は、
+すべての求積点・並進点で候補のPfaffianを直接評価し、受理時には行列も再構築します。
+候補の電子数を <span class="math notranslate nohighlight">\(N\)</span> とすると、直接評価は低rank更新ではなく
+1点あたり <span class="math notranslate nohighlight">\(O(N^3)\)</span> の計算となるため、厳密なtriplet対称性を持たない
+対関数でもsampling stepあたりの費用が増え得ます。大系での性能は未測定なので、
+対象の系で実行時間と粒子数の混合をともに確認してください。
+<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> とcanonical samplingの提案混合・乱数列は変わりません。</p>
 <p>Hamiltonianは <span class="math notranslate nohighlight">\(S^z\)</span> を保存すればよく、<span class="math notranslate nohighlight">\(SU(2)\)</span> 対称である
 必要はありません。測定演算子は演算子全体の <span class="math notranslate nohighlight">\(S^z\)</span> 変化が0でなければ
 期待値0になり、<span class="math notranslate nohighlight">\(S^+_iS^-_j\)</span> のように因子はスピンを反転しても全体で
