@@ -1191,6 +1191,17 @@ smaller and load imbalance can occur. Direct SR with <code class="docutils liter
 <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> because the SR-CG stored <span class="math notranslate nohighlight">\(O\)</span> matvec path does
 not support the inner MPI split.</p>
 </li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OutputDir</span></code></p>
+<p><strong>Type :</strong> string-type (blank parameter not allowed, default value: output)</p>
+<p><strong>Description :</strong> Directory where output files are written. A relative
+path is resolved against the current directory at run time. The
+directory and its missing parents are created if they do not exist.
+Output file names become <code class="docutils literal notranslate"><span class="pre">OutputDir</span></code>/<code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> and
+<code class="docutils literal notranslate"><span class="pre">OutputDir</span></code>/<code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code>, each of which must be at most 191
+bytes long. <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> also reads correlation functions from and
+writes its results to <code class="docutils literal notranslate"><span class="pre">OutputDir</span></code>. <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> is always written
+to the current directory regardless of <code class="docutils literal notranslate"><span class="pre">OutputDir</span></code>.</p>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NStore</span></code></p>
 <p><strong>Type :</strong> int-type (0 or 1, default value: 1)</p>
 <p><strong>Description :</strong> The option of applying matrix-matrix product to

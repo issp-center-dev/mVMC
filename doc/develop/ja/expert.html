@@ -1095,6 +1095,16 @@ load imbalance が起こり得ます。直接SRでは <code class="docutils lite
 SR-CG の stored <span class="math notranslate nohighlight">\(O\)</span> 行列ベクトル積は内部MPI分割に対応していないため、
 <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code> の場合は <code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code> を指定してください。</p>
 </li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OutputDir</span></code></p>
+<p><strong>形式 :</strong> string型 (空白不可、デフォルト値=output)</p>
+<p><strong>説明 :</strong> 出力ファイルを書き出すディレクトリ。相対パスは実行時の
+カレントディレクトリを基準とします。存在しない場合は親ディレクトリも
+含めて作成します。出力ファイル名は <code class="docutils literal notranslate"><span class="pre">OutputDir</span></code>/<code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code>
+および <code class="docutils literal notranslate"><span class="pre">OutputDir</span></code>/<code class="docutils literal notranslate"><span class="pre">CParaFileHead</span></code> の形になります。これらの長さは
+それぞれ191バイト以下である必要があります。
+<code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> も <code class="docutils literal notranslate"><span class="pre">OutputDir</span></code> のディレクトリから相関関数を読み込み、結果を書き出します。
+<code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> は <code class="docutils literal notranslate"><span class="pre">OutputDir</span></code> によらずカレントディレクトリに出力されます。</p>
+</li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NStore</span></code></p>
 <p><strong>形式 :</strong> int型 (0もしくは1、デフォルト値=1)</p>
 <p><strong>説明 :</strong>
