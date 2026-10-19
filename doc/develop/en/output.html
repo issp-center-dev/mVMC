@@ -611,7 +611,17 @@ and effective sample count, and the retained rank, condition estimate, and
 residual of the generalized eigenproblem. It contains no Green’s functions or
 per-sample trace. For multiple independent chains, <code class="docutils literal notranslate"><span class="pre">effective_samples</span></code> is
 the sum of the per-chain effective sample counts, and <code class="docutils literal notranslate"><span class="pre">tau_int</span></code> is the
-equivalent value <code class="docutils literal notranslate"><span class="pre">total_samples/(2*effective_samples)</span></code>.</p>
+equivalent value <code class="docutils literal notranslate"><span class="pre">total_samples/(2*effective_samples)</span></code>.
+For each chain, the Geyer initial-positive estimator returns the statistical
+inefficiency <span class="math notranslate nohighlight">\(g=1+2\sum_{k\geq1}\rho(k)\)</span>, clamped to at least 1.
+The reported convention is <span class="math notranslate nohighlight">\(\tau_{\mathrm{int}}=g/2\)</span> and
+<span class="math notranslate nohighlight">\(N_{\mathrm{eff}}=M/g\)</span>, where <span class="math notranslate nohighlight">\(M\)</span> is the number of saved samples.
+Thus the minimum reported <code class="docutils literal notranslate"><span class="pre">tau_int</span></code> is 0.5. A constant series uses this
+minimum by convention; it does not establish that the chain has mixed.
+Earlier output used <code class="docutils literal notranslate"><span class="pre">M/(2*g)</span></code>: its effective sample count is half the
+corrected value, and its reported autocorrelation time is twice the corrected
+value. This correction applies to canonical, grand-canonical, and independent
+Hamiltonian runs without changing the sampled physical observables.</p>
 <p>With <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> (first step only) the file has the same header
 with <code class="docutils literal notranslate"><span class="pre">order=1</span></code> and the same 11 fields. Energy and variance are those of the
 input <span class="math notranslate nohighlight">\(H\)</span>, including <span class="math notranslate nohighlight">\(-\mu N\)</span>, over all particle numbers; no

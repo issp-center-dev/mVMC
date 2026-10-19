@@ -573,7 +573,15 @@ variance、そのstandard error、虚部、energyの自己相関時間と有効s
 一般化固有値問題のretained rank・condition estimate・residualを出力します。
 Green関数やsampleごとのtraceは出力しません。独立chainが複数ある場合、
 <code class="docutils literal notranslate"><span class="pre">effective_samples</span></code> はchainごとの有効sample数の合計、<code class="docutils literal notranslate"><span class="pre">tau_int</span></code> は
-<code class="docutils literal notranslate"><span class="pre">total_samples/(2*effective_samples)</span></code> で定義する等価な値です。</p>
+<code class="docutils literal notranslate"><span class="pre">total_samples/(2*effective_samples)</span></code> で定義する等価な値です。
+chainごとのGeyer initial-positive推定器は統計的非効率度
+<span class="math notranslate nohighlight">\(g=1+2\sum_{k\geq1}\rho(k)\)</span> を返し、下限1へ補正します。
+公開値の規約は <span class="math notranslate nohighlight">\(\tau_{\mathrm{int}}=g/2\)</span>、
+<span class="math notranslate nohighlight">\(N_{\mathrm{eff}}=M/g\)</span> （Mは保存sample数）で、<code class="docutils literal notranslate"><span class="pre">tau_int</span></code> の下限は0.5です。
+定数系列も規約上この下限を使いますが、混合の成功を意味しません。
+以前の出力は <code class="docutils literal notranslate"><span class="pre">M/(2*g)</span></code> を用いていたため、有効sample数が修正後の1/2、
+自己相関時間が修正後の2倍でした。この修正はcanonical、grand canonical、独立Hamiltonianの
+各経路に適用され、sampleされた物理量は変わりません。</p>
 <p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1``（1</span> <span class="pre">stepのみ）でも、headerは</span> <span class="pre">``order=1</span></code> の同じ形式で、
 data行は同じ11項目です。energyとvarianceは <span class="math notranslate nohighlight">\(-\mu N\)</span> を含む入力
 <span class="math notranslate nohighlight">\(H\)</span> の全粒子数にわたる値で、粒子数の項目は追加しません。最終chainで

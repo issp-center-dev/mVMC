@@ -551,6 +551,14 @@ variance、そのstandard error、虚部、energyの自己相関時間と有効s
 Green関数やsampleごとのtraceは出力しません。独立chainが複数ある場合、
 ``effective_samples`` はchainごとの有効sample数の合計、``tau_int`` は
 ``total_samples/(2*effective_samples)`` で定義する等価な値です。
+chainごとのGeyer initial-positive推定器は統計的非効率度
+:math:`g=1+2\sum_{k\geq1}\rho(k)` を返し、下限1へ補正します。
+公開値の規約は :math:`\tau_{\mathrm{int}}=g/2`、
+:math:`N_{\mathrm{eff}}=M/g` （Mは保存sample数）で、``tau_int`` の下限は0.5です。
+定数系列も規約上この下限を使いますが、混合の成功を意味しません。
+以前の出力は ``M/(2*g)`` を用いていたため、有効sample数が修正後の1/2、
+自己相関時間が修正後の2倍でした。この修正はcanonical、grand canonical、独立Hamiltonianの
+各経路に適用され、sampleされた物理量は変わりません。
 
 ``NGrandCanonical=1``（1 stepのみ）でも、headerは ``order=1`` の同じ形式で、
 data行は同じ11項目です。energyとvarianceは :math:`-\mu N` を含む入力
