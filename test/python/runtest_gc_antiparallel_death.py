@@ -32,6 +32,8 @@ EXPECTED = {
     '--death-explicit-range': ['NGCInitNelec=2', 'total spin S=2',
                                '2S <= N <= 2*Nsite-2S'],
     '--death-rank-singlet': ['rank-inconsistent GC spin support'],
+    '--death-chain-singlet': ['exactly symmetric (pure singlet)',
+                              'no total spin S=1 component'],
     '--death-swap-nonfinite': ['GC spin bridge evaluation failed'],
     '--death-restart-same-generation': ['total-spin S=2 restored state',
                                         'without a pair-function change'],

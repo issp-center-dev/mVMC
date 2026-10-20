@@ -287,7 +287,7 @@ def negative_cases(rootdir, procs):
         {'momentum': True, 'nmptrans': -2147483648},
         'NMPTrans must be a nonzero integer')
     for order in ('early', 'late'):
-        for name in ('general', 's_nonzero', 'spin_jastrow', 'opttrans',
+        for name in ('general', 's_over', 'spin_jastrow', 'opttrans',
                      'g_zero', 'g_fraction', 'g_workspace_sum_over',
                      'combined_workspace', 'combined_r_over'):
             options, message = spin.INPUT_CASES[name]

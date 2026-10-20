@@ -56,6 +56,24 @@ def main():
     for fixture, lines in controls.items():
         check("control " + fixture, lines, fixture)
 
+    # Retain the nonzero-support gate after distinguishing exact nodes from
+    # rounded-quadrature residues. In particular, dropping the small N=4
+    # component of a near triplet must still fail.
+    fixture = "L4_S1_near"
+    lines = controls[fixture]
+    pair, spin = runner.oracle.finite_spin_fixture(fixture)
+    exact_spin = runner.oracle.raw_exact_spin(pair, spin)
+    index = next(i for i, line in enumerate(lines)
+                 if line.startswith("A ") and
+                 runner.oracle.popcount(int(line.split()[1])) == 4 and
+                 exact_spin[int(line.split()[1])] != runner.oracle.ZERO)
+    words = lines[index].split()
+    words[4:6] = ["0x0p+0", "0x0p+0"]
+    damaged = list(lines)
+    damaged[index] = " ".join(words)
+    check("drop near-triplet physical amplitude", damaged, fixture,
+          reject="amplitude")
+
     # Every numeric component, including imaginary components and both
     # derivative directions, must reject NaN and either sign of infinity.
     numeric_columns = {"Q": range(2, 7), "A": range(4, 6),

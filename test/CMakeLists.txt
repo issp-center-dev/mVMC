@@ -295,10 +295,10 @@ if(MPI_FOUND)
         PROCESSORS 2 TIMEOUT 60)
 endif()
 
-# Finite total spin S>0 (Phase 3c Task 1/2): production evaluation, Green,
-# derivatives, sampler kernels and initialization with the public S>0 input
-# gate still closed. The probe/chain modes are compared with the independent
-# oracle by python/runtest_gc_finite_spin.py.
+# Finite total spin S>0: direct production evaluation, Green, derivatives,
+# sampler kernels and initialization through a Testing-only binary.
+# Its probe/chain modes are compared with the independent oracle by
+# python/runtest_gc_finite_spin.py; public-input tests use the E2E helper.
 add_executable(gc_finite_spin_unit gc_finite_spin_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
@@ -335,6 +335,13 @@ foreach(gc_fs_death singlet explicit-n explicit-range swap-nonfinite
         ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 60)
 endforeach()
 if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+    add_test(NAME GC_FS_Death_chain-singlet_np2_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+            $<TARGET_FILE:gc_finite_spin_unit> --death-chain-singlet 2)
+    set_tests_properties(GC_FS_Death_chain-singlet_np2_mpi PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};OMPI_MCA_rmaps_base_oversubscribe=1"
+        PROCESSORS 2 TIMEOUT 60)
     add_test(NAME GC_FS_Death_rank-singlet_np2_mpi
         COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py

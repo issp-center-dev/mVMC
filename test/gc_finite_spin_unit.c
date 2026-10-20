@@ -1,8 +1,8 @@
 /*
- * Finite total-spin (S>0) GC projection, Task 1/2 of the finite-S plan.
- * The public S>0 input gate stays closed; this Testing-only binary sets the
- * globals directly and drives the production amplitude, Green, derivative,
- * sampler and initialization code.
+ * Finite total-spin (S>0) GC projection unit tests.
+ * This Testing-only binary sets globals directly and drives production
+ * amplitude, Green, derivative, sampler and initialization code.
+ * Public input paths are covered by runtest_gc_finite_spin_e2e.py.
  *
  *   --probe <fixture> <out>  production values for the independent oracle
  *   --chain <fixture> <seed> <sweeps> <out>
@@ -779,12 +779,18 @@ static void test_restart(void) {
   setup_fixture(4, 1, 4, general, 0.0);
   CHECK(GCSpinTriplet == 0, "general fixture classified as triplet");
   init_gen_rand(313U);
-  /* mask 0x96 = up1,up2 + down0,down3: N=4 with four singles. */
-  CHECK(load_state(0x96U, eleIdx, eleCfg, eleNum, eleProjCnt) == GC_MALL_OK,
+  /* mask 0x53 = up0,up1 + down0,down2: one doublon and two singles.
+   * Its exact raw S=1 amplitude is 2/3. The former four-single mask 0x96
+   * is exactly zero: the diagonal singlet perturbation cannot contribute
+   * there, so a nonzero floating-point residue was a false control. */
+  CHECK(load_state(0x53U, eleIdx, eleCfg, eleNum, eleProjCnt) == GC_MALL_OK,
         "restart state");
   CHECK(isfinite(creal(CalculateLogIPGC_fcmp(PfM, Ncur, eleNum, 0, NQPFull,
                                              MPI_COMM_SELF))),
         "general N=4 state is zero");
+  CHECK(cabs(CalculateIPGC_fcmp(PfM, Ncur, eleNum, 0, NQPFull,
+                                MPI_COMM_SELF)) > 0.1,
+        "restart control must be a resolved nonzero, not cancellation residue");
   BurnEleIdx = malloc(MAX_ORBITALS * sizeof(int));
   BurnEleCfg = malloc(MAX_ORBITALS * sizeof(int));
   BurnEleNum = malloc(MAX_ORBITALS * sizeof(int));
@@ -1147,6 +1153,20 @@ static int run_death(const char *mode) {
     builtin_fixture("L4_S1_triplet", 4);
     GCSpinSinglet = rank == 0 ? 0 : 1;
     GCRequireSpinSupport(MPI_COMM_WORLD);
+  } else if (strcmp(mode, "--death-chain-singlet") == 0) {
+#ifdef _mpi_use
+    MPI_Comm chain;
+    builtin_fixture("L4_S1_triplet", 4);
+    /* Two independent one-rank chains: only the non-world-root chain
+     * fails. Its abort must also release the healthy chain's parent wait. */
+    MPI_Comm_split(MPI_COMM_WORLD, rank, 0, &chain);
+    GCSpinSinglet = rank == 1 ? 1 : 0;
+    GCRequireSpinSupport(chain);
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Comm_free(&chain);
+#else
+    return 2;
+#endif
   } else if (strcmp(mode, "--death-swap-nonfinite") == 0) {
     int start, end;
     int k;

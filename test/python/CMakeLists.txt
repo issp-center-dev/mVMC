@@ -1549,7 +1549,7 @@ set(GC_ANTIPAIR_INPUT_MUTATIONS header_missing header_norb_zero
     opt_blank_middle orbital_file_missing sz_transfer_flip sz_interall_net2
     sz_nbody_net1 sz_anomalous_same_spin zero_nonconserving_rows alias_orbital
     start_vacuum start_full start_default start_odd ncond_ignored
-    twosz_missing twosz_minus1 twosz_two alias_duplicate all_real gaussleg2_stot1
+    twosz_missing twosz_minus1 twosz_two alias_duplicate all_real gaussleg2_stot_over
     mptrans2 opttrans backflow rbm locspin lanczos srcg exupdate updateweight)
 list(APPEND GC_ANTIPAIR_INPUT_MUTATIONS
     twosz_fractional twosz_negative_fractional twosz_garbage twosz_suffix
@@ -1778,12 +1778,14 @@ endif()
 add_gc_spin_momentum_test(GC_SMP_OMP4 omp)
 set_tests_properties(GC_SMP_OMP4 PROPERTIES PROCESSORS 4)
 
-# Phase 3c Task 1/2: finite total spin S>0 with the public input gate closed.
+# Phase 3c finite total spin: unit/probe plus public-input E2E.
 # The oracle self-test checks projector algebra, finite-G convergence and the
 # fixture contracts; the probe/chain runs compare the Testing-only
 # gc_finite_spin_unit binary with that independent oracle.
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_finite_spin.py
     ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_finite_spin_validation.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_finite_spin_e2e.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_spin_sector.py
     DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 add_test(NAME GC_FS_Probe_Validation
     COMMAND ${PYTHON_EXECUTABLE} runtest_gc_finite_spin_validation.py
@@ -1822,6 +1824,50 @@ foreach(gc_fs_fixture L2_S1 L4_S2 L4_S1_triplet_stat L4_S1_general)
         --fixture ${gc_fs_fixture} --gauss 4
         --work ${CMAKE_CURRENT_BINARY_DIR}/gc-fs-chain-${gc_fs_fixture})
 endforeach()
+
+# Ordinary finite-S projection; Lanczos remains rejected by the reader.
+function(add_gc_fs_e2e name)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE} runtest_gc_finite_spin_e2e.py ${ARGN})
+    set_tests_properties(${name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};OMPI_MCA_rmaps_base_oversubscribe=1"
+        TIMEOUT 900)
+endfunction()
+foreach(fixture L2_S1 L4_S2 L4_S1_triplet_stat L4_S1_general L5_S2)
+    add_gc_fs_e2e(GC_FS_E2E_${fixture} replay --fixture ${fixture})
+    add_gc_fs_e2e(GC_FS_Convergence_${fixture} convergence --fixture ${fixture})
+    add_gc_fs_e2e(GC_FS_Statistics_${fixture} statistics --fixture ${fixture})
+endforeach()
+foreach(bc pbc apbc)
+    add_gc_fs_e2e(GC_FS_Optimize_${bc} optimization --boundary ${bc} --shared)
+    foreach(k 0 1)
+        add_gc_fs_e2e(GC_FS_Momentum_${bc}_k${k}
+            replay --boundary ${bc} --k ${k})
+    endforeach()
+endforeach()
+add_gc_fs_e2e(GC_FS_Convergence_Momentum convergence --boundary apbc --k 1)
+add_gc_fs_e2e(GC_FS_Statistics_Momentum statistics --boundary apbc --k 1)
+add_gc_fs_e2e(GC_FS_Shared_APBC replay --boundary apbc --shared)
+add_gc_fs_e2e(GC_FS_LowG replay --gauss 3)
+add_gc_fs_e2e(GC_FS_Input negative)
+add_gc_fs_e2e(GC_FS_Replay_Validation validation)
+add_gc_fs_e2e(GC_FS_EnergyGradient_S1 energy_gradient)
+add_gc_fs_e2e(GC_FS_EnergyGradient_S2 energy_gradient --fixture L5_S2)
+add_gc_fs_e2e(GC_FS_EnergyGradient_Momentum energy_gradient
+    --boundary apbc --k 1 --shared)
+add_gc_fs_e2e(GC_FS_Samples sample
+    --samples-dir ${PROJECT_SOURCE_DIR}/samples/GrandCanonical/FiniteSpin)
+if(MPI_FOUND)
+    foreach(np 2 3)
+        add_gc_fs_e2e(GC_FS_E2E_np${np}_mpi replay --gauss 2 --np ${np})
+        set_tests_properties(GC_FS_E2E_np${np}_mpi PROPERTIES PROCESSORS ${np})
+    endforeach()
+    add_gc_fs_e2e(GC_FS_Momentum_mpi replay --boundary apbc --k 1 --np 2)
+    add_gc_fs_e2e(GC_FS_TwoChain_mpi replay --np 2 --split 1)
+    add_gc_fs_e2e(GC_FS_Input_mpi negative --np 2)
+    set_tests_properties(GC_FS_Momentum_mpi GC_FS_TwoChain_mpi GC_FS_Input_mpi
+        PROPERTIES PROCESSORS 2)
+endif()
 
 # Phase 3a: grand-canonical S=0 spin projection.
 add_test(NAME GC_SP_Oracle
@@ -1906,9 +1952,9 @@ set_tests_properties(GC_SP_Replay_OMP4_pbc_g8_m1 PROPERTIES
 set(GC_SP_INPUT_CASES
     g_zero g_negative g_fraction g_decimal g_nan g_inf g_minus_inf
     g_int_over g_huge g_long g_extra g_workspace_over g_workspace_sum_over
-    s_negative s_nonzero s_fraction s_decimal s_nan s_inf s_int_over
+    s_negative s_over s_int_max s_fraction s_decimal s_nan s_inf s_int_over
     general combined spin_jastrow opttrans
-    positive_g2 positive_g3 positive_g8
+    positive_g2 positive_g3 positive_g8 positive_s1 positive_s2
     compat_g1_spin_jastrow compat_g1_momentum compat_canonical_g2)
 foreach(gc_sp_case ${GC_SP_INPUT_CASES})
     foreach(order early late)

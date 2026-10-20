@@ -1,7 +1,7 @@
 """Finite total spin S>0: production probe and chains versus the oracle.
 
-The public S>0 input gate is closed (Task 1/2 of the finite-S plan), so the
-production code is driven by the Testing-only gc_finite_spin_unit binary.
+This helper drives production code through the Testing-only
+gc_finite_spin_unit binary; public inputs are covered by the E2E helper.
 Reference values come only from grandcanonical_spin_oracle (independent
 Fock-space and rational evaluation); the binary never builds them.
 
@@ -241,9 +241,13 @@ def probe_case(args):
     worst_coefficient = check_coefficients(data, args.gauss, spin)
 
     # Amplitudes: exact rational reference with the production coefficients,
-    # proven zeros exact in production, and no legitimate nonzero dropped.
+    # proven zeros exact in production. A rational calculation using rounded
+    # quadrature coefficients can leave a sub-roundoff residue at an exact
+    # spin-projection node. It still obeys the amplitude error gate below;
+    # it cannot be required to have a nonzero binary64 representation.
     nodes = production_nodes(data, args.gauss)
     exact = oracle.masked_finite_spin(F, nodes, spin, exact_arithmetic=True)
+    exact_spin = oracle.raw_exact_spin(F, spin)
     reference = dict((mask, require_finite(oracle.qfloat(value),
                                           "amplitude reference mask={}".format(mask)))
                      for mask, value in exact.items())
@@ -268,7 +272,7 @@ def probe_case(args):
         if error > AMPLITUDE_TOLERANCE * (1.0 + scale):
             raise AssertionError("amplitude {} differs: {} vs {}".format(
                 mask, actual, reference[mask]))
-        if exact[mask] != oracle.ZERO:
+        if exact[mask] != oracle.ZERO and exact_spin[mask] != oracle.ZERO:
             nonzeros += 1
             if actual == 0:
                 raise AssertionError("nonzero amplitude {} dropped".format(
@@ -441,7 +445,7 @@ def chain_case(args):
     total = sum(weights.values())
     target = dict((mask, value / total) for mask, value in weights.items())
     seeds = CHAIN_SEEDS[:args.chains]
-    frequencies = []
+    chain_counts = []
     for seed in seeds:
         output = os.path.join(workdir, "chain-{}.txt".format(seed))
         run([args.binary, "--chain", fixture, str(seed), str(args.sweeps),
@@ -459,8 +463,10 @@ def chain_case(args):
         if outside:
             raise AssertionError("chain {} visited zero-amplitude masks {}"
                                  .format(seed, outside[:8]))
-        frequencies.append(dict((mask, counts.get(mask, 0) /
-                                 float(args.sweeps)) for mask in target))
+        if any(count < 0 for count in counts.values()) or \
+                sum(counts.values()) != args.sweeps:
+            raise AssertionError("chain count inventory does not match sweeps")
+        chain_counts.append(counts)
     # Between-chain standard errors; Bonferroni over the support masks and
     # the N sectors, Student t with chains-1 degrees of freedom.
     groups = dict((("mask", mask), [mask]) for mask in target)
@@ -471,8 +477,12 @@ def chain_case(args):
                                   len(seeds) - 1)
     worst = 0.0
     for key, masks in sorted(groups.items()):
-        expect = sum(target[mask] for mask in masks)
-        values = [sum(freq[mask] for mask in masks) for freq in frequencies]
+        expect = math.fsum(target[mask] for mask in masks)
+        # Add integer counts before dividing. Summing separately rounded
+        # mask frequencies gave a constant-N observable spurious spread at
+        # ~1e-16 and then a large t score when dividing by that roundoff.
+        values = [sum(counts.get(mask, 0) for mask in masks) /
+                  float(args.sweeps) for counts in chain_counts]
         mean = sum(values) / len(values)
         variance = sum((value - mean) ** 2 for value in values) / \
             (len(values) - 1)

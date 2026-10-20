@@ -1342,6 +1342,15 @@ def finite_spin_self_test(verbose=False):
     _check(described["L4_S1_near"]["symmetry"] == "general" and
            4 in described["L4_S1_near"]["sector_norms"],
            "near triplet has no N=4 component")
+    near, unused = finite_spin_fixture("L4_S1_near")
+    _check(raw_exact_spin(near, 1)[89] == ZERO,
+           "near-triplet mask 89 is an exact node, not a small physical amplitude")
+    restart_pair = [[0.5, 3, 1, 1], [-3, 0.25, -4, 2],
+                    [-1, 4, 0, -6], [-1, -2, 6, 0.125]]
+    restart_raw = raw_exact_spin(restart_pair, 1)
+    _check(restart_raw[0x96] == ZERO and
+           restart_raw[0x53] == (Fraction(2, 3), Fraction(0)),
+           "restart control must start at a nonzero exact amplitude")
     _check(set(described["L4_S1_general"]["sector_norms"]) == {2, 4, 6},
            "general L4 S=1 sectors")
     _check({4, 6} <= set(described["L5_S2"]["sector_norms"]),
