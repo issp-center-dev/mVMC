@@ -23,6 +23,63 @@
 #ifndef _SRC_VMCMAKE_GC
 #define _SRC_VMCMAKE_GC
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+/* B0 measurement only. All calls are on the serial sampler thread; counters
+ * are replicated within each QP communicator, never summed across QP ranks.
+ * No random draws or extra wave-function evaluations are introduced. */
+static int gcB0Enabled = 0, gcB0Phase = 0;
+static long long gcB0Generation = 0;
+static long long gcB0Count[2][6][5];
+static long long gcB0Periodic[2];
+#define GC_B0_COUNT(move, field, amount) do { \
+  if (gcB0Enabled) gcB0Count[gcB0Phase][(move)][(field)] += (amount); \
+} while (0)
+static void GCB0Begin(void) {
+  const char *value = getenv("MVMC_GC_B0_STATS");
+  gcB0Enabled = value != NULL && strcmp(value, "1") == 0;
+  memset(gcB0Count, 0, sizeof(gcB0Count));
+  memset(gcB0Periodic, 0, sizeof(gcB0Periodic));
+}
+static void GCB0End(MPI_Comm comm) {
+  static const char *const names[6] = {
+      "hop", "add2", "remove2", "add4", "remove4", "global"};
+  int rank, worldRank, phase, move;
+  if (!gcB0Enabled) return;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+  if (rank == 0) {
+    char path[64];
+    FILE *fp;
+    snprintf(path, sizeof(path), "gc-b0-stats.rank%d", worldRank);
+    fp = fopen(path, "a");
+    if (fp == NULL) {
+      fprintf(stderr, "Error: cannot open B0 statistics file.\n");
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    for (phase = 0; phase < 2; ++phase) {
+      for (move = 0; move < 6; ++move) {
+        const long long *c = gcB0Count[phase][move];
+        fprintf(fp, "GC B0: world_rank=%d generation=%lld phase=%s move=%s selected=%lld "
+               "proposed=%lld self_loop=%lld accepted=%lld rejected=%lld "
+               "endpoint_qp=%lld commit_rebuild=%lld\n",
+               worldRank, gcB0Generation, phase == 0 ? "warmup" : "sample", names[move],
+               c[0], c[1], c[0]-c[1], c[2], c[1]-c[2], c[3], c[4]);
+      }
+      fprintf(fp, "GC B0 periodic: world_rank=%d generation=%lld phase=%s rebuild=%lld\n",
+             worldRank, gcB0Generation, phase == 0 ? "warmup" : "sample", gcB0Periodic[phase]);
+    }
+    if (fclose(fp) != 0) {
+      fprintf(stderr, "Error: cannot write B0 statistics file.\n");
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+  }
+  gcB0Generation++;
+  gcB0Enabled = 0;
+}
+#else
+#define GC_B0_COUNT(move, field, amount) ((void)0)
+#endif
+
 void UpdateProjCnt_fsz(int ri, int rj, int s, int t, int *projCntNew,
                        const int *projCntOld, const int *eleNum);
 
@@ -492,6 +549,7 @@ static int GCAttemptBridge(const enum GCAntiBridgeMove move,
   double complex logIpNew;
   const int drawn = GCAntiDrawBridge(move, eleNum, Nsite, Ncur / 2,
                                      candidate, GCAntiNext32, &ratio);
+  GC_B0_COUNT(3 + move, 0, 1);
   if (drawn == 0) {
     free(candidate);
     return 0;
@@ -500,6 +558,8 @@ static int GCAttemptBridge(const enum GCAntiBridgeMove move,
     fprintf(stderr, "Error: invalid GC spin bridge proposal.\n");
     MPI_Abort(comm, EXIT_FAILURE);
   }
+  GC_B0_COUNT(3 + move, 1, 1);
+  GC_B0_COUNT(3 + move, 3, NQPFull);
   for (rs = 0; rs < Nsite2; ++rs)
     if (candidate[rs]) indices[count++] = rs;
   MakeProjCnt(projCntNew, candidate);
@@ -531,6 +591,8 @@ static int GCAttemptBridge(const enum GCAntiBridgeMove move,
   }
   if (creal(logIpNew) == -INFINITY) GCRecordCompositeZero(comm);
   if (accepted) {
+    GC_B0_COUNT(3 + move, 2, 1);
+    GC_B0_COUNT(3 + move, 4, 1);
     for (rs = 0; rs < Nsite2; ++rs) {
       eleNum[rs] = candidate[rs];
       eleCfg[rs] = -1;
@@ -574,6 +636,7 @@ int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
   int arg0;
   int arg1;
   int accepted;
+  GC_B0_COUNT(moveClass, 0, 1);
   if (GCAntiMode()) {
     /* Spin-resolved candidates; m pairs occupy m up and m down sites. */
     const int m = Ncur / 2;
@@ -638,9 +701,11 @@ int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
   } else {
     if (!GCSelectTwoDistinct(Ncur, &arg0, &arg1)) return 0;
   }
+  GC_B0_COUNT(moveClass, 1, 1);
   accepted = GCAttemptMove(moveClass, arg0, arg1, genrand_real2(), eleIdx,
                            eleCfg, eleNum, eleProjCnt, logIpOld, pfMNew,
                            projCntNew, qpStart, qpEnd, comm);
+  GC_B0_COUNT(moveClass, 2, accepted);
   if (accepted && GCDebugRebuildInterval() > 0) {
     debugAccepted++;
     if (debugAccepted % GCDebugRebuildInterval() == 0) {
@@ -878,13 +943,22 @@ void VMCMakeSampleGC(MPI_Comm comm) {
 
   nOutStep = (BurnFlag == 0) ? NVMCWarmUp + NVMCSample : NVMCSample + 1;
   nInStep = NVMCInterval * Nsite;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  GCB0Begin();
+#endif
   for (outStep = 0; outStep < nOutStep; outStep++) {
     int inStep;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    gcB0Phase = outStep >= nOutStep - NVMCSample;
+#endif
     for (inStep = 0; inStep < nInStep; inStep++) {
       nAccept += GCMakeOneStep(TmpEleIdx, TmpEleCfg, TmpEleNum,
                                TmpEleProjCnt, &logIpOld, pfMNew,
                                projCntNew, qpStart, qpEnd, comm);
       if (nAccept > Nsite) {
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+        if (gcB0Enabled) gcB0Periodic[gcB0Phase]++;
+#endif
         if (CalculateMAllGC_fcmp(Ncur, TmpEleIdx, qpStart, qpEnd) !=
             GC_MALL_OK) {
           fprintf(stderr, "Error: periodic GC sampler rebuild failed.\n");
@@ -911,6 +985,9 @@ void VMCMakeSampleGC(MPI_Comm comm) {
   GCWriteStateDump(stateDump, "STORE", -1, TmpEleIdx, TmpEleCfg,
                    TmpEleNum, TmpEleProjCnt, NULL);
   BurnFlag = 1;
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  GCB0End(comm);
+#endif
   if (stateDump != NULL) fclose(stateDump);
   ReleaseWorkSpaceInt();
   free(pfMNew);
