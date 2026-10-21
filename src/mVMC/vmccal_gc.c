@@ -129,7 +129,7 @@ void VMCMainCalGC(MPI_Comm comm_parent, MPI_Comm comm) {
       for (qp = 0; qp < NQPFull; qp++) PfM[qp] = 0.0;
     }
 #endif
-    ip = CalculateIPGC_fcmp(PfM, ncur, 0, NQPFull, MPI_COMM_SELF);
+    ip = CalculateIPGC_fcmp(PfM, ncur, eleNum, 0, NQPFull, MPI_COMM_SELF);
     if (!isfinite(creal(ip)) || !isfinite(cimag(ip)) || cabs(ip) == 0.0) {
       GCMeasurementAbort("has a zero or nonfinite amplitude", rank, sample,
                          comm);

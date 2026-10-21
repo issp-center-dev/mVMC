@@ -24,6 +24,19 @@ EXPECTED = {
     '--death-cache_uninitialized': ['component cache is not initialized'],
     '--death-rebuild_zero': ['zero projected amplitude',
                              'after periodic rebuild'],
+    # Finite total spin S>0 (gc_finite_spin_unit).
+    '--death-singlet': ['exactly symmetric (pure singlet)',
+                        'no total spin S=1 component'],
+    '--death-explicit-n': ['NGCInitNelec=4', 'total spin S=1',
+                           'N/2-S even'],
+    '--death-explicit-range': ['NGCInitNelec=2', 'total spin S=2',
+                               '2S <= N <= 2*Nsite-2S'],
+    '--death-rank-singlet': ['rank-inconsistent GC spin support'],
+    '--death-chain-singlet': ['exactly symmetric (pure singlet)',
+                              'no total spin S=1 component'],
+    '--death-swap-nonfinite': ['GC spin bridge evaluation failed'],
+    '--death-restart-same-generation': ['total-spin S=2 restored state',
+                                        'without a pair-function change'],
 }
 
 binary, mode = sys.argv[1:3]

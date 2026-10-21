@@ -41,10 +41,14 @@ void UpdateSlaterElm_fcmp() {
   double complex *sltE,*sltE_i0,*sltE_i1;
 
   GCSpinTriplet = 0;
-  if (FlagGrandCanonical && !iFlgOrbitalGeneral && NSPGaussLeg > 1 &&
-      NSPStot == 0)
+  GCSpinSinglet = 0;
+  if (FlagGrandCanonical && !iFlgOrbitalGeneral && NSPGaussLeg > 1) {
     GCSpinTriplet = GCSpinPureTriplet(Nsite, NSlater, OrbitalIdx,
                                     OrbitalSgn, Slater);
+    if (NSPStot > 0)
+      GCSpinSinglet = GCSpinPureSinglet(Nsite, NSlater, OrbitalIdx,
+                                        OrbitalSgn, Slater);
+  }
 
   #pragma omp parallel for default(shared)        \
     private(qpidx,optidx,mpidx,spidx,                      \

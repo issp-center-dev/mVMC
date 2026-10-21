@@ -698,9 +698,73 @@ Keywords and parameters
    :math:`2GR+5G` to fit in a C ``int``; oversized input is rejected before
    allocation. ``SpinJastrow`` is rejected for ``NSPGaussLeg>=2`` because
    :math:`\exp(\sum_{ij}v_{ij}m_im_j)` is not a spin scalar and would break
-   :math:`S=0`. General pairing and nonzero ``NSPStot`` are not supported
-   with the spin projection. The existing prohibition on ``OptTrans`` in
+   a fixed total spin. General pairing is not supported with spin projection.
+   Ordinary GC also supports integer ``NSPStot=S>0`` as described below.
+   The existing prohibition on ``OptTrans`` in
    GC mode also remains in effect.
+
+   **Finite total spin without Lanczos.** With anti-parallel pairing,
+   ``2Sz=0`` and ``NSPGaussLeg>=2``, ordinary measurement and dense-SR
+   optimization accept ``0 <= NSPStot <= Nsite/2`` (integer division).
+   ``NSPStot`` is :math:`S`, not :math:`2S` or :math:`S^z`.
+   For :math:`S>0` the quadrature weights are
+   :math:`a_g(S)=\frac12\sin\beta_g\,w_g P_S(\cos\beta_g)`, where
+   :math:`P_S` in this weight denotes the Legendre polynomial. In the
+   converged limit the raw pair state tends to
+   :math:`\mathcal{P}_S|\phi\rangle/(2S+1)`, where
+   :math:`\mathcal{P}_S^2=\mathcal{P}_S` is the total-spin projector.
+   This common factor does not change relative particle-number weights.
+   ``NSPGaussLeg=1`` still omits spin projection and does not activate
+   finite-S behavior. Finite-S projection can be combined with momentum
+   projection and PBC/APBC. Finite-S plus Lanczos is rejected.
+
+   A configuration needs at least :math:`2S` singly occupied sites;
+   therefore only :math:`2S\le N\le2N_{\rm site}-2S` can contribute.
+   Configurations that violate this condition are exact zeros, including
+   at finite quadrature order. This mask is part of the finite-G state,
+   not merely a rounding correction. For exactly antisymmetric pair
+   functions, :math:`N/2-S` must also be even. An exactly symmetric pair
+   function has no :math:`S>0` component and is rejected. These symmetry
+   tests use the actual signed pair parameters without a tolerance;
+   small nonzero amplitudes are not discarded. A zero at a symmetric
+   parameter point can still have a nonzero symmetry-breaking derivative.
+
+   **SR at parameter-dependent nodes.** The ordinary SR estimator samples
+   only configurations with nonzero wave-function amplitude. It can omit
+   energy-gradient and overlap-matrix contributions when a zero amplitude
+   has a nonzero parameter derivative. In particular, an exactly pure
+   triplet starting state is outside the validated scope of unconstrained
+   SR; with a particle-number-changing Hamiltonian even the energy
+   gradient can be wrong. This limitation also exists for S=0.
+   The code does not automatically detect all such nodes. Use generic
+   anti-parallel pair parameters with both singlet and triplet components
+   for unconstrained SR, and check sampling and initialization dependence.
+   Adding an arbitrarily tiny perturbation does not ensure adequate
+   sampling. Fixed-parameter measurement of a pure triplet state remains
+   supported. The energy-squared output averages :math:`|E_{\rm local}|^2`
+   on nonzero support and omits :math:`H\Psi` contributions on nodes.
+
+   An explicit ``NGCInitNelec`` must permit the requested spin and pair
+   symmetry. An omitted value (or ``-1``) selects the nearest permitted
+   even number to the usual default, preferring the smaller one on a tie.
+   Initialization constructs configurations with enough single occupancy
+   and tries at most 100 candidates per permitted number. After an SR
+   update makes the saved configuration zero, the sampler reinitializes
+   and performs the full warm-up. Finite-S proposals use a uniform balanced
+   configuration with probability 1/64, two-pair addition/removal with
+   probability 1/8 each, an up-only/down-only spin swap with probability
+   1/8, and the original local moves with probability 39/64. Unavailable
+   moves are self-loops. The swap enables sampling at maximal spin,
+   where particle number is fixed and ordinary hops can all be forbidden.
+
+   Check convergence with increasing ``NSPGaussLeg``, particle-number
+   histograms, independent seeds and initial configurations. Agreement of
+   :math:`\langle S^2\rangle` with :math:`S(S+1)` alone is not sufficient
+   to exclude other-spin contamination; a small-system reference can
+   check :math:`\|(S^2-S(S+1))\Psi\|/\|\Psi\|` and other-spin weights.
+   General cancellation zeros and slow mixing are not automatically
+   resolved by the structural masks. Examples with :math:`S=1` and
+   multi-number :math:`S=2` are in ``samples/GrandCanonical/FiniteSpin``.
 
    If the actual unrotated pair function is exactly antisymmetric
    (:math:`F^T=-F`, pure triplet pairs), the :math:`S=0` projection removes
@@ -714,7 +778,7 @@ Keywords and parameters
    the chain is initialized in a permitted sector and warmed up again.
    Near-antisymmetric functions are not rounded to this symmetry.
 
-   For ordinary GC sampling with active spin projection, the move mixture now
+   For ordinary GC sampling with active S=0 spin projection, the move mixture now
    includes simultaneous addition/removal of two up-down pairs (probability
    1/8 each) and a uniform balanced configuration (1/64). The remaining 47/64
    uses the original local moves. Each proposal uses its own Metropolis ratio;

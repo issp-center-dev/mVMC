@@ -1,0 +1,12 @@
+ModPara modpara.def
+LocSpin locspn.def
+OrbitalAntiParallel orbitalidx.def
+TransSym qptransidx.def
+Trans trans.def
+CoulombIntra coulomb.def
+OneBodyG greenone.def
+AnomalousG anomalousg.def
+Gutzwiller gutz.def
+AnomalousTerm pair.def
+TwoBodyG greentwo.def
+NBodyG nbodyg.def

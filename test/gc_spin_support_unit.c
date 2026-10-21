@@ -116,8 +116,216 @@ static void draws(void) {
       CHECK(abs(histogram[mask] - 2000) < 230);
 }
 
+/* ---- Finite total spin S>0 pure helpers (Task 1) ---- */
+
+static void finite_symmetry(void) {
+  int idx[3][3], signs[3][3], i, j;
+  int *ir[3] = {idx[0], idx[1], idx[2]}, *sr[3] = {signs[0], signs[1], signs[2]};
+  double complex f[9];
+  for (i = 0; i < 3; ++i)
+    for (j = 0; j < 3; ++j) { idx[i][j] = 3 * i + j; signs[i][j] = 1; }
+  for (i = 0; i < 9; ++i) f[i] = 0;
+  /* The zero table is both; S>0 treats it as a pure singlet. */
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == 1);
+  CHECK(GCSpinPureTriplet(3, 9, ir, sr, f) == 1);
+  for (i = 0; i < 3; ++i)
+    for (j = 0; j < 3; ++j) f[3 * i + j] = (i + 1) * (j + 1) + 0.25 * I;
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == 1);
+  CHECK(GCSpinPureTriplet(3, 9, ir, sr, f) == 0);
+  f[5] = nextafter(creal(f[5]), 0.0) + cimag(f[5]) * I; /* F12 != F21 */
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == 0);
+  f[5] = f[7];
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == 1);
+  /* Shared parameter with sign -1 encodes an antisymmetric pair. */
+  idx[2][1] = 5; signs[2][1] = -1;
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == 0);
+  signs[2][1] = 1;
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == 1);
+  f[0] = INFINITY;
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == -1);
+  f[0] = 1; idx[0][0] = 9;
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == -1);
+  idx[0][0] = 0; signs[0][0] = 0;
+  CHECK(GCSpinPureSinglet(3, 9, ir, sr, f) == -1);
+  /* Pair parity: m-S even; S=0 reduces to the Phase 3a N%4==2 rule. */
+  for (i = 0; i <= 24; ++i) {
+    int spin;
+    CHECK(GCSpinForbiddenSector(1, 0, 2, 0, 1, i) ==
+          (i % 2 == 0 && i % 4 == 2));
+    for (spin = 0; spin <= 4; ++spin) {
+      CHECK(GCSpinForbiddenSector(1, 0, 3, spin, 1, i) ==
+            (i % 2 == 0 && (((i / 2 - spin) % 2) + 2) % 2 == 1));
+      CHECK(!GCSpinForbiddenSector(1, 0, 1, spin, 1, i));
+      CHECK(!GCSpinForbiddenSector(1, 0, 3, spin, 0, i));
+      CHECK(!GCSpinForbiddenSector(1, 1, 3, spin, 1, i));
+    }
+  }
+}
+
+/* Brute force over every M=0 occupation of L<=6 sites. */
+static void finite_support(void) {
+  int nsite;
+  for (nsite = 1; nsite <= 6; ++nsite) {
+    const unsigned limit = 1U << (2 * nsite);
+    int spin;
+    for (spin = 0; spin <= nsite; ++spin) {
+      int electrons;
+      for (electrons = 0; electrons <= 2 * nsite; electrons += 2) {
+        int seenLow = 1000, seenHigh = -1, low, high, triplet;
+        unsigned mask;
+        for (mask = 0; mask < limit; ++mask) {
+          int occupation[12], rs, singles, doubles = 0;
+          const unsigned up = mask & ((1U << nsite) - 1U);
+          const unsigned down = mask >> nsite;
+          if (bits(mask) != electrons || bits(up) != bits(down)) continue;
+          for (rs = 0; rs < 2 * nsite; ++rs)
+            occupation[rs] = (int)((mask >> rs) & 1U);
+          singles = GCSpinCountSingles(occupation, nsite);
+          CHECK(singles == bits(up ^ down));
+          CHECK(GCSpinConfigurationZero(spin, singles) ==
+                (spin > 0 && bits(up ^ down) < 2 * spin));
+          doubles = bits(up & down);
+          if (!GCSpinConfigurationZero(spin, singles)) {
+            if (doubles < seenLow) seenLow = doubles;
+            if (doubles > seenHigh) seenHigh = doubles;
+          }
+        }
+        /* The closed form covers exactly the observed doublon counts. */
+        CHECK(GCSpinDoublonRange(nsite, spin, electrons, &low, &high) ==
+              (seenHigh >= 0));
+        if (seenHigh >= 0) CHECK(low == seenLow && high == seenHigh);
+        for (triplet = -1; triplet <= 1; ++triplet)
+          CHECK(GCSpinSectorPossible(nsite, spin, triplet, electrons) ==
+                (seenHigh >= 0 &&
+                 !(triplet == 1 && (electrons / 2 - spin) % 2 != 0)));
+      }
+      CHECK(GCSpinDoublonRange(nsite, spin, 1, NULL, NULL) == -1);
+      CHECK(!GCSpinSectorPossible(nsite, spin, 0, 2 * nsite + 2));
+    }
+  }
+  {
+    int bad[4] = {1, 2, 0, 1};
+    CHECK(GCSpinCountSingles(bad, 2) == -1);
+    CHECK(GCSpinCountSingles(NULL, 2) == -1);
+  }
+}
+
+/* Structured initial draws: always valid, D uniform in its range, and the
+ * configuration uniform for a given D (L=4: S=1 at N=4, S=2 at N=4). */
+static void finite_initial(void) {
+  int spin;
+  for (spin = 1; spin <= 2; ++spin) {
+    long histogram[256] = {0};
+    long byDoubles[3] = {0, 0, 0};
+    int perDoubles[3] = {0, 0, 0};
+    int occupation[8], iteration, mask;
+    const int draws = 120000;
+    for (iteration = 0; iteration < draws; ++iteration) {
+      int rs;
+      CHECK(GCAntiDrawSpinConfiguration(4, 2, spin, random_word,
+                                        occupation) == 1);
+      for (rs = 0, mask = 0; rs < 8; ++rs) mask |= occupation[rs] << rs;
+      CHECK(bits((unsigned)mask & 15) == 2 && bits((unsigned)mask >> 4) == 2);
+      CHECK(bits(((unsigned)mask & 15) ^ ((unsigned)mask >> 4)) >= 2 * spin);
+      ++histogram[mask];
+    }
+    for (mask = 0; mask < 256; ++mask) {
+      const unsigned up = (unsigned)mask & 15, down = (unsigned)mask >> 4;
+      if (bits(up) == 2 && bits(down) == 2 && bits(up ^ down) >= 2 * spin) {
+        perDoubles[bits(up & down)]++;
+        byDoubles[bits(up & down)] += histogram[mask];
+      } else {
+        CHECK(histogram[mask] == 0);
+      }
+    }
+    if (spin == 1) {
+      /* D=0 (6 states) and D=1 (24 states), each D with probability 1/2. */
+      CHECK(perDoubles[0] == 6 && perDoubles[1] == 24 && perDoubles[2] == 0);
+      CHECK(labs(byDoubles[0] - draws / 2) < 1000);
+      for (mask = 0; mask < 256; ++mask) {
+        const unsigned up = (unsigned)mask & 15, down = (unsigned)mask >> 4;
+        if (bits(up) != 2 || bits(down) != 2 || bits(up ^ down) < 2) continue;
+        if (bits(up & down) == 0)
+          CHECK(labs(histogram[mask] - draws / 12) < 600);
+        else
+          CHECK(labs(histogram[mask] - draws / 48) < 330);
+      }
+    } else {
+      CHECK(perDoubles[0] == 6 && byDoubles[0] == draws);
+      for (mask = 0; mask < 256; ++mask)
+        if (histogram[mask])
+          CHECK(labs(histogram[mask] - draws / 6) < 900);
+    }
+  }
+  {
+    int occupation[8];
+    CHECK(GCAntiDrawSpinConfiguration(4, 1, 2, random_word, occupation) == 0);
+    CHECK(GCAntiDrawSpinConfiguration(4, 4, 1, random_word, occupation) == 0);
+    CHECK(GCAntiDrawSpinConfiguration(4, 5, 0, random_word, occupation) == -1);
+    CHECK(GCAntiDrawSpinConfiguration(4, 2, -1, random_word, occupation) ==
+          -1);
+    CHECK(GCAntiDrawSpinConfiguration(4, 2, 1, NULL, occupation) == -1);
+  }
+}
+
+/* Spin swap: uniform over (up-only, down-only) pairs, counts unchanged, the
+ * reverse proposal has the same probability, impossible swaps self-loop. */
+static void finite_swap(void) {
+  unsigned mask;
+  for (mask = 0; mask < 256; ++mask) {
+    const unsigned up = mask & 15, down = mask >> 4;
+    const int upOnly = bits(up & ~down), downOnly = bits(down & ~up);
+    int current[8], candidate[8], rs, iteration;
+    long histogram[256] = {0};
+    double ratio = 0;
+    if (bits(up) != bits(down)) continue;
+    for (rs = 0; rs < 8; ++rs) current[rs] = (int)((mask >> rs) & 1U);
+    if (upOnly == 0 || downOnly == 0) {
+      CHECK(GCAntiDrawBridge(GC_ANTI_SWAP, current, 4, bits(up), candidate,
+                             random_word, &ratio) == 0);
+      continue;
+    }
+    for (iteration = 0; iteration < 1600 * upOnly * downOnly; ++iteration) {
+      unsigned target = 0;
+      CHECK(GCAntiDrawBridge(GC_ANTI_SWAP, current, 4, bits(up), candidate,
+                             random_word, &ratio) == 1);
+      CHECK(ratio == 1.0);
+      for (rs = 0; rs < 8; ++rs) target |= (unsigned)candidate[rs] << rs;
+      ++histogram[target];
+    }
+    for (rs = 0; rs < 256; ++rs) {
+      const unsigned t = (unsigned)rs, tu = t & 15, td = t >> 4;
+      const unsigned changed = (up ^ tu) | (down ^ td);
+      /* Valid swap: one up-only site i becomes down-only and one down-only
+       * site j becomes up-only; doubles and empties are untouched. */
+      const int valid = bits(up ^ tu) == 2 && (up ^ tu) == (down ^ td) &&
+                        bits(up & ~down & ~tu & td) == 1 &&
+                        bits(down & ~up & ~td & tu) == 1 &&
+                        (changed & (up & down)) == 0;
+      if (valid) {
+        CHECK(labs(histogram[rs] - 1600) < 200);
+        CHECK(bits(tu & ~td) == upOnly && bits(td & ~tu) == downOnly);
+      } else {
+        CHECK(histogram[rs] == 0);
+      }
+    }
+  }
+  /* Finite-S mixture: 1/64 global, 8/64 add, 8/64 remove, 8/64 swap. */
+  {
+    int k, counts[5] = {0, 0, 0, 0, 0};
+    for (k = 0; k < 64; ++k) {
+      const int move = GCAntiSelectFiniteSpinBridge((k + 0.5) / 64.0);
+      counts[move < 0 ? 4 : move]++;
+    }
+    CHECK(counts[GC_ANTI_GLOBAL] == 1 && counts[GC_ANTI_ADD_TWO] == 8 &&
+          counts[GC_ANTI_REMOVE_TWO] == 8 && counts[GC_ANTI_SWAP] == 8 &&
+          counts[4] == 39);
+  }
+}
+
 int main(void) {
   symmetry(); balance(); draws();
+  finite_symmetry(); finite_support(); finite_initial(); finite_swap();
   if (failures) return EXIT_FAILURE;
   puts("GC spin support and bridge proposals: PASS");
   return EXIT_SUCCESS;

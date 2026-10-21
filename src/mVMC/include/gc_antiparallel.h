@@ -12,18 +12,34 @@
  * is present (the orbital table is the Nsite x Nsite anti-parallel form). */
 int GCAntiEnabled(int grandCanonical, int orbitalGeneral);
 
-enum GCAntiBridgeMove { GC_ANTI_ADD_TWO, GC_ANTI_REMOVE_TWO, GC_ANTI_GLOBAL };
-/* Fixed mixture for active spin projection: 1/8 add-two, 1/8 remove-two,
+enum GCAntiBridgeMove {
+  GC_ANTI_ADD_TWO,
+  GC_ANTI_REMOVE_TWO,
+  GC_ANTI_GLOBAL,
+  GC_ANTI_SWAP
+};
+/* Fixed mixture for active S=0 projection: 1/8 add-two, 1/8 remove-two,
  * 1/64 uniform balanced configuration, 47/64 original local kernel.
  * Return -1 for the original kernel. Impossible bridge moves self-loop. */
 int GCAntiSelectBridge(double draw);
+/* Finite S>0: 1/64 global, 8/64 add-two, 8/64 remove-two, 8/64 spin swap,
+ * 39/64 original hop/N+-2 kernel (-1). Never renormalized by the state. */
+int GCAntiSelectFiniteSpinBridge(double draw);
 double GCAntiRatioTwoPairs(int m, int nsite, int adding);
 /* Write occupation numbers for a bridge proposal without changing current.
  * Return 1 for a candidate, 0 for an impossible move, -1 for invalid input.
- * q_reverse/q_forward is 1 for global, the squared binomial ratio otherwise. */
+ * q_reverse/q_forward is 1 for global and swap, the squared binomial ratio
+ * for two pairs. The swap exchanges the spins of a uniformly chosen up-only
+ * site and a uniformly chosen down-only site; both counts are unchanged. */
 int GCAntiDrawBridge(enum GCAntiBridgeMove move, const int *current,
                      int nsite, int m, int *candidate,
                      uint32_t (*next32)(void), double *ratio);
+/* Initial M=0 occupation with m up and m down electrons and at least 2S
+ * singles: D uniform in the allowed doublon range, then doubles, up-only and
+ * down-only sites as uniform disjoint subsets. Not an equilibrium proposal.
+ * Return 1 on success, 0 when no such configuration exists, -1 if invalid. */
+int GCAntiDrawSpinConfiguration(int nsite, int m, int spin,
+                                uint32_t (*next32)(void), int *eleNum);
 
 /* Reverse/forward proposal ratio for adding one up-down pair to a state with
  * m pairs on nsite sites.  pAdd is the add-class probability at m and

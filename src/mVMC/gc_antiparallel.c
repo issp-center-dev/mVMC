@@ -18,6 +18,14 @@ int GCAntiSelectBridge(const double draw) {
   return -1;
 }
 
+int GCAntiSelectFiniteSpinBridge(const double draw) {
+  if (draw < 1.0 / 64.0) return GC_ANTI_GLOBAL;
+  if (draw < 9.0 / 64.0) return GC_ANTI_ADD_TWO;
+  if (draw < 17.0 / 64.0) return GC_ANTI_REMOVE_TWO;
+  if (draw < 25.0 / 64.0) return GC_ANTI_SWAP;
+  return -1;
+}
+
 double GCAntiRatioTwoPairs(const int m, const int nsite, const int adding) {
   double ratio;
   if (nsite < 2 || m < 0 || m > nsite) return 0.0;
@@ -53,6 +61,30 @@ int GCAntiDrawBridge(const enum GCAntiBridgeMove move, const int *current,
     *ratio = 1.0;
     return remaining == 0 ? 1 : -1;
   }
+  if (move == GC_ANTI_SWAP) {
+    int site, ups = 0, downs = 0, upPick, downPick, upSite = -1, downSite = -1;
+    for (site = 0; site < nsite; ++site) {
+      ups += current[site] && !current[site + nsite];
+      downs += !current[site] && current[site + nsite];
+    }
+    *ratio = 1.0;
+    if (ups == 0 || downs == 0) return 0;
+    upPick = (int)GCAntiDrawBelow((uint32_t)ups, next32);
+    downPick = (int)GCAntiDrawBelow((uint32_t)downs, next32);
+    for (site = 0; site < nsite; ++site) {
+      if (current[site] && !current[site + nsite] && upPick-- == 0)
+        upSite = site;
+      if (!current[site] && current[site + nsite] && downPick-- == 0)
+        downSite = site;
+    }
+    if (upSite < 0 || downSite < 0) return -1;
+    memcpy(candidate, current, (size_t)(2 * nsite) * sizeof(*candidate));
+    candidate[upSite] = 0;
+    candidate[upSite + nsite] = 1;
+    candidate[downSite] = 1;
+    candidate[downSite + nsite] = 0;
+    return 1;
+  }
   if (move != GC_ANTI_ADD_TWO && move != GC_ANTI_REMOVE_TWO) return -1;
   *ratio = GCAntiRatioTwoPairs(m, nsite, move == GC_ANTI_ADD_TWO);
   if (*ratio == 0.0) return 0;
@@ -75,6 +107,45 @@ int GCAntiDrawBridge(const enum GCAntiBridgeMove move, const int *current,
       }
     }
     if (k != count || changed != 2) return -1;
+  }
+  return 1;
+}
+
+/* Mark the k-th site whose up and down orbitals are both empty. */
+static int GCAntiMarkKthEmptySite(int *eleNum, const int nsite, int k,
+                                  const int up, const int down) {
+  int site;
+  for (site = 0; site < nsite; ++site) {
+    if (eleNum[site] == 0 && eleNum[site + nsite] == 0 && k-- == 0) {
+      eleNum[site] = up;
+      eleNum[site + nsite] = down;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int GCAntiDrawSpinConfiguration(const int nsite, const int m, const int spin,
+                                uint32_t (*next32)(void), int *eleNum) {
+  int low, high, doubles, singles, k, used = 0;
+  if (nsite <= 0 || nsite > INT_MAX / 2 || m < 0 || m > nsite ||
+      spin < 0 || next32 == NULL || eleNum == NULL)
+    return -1;
+  low = 2 * m - nsite > 0 ? 2 * m - nsite : 0;
+  high = m - spin;
+  if (low > high) return 0;
+  doubles = low + (int)GCAntiDrawBelow((uint32_t)(high - low + 1), next32);
+  singles = m - doubles;
+  memset(eleNum, 0, (size_t)(2 * nsite) * sizeof(*eleNum));
+  /* Sequential uniform choices without replacement give uniform disjoint
+   * subsets: first the doubles, then up-only, then down-only sites. */
+  for (k = 0; k < doubles + 2 * singles; ++k, ++used) {
+    const int up = k < doubles + singles;
+    const int down = k < doubles || k >= doubles + singles;
+    const uint32_t pick = GCAntiDrawBelow((uint32_t)(nsite - used), next32);
+    if (pick == UINT32_MAX ||
+        !GCAntiMarkKthEmptySite(eleNum, nsite, (int)pick, up, down))
+      return -1;
   }
   return 1;
 }

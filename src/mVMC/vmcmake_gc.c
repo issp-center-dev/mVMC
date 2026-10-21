@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,14 +44,32 @@ static int GCForbiddenSpinSector(const int n) {
 
 static void GCRequireSpinSupport(MPI_Comm comm) {
   int low = GCSpinTriplet, high = GCSpinTriplet;
-  if (!GCActiveSpinProjection()) return;
+  int invalid, singlet = 0;
+  if (!GCActiveSpinProjection() && !GCFiniteSpinActive()) return;
   MPI_Allreduce(&GCSpinTriplet, &low, 1, MPI_INT, MPI_MIN, comm);
   MPI_Allreduce(&GCSpinTriplet, &high, 1, MPI_INT, MPI_MAX, comm);
-  if (low < 0 || high > 1 || low != high) {
+  invalid = low < 0 || high > 1 || low != high;
+  if (GCFiniteSpinActive()) {
+    int singletLow = GCSpinSinglet, singletHigh = GCSpinSinglet;
+    MPI_Allreduce(&GCSpinSinglet, &singletLow, 1, MPI_INT, MPI_MIN, comm);
+    MPI_Allreduce(&GCSpinSinglet, &singletHigh, 1, MPI_INT, MPI_MAX, comm);
+    invalid = invalid || singletLow < 0 || singletHigh > 1 ||
+              singletLow != singletHigh;
+    singlet = !invalid && singletLow == 1;
+  }
+  if (invalid || singlet) {
     int rank = 0;
     MPI_Comm_rank(comm, &rank);
-    if (rank == 0)
-      fprintf(stderr, "Error: invalid or rank-inconsistent GC spin support.\n");
+    if (rank == 0) {
+      if (invalid)
+        fprintf(stderr,
+                "Error: invalid or rank-inconsistent GC spin support.\n");
+      else
+        fprintf(stderr,
+                "Error: the pair function is exactly symmetric (pure "
+                "singlet) and has no total spin S=%d component.\n",
+                NSPStot);
+    }
     MPI_Barrier(comm);
     MPI_Abort(comm, EXIT_FAILURE);
   }
@@ -257,7 +276,9 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
     return 0;
   }
 
-  logIpNew = CalculateLogIPGC_fcmp(pfMNew, ncurProposal, qpStart, qpEnd, comm);
+  /* eleNum already holds the candidate occupation. */
+  logIpNew = CalculateLogIPGC_fcmp(pfMNew, ncurProposal, eleNum, qpStart,
+                                   qpEnd, comm);
   x = LogProjRatio(projCntNew, eleProjCnt);
   if (GCAntiAcceptLog(*logIpOld, logIpNew, x, proposalRatio, acceptDraw,
                       &accepted) != 0) {
@@ -295,7 +316,8 @@ int GCAttemptMove(const enum GCMoveClass moveClass, const int arg0,
     if (NProj > 0)
       memcpy(eleProjCnt, projCntNew, (size_t)NProj * sizeof(*eleProjCnt));
     Ncur = ncurProposal;
-    *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+    *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, eleNum, qpStart, qpEnd,
+                                      comm);
     return 1;
   }
 
@@ -394,7 +416,7 @@ static void GCWriteStateDump(FILE *fp, const char *label, const int sample,
   fprintf(fp, "\n");
 }
 
-static void GCDebugCheckFastState(const int *eleIdx,
+static void GCDebugCheckFastState(const int *eleIdx, const int *eleNum,
                                   double complex *logIpOld,
                                   const int qpStart, const int qpEnd,
                                   MPI_Comm comm) {
@@ -468,7 +490,7 @@ static void GCDebugCheckFastState(const int *eleIdx,
   free(fastState);
   free(fastPf);
   free(fastInv);
-  *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+  *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, eleNum, qpStart, qpEnd, comm);
   GCRequireRebuiltAmplitude(*logIpOld, "debug", comm);
 }
 
@@ -522,7 +544,8 @@ static int GCAttemptBridge(const enum GCAntiBridgeMove move,
             status);
     MPI_Abort(comm, EXIT_FAILURE);
   }
-  logIpNew = CalculateLogIPGC_fcmp(pfMNew, count, qpStart, qpEnd, comm);
+  logIpNew = CalculateLogIPGC_fcmp(pfMNew, count, candidate, qpStart, qpEnd,
+                                   comm);
   if (GCAntiAcceptLog(*logIpOld, logIpNew,
                       LogProjRatio(projCntNew, eleProjCnt), ratio,
                       genrand_real2(), &accepted) != 0) {
@@ -550,7 +573,8 @@ static int GCAttemptBridge(const enum GCAntiBridgeMove move,
               status);
       MPI_Abort(comm, EXIT_FAILURE);
     }
-    *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+    *logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, eleNum, qpStart, qpEnd,
+                                      comm);
     GCRequireRebuiltAmplitude(*logIpOld, "spin bridge", comm);
   }
   free(candidate);
@@ -564,6 +588,14 @@ int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
   static long long debugAccepted = 0;
   if (GCActiveSpinProjection()) {
     const int bridge = GCAntiSelectBridge(genrand_real2());
+    if (bridge >= 0)
+      return GCAttemptBridge((enum GCAntiBridgeMove)bridge, eleIdx, eleCfg,
+                             eleNum, eleProjCnt, logIpOld, pfMNew,
+                             projCntNew, qpStart, qpEnd, comm);
+  } else if (GCFiniteSpinActive()) {
+    /* Each kernel keeps its own Metropolis-Hastings ratio, so the fixed
+     * mixture preserves the common stationary distribution. */
+    const int bridge = GCAntiSelectFiniteSpinBridge(genrand_real2());
     if (bridge >= 0)
       return GCAttemptBridge((enum GCAntiBridgeMove)bridge, eleIdx, eleCfg,
                              eleNum, eleProjCnt, logIpOld, pfMNew,
@@ -644,7 +676,8 @@ int GCMakeOneStep(int *eleIdx, int *eleCfg, int *eleNum,
   if (accepted && GCDebugRebuildInterval() > 0) {
     debugAccepted++;
     if (debugAccepted % GCDebugRebuildInterval() == 0) {
-      GCDebugCheckFastState(eleIdx, logIpOld, qpStart, qpEnd, comm);
+      GCDebugCheckFastState(eleIdx, eleNum, logIpOld, qpStart, qpEnd,
+                            comm);
     }
   }
   return accepted;
@@ -656,6 +689,150 @@ static int GCCollectiveRebuildStatus(const int localStatus, MPI_Comm comm) {
   return globalStatus;
 }
 
+static int GCFiniteSpinPermitted(const int electrons) {
+  return GCSpinSectorPossible(Nsite, NSPStot, GCSpinTriplet, electrons);
+}
+
+/* Append the permitted even N not yet listed, by distance from center (the
+ * smaller N first on a tie). Returns the new count. */
+static int GCFiniteSpinAppendByDistance(const int center, int *order,
+                                        int count) {
+  int distance;
+  for (distance = 0; distance <= Nsite2; ++distance) {
+    int side;
+    for (side = 0; side < (distance == 0 ? 1 : 2); ++side) {
+      const int n = side == 0 ? center - distance : center + distance;
+      int k, listed = 0;
+      if (n < 0 || n > Nsite2 || n % 2 != 0 || !GCFiniteSpinPermitted(n))
+        continue;
+      for (k = 0; k < count; ++k) listed = listed || order[k] == n;
+      if (!listed) order[count++] = n;
+    }
+  }
+  return count;
+}
+
+/* Finite S>0 start: structured draws with at least 2S singles, at most 100
+ * per N and 100*(L+1) in total, trying N in the given order. The first
+ * nonzero amplitude is the start; Ncur is set to its N. */
+static int GCFiniteSpinInitialize(const int *order, const int count,
+                                  int *eleIdx, int *eleCfg, int *eleNum,
+                                  int *eleProjCnt, const int qpStart,
+                                  const int qpEnd, MPI_Comm comm) {
+  const int totalLimit = 100 * (Nsite + 1);
+  int rank = 0, k, total = 0;
+  MPI_Comm_rank(comm, &rank);
+  for (k = 0; k < count && total < totalLimit; ++k) {
+    int attempt;
+    for (attempt = 0; attempt < 100 && total < totalLimit;
+         ++attempt, ++total) {
+      int rs, position = 0, status;
+      double complex logIp;
+      if (GCAntiDrawSpinConfiguration(Nsite, order[k] / 2, NSPStot,
+                                      GCAntiNext32, eleNum) != 1) {
+        if (rank == 0)
+          fprintf(stderr, "Error: invalid GC finite-spin initial draw "
+                  "(S=%d, N=%d).\n", NSPStot, order[k]);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      for (rs = 0; rs < NsizeMax; ++rs) eleIdx[rs] = -1;
+      for (rs = 0; rs < Nsite2; ++rs) {
+        eleCfg[rs] = -1;
+        if (eleNum[rs] != 0) {
+          eleIdx[position] = rs;
+          eleCfg[rs] = position++;
+        }
+      }
+      Ncur = order[k];
+      GCAntiRequireConfig(eleIdx, eleCfg, eleNum, "initial", comm);
+      MakeProjCnt(eleProjCnt, eleNum);
+      status = GCCollectiveRebuildStatus(
+          CalculateMAllGC_fcmp(Ncur, eleIdx, qpStart, qpEnd), comm);
+      if (status != GC_MALL_OK) {
+        if (rank == 0)
+          fprintf(stderr, "Error: GC initial rebuild failed (status=%d).\n",
+                  status);
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      logIp = CalculateLogIPGC_fcmp(PfM, Ncur, eleNum, qpStart, qpEnd, comm);
+      if (isfinite(creal(logIp)) && isfinite(cimag(logIp))) return order[k];
+      if (!(creal(logIp) == -INFINITY && isfinite(cimag(logIp)))) {
+        if (rank == 0)
+          fprintf(stderr, "Error: GC initial configuration has a nonfinite "
+                  "projected amplitude.\n");
+        MPI_Abort(comm, EXIT_FAILURE);
+      }
+      if (rank == 0)
+        GCComponentCountersOf(GCComponentThreadCache())->compositeZero++;
+    }
+  }
+  if (rank == 0)
+    fprintf(stderr,
+            "Error: GC total-spin S=%d initial configuration has zero "
+            "projected amplitude after %d attempt(s) over %d particle "
+            "number(s). Check the pair function and NGCInitNelec.\n",
+            NSPStot, total, k);
+  MPI_Abort(comm, EXIT_FAILURE);
+  return -1;
+}
+
+/* restartN < 0: first start, where an explicit NGCInitNelec (after the
+ * reader's even rounding, i.e. Ncur) is binding and an unspecified one picks
+ * the nearest permitted N. restartN >= 0: an SR generation made the saved
+ * state zero; try the saved N, then NGCInitNelec, then the rest. */
+static void GCFiniteSpinStart(const int restartN, int *eleIdx, int *eleCfg,
+                              int *eleNum, int *eleProjCnt, const int qpStart,
+                              const int qpEnd, MPI_Comm comm) {
+  const size_t slots = GCCheckedAddSize(
+      GCNonnegativeSize(Nsite2, "GC finite-spin sectors"), 1);
+  int *order = (int *)GCCheckedMalloc(
+      GCCheckedMulSize(slots, sizeof(*order)), "GC finite-spin sectors");
+  const int requested = Ncur;
+  int rank = 0, count = 0, chosen;
+  MPI_Comm_rank(comm, &rank);
+  if (restartN < 0 && NGCInitNelec >= 0) {
+    if (!GCFiniteSpinPermitted(requested)) {
+      if (rank == 0)
+        fprintf(stderr,
+                "Error: NGCInitNelec=%d cannot carry total spin S=%d on "
+                "%d sites (%s).\n",
+                requested, NSPStot, Nsite,
+                2 * NSPStot > requested || requested > Nsite2 - 2 * NSPStot
+                    ? "2S <= N <= 2*Nsite-2S is required"
+                    : "an exactly antisymmetric pair function requires "
+                      "N/2-S even");
+      MPI_Barrier(comm);
+      MPI_Abort(comm, EXIT_FAILURE);
+    }
+    order[count++] = requested;
+  } else if (restartN < 0) {
+    count = GCFiniteSpinAppendByDistance(requested, order, 0);
+  } else {
+    const int initial = NGCInitNelec - NGCInitNelec % 2;
+    if (GCFiniteSpinPermitted(restartN)) order[count++] = restartN;
+    if (NGCInitNelec >= 0 && initial != restartN &&
+        GCFiniteSpinPermitted(initial))
+      order[count++] = initial;
+    count = GCFiniteSpinAppendByDistance(restartN, order, count);
+  }
+  if (count == 0) {
+    if (rank == 0)
+      fprintf(stderr,
+              "Error: no particle number can carry total spin S=%d on %d "
+              "sites with this pair function.\n",
+              NSPStot, Nsite);
+    MPI_Barrier(comm);
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
+  chosen = GCFiniteSpinInitialize(order, count, eleIdx, eleCfg, eleNum,
+                                  eleProjCnt, qpStart, qpEnd, comm);
+  if (rank == 0 && chosen != requested)
+    fprintf(stdout, "  Note: GC S=%d %s particle number is %d (was %d).\n",
+            NSPStot, restartN < 0 ? "initial" : "restart", chosen,
+            requested);
+  free(order);
+}
+
 int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
                         int *eleProjCnt, const int qpStart,
                         const int qpEnd, MPI_Comm comm) {
@@ -663,6 +840,11 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
   int rank;
   double complex logIp;
   MPI_Comm_rank(comm, &rank);
+  if (GCFiniteSpinActive()) {
+    GCFiniteSpinStart(-1, eleIdx, eleCfg, eleNum, eleProjCnt, qpStart, qpEnd,
+                      comm);
+    return 0;
+  }
   if (GCForbiddenSpinSector(Ncur)) {
     if (rank == 0)
       fprintf(stderr, "Error: NGCInitNelec=%d is forbidden by S=0 spin "
@@ -729,7 +911,7 @@ int makeInitialSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
       }
       MPI_Abort(comm, EXIT_FAILURE);
     }
-    logIp = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+    logIp = CalculateLogIPGC_fcmp(PfM, Ncur, eleNum, qpStart, qpEnd, comm);
     if (isfinite(creal(logIp)) && isfinite(cimag(logIp))) return 0;
     if (!(creal(logIp) == -INFINITY && isfinite(cimag(logIp)))) {
       if (rank == 0) {
@@ -769,6 +951,22 @@ void copyFromBurnSampleGC(int *eleIdx, int *eleCfg, int *eleNum,
   Ncur = BurnNcur;
 }
 
+/* Finite S>0: the pair-function generation of the stored burn sample. Only
+ * the Slater parameters can create zeros (Proj factors are exponentials). */
+static uint64_t GCBurnSlaterHash = 0;
+
+static uint64_t GCSlaterHash(void) {
+  const unsigned char *byte = (const unsigned char *)Slater;
+  const size_t count = (size_t)NSlater * sizeof(*Slater);
+  uint64_t hash = UINT64_C(1469598103934665603);
+  size_t k;
+  for (k = 0; Slater != NULL && k < count; ++k) {
+    hash ^= byte[k];
+    hash *= UINT64_C(1099511628211);
+  }
+  return hash;
+}
+
 void copyToBurnSampleGC(const int *eleIdx, const int *eleCfg,
                         const int *eleNum, const int *eleProjCnt) {
   memcpy(BurnEleIdx, eleIdx, (size_t)NsizeMax * sizeof(*eleIdx));
@@ -779,6 +977,7 @@ void copyToBurnSampleGC(const int *eleIdx, const int *eleCfg,
            (size_t)NProj * sizeof(*eleProjCnt));
   }
   BurnNcur = Ncur;
+  if (GCFiniteSpinActive()) GCBurnSlaterHash = GCSlaterHash();
 }
 
 void saveEleConfigGC(const int sample, const double complex logIp,
@@ -848,7 +1047,8 @@ void VMCMakeSampleGC(MPI_Comm comm) {
       MPI_Abort(comm, EXIT_FAILURE);
     }
   }
-  logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+  logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, TmpEleNum, qpStart, qpEnd,
+                                   comm);
   if (!isfinite(creal(logIpOld)) || !isfinite(cimag(logIpOld))) {
     if (!(creal(logIpOld) == -INFINITY && isfinite(cimag(logIpOld)))) {
       if (rank == 0)
@@ -860,19 +1060,36 @@ void VMCMakeSampleGC(MPI_Comm comm) {
     /* An SR update may enter the pure-triplet manifold and invalidate the
      * saved N. Restart in a permitted sector and perform the full warm-up.
      * Initial user input is checked separately by makeInitialSampleGC. */
-    if (GCForbiddenSpinSector(Ncur)) {
-      Ncur = NGCInitNelec;
-      if (GCForbiddenSpinSector(Ncur)) Ncur = 0;
-      if (Ncur == 0 && GCProjectionSectorZero(0)) Ncur = 4;
-      if (Ncur > NsizeMax) {
+    if (GCFiniteSpinActive()) {
+      /* Same pair-function generation: the stored state was nonzero, so a
+       * zero now is a state or numerical anomaly, not a support change. */
+      if (GCSlaterHash() == GCBurnSlaterHash) {
         if (rank == 0)
-          fprintf(stderr, "Error: no GC spin sector available for restart.\n");
+          fprintf(stderr,
+                  "Error: GC total-spin S=%d restored state is zero without "
+                  "a pair-function change.\n",
+                  NSPStot);
         MPI_Abort(comm, EXIT_FAILURE);
       }
+      GCFiniteSpinStart(Ncur, TmpEleIdx, TmpEleCfg, TmpEleNum, TmpEleProjCnt,
+                        qpStart, qpEnd, comm);
+    } else {
+      if (GCForbiddenSpinSector(Ncur)) {
+        Ncur = NGCInitNelec;
+        if (GCForbiddenSpinSector(Ncur)) Ncur = 0;
+        if (Ncur == 0 && GCProjectionSectorZero(0, NULL)) Ncur = 4;
+        if (Ncur > NsizeMax) {
+          if (rank == 0)
+            fprintf(stderr,
+                    "Error: no GC spin sector available for restart.\n");
+          MPI_Abort(comm, EXIT_FAILURE);
+        }
+      }
+      (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
+                                TmpEleProjCnt, qpStart, qpEnd, comm);
     }
-    (void)makeInitialSampleGC(TmpEleIdx, TmpEleCfg, TmpEleNum,
-                              TmpEleProjCnt, qpStart, qpEnd, comm);
-    logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+    logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, TmpEleNum, qpStart, qpEnd,
+                                     comm);
     BurnFlag = 0;
   }
 
@@ -890,7 +1107,8 @@ void VMCMakeSampleGC(MPI_Comm comm) {
           fprintf(stderr, "Error: periodic GC sampler rebuild failed.\n");
           MPI_Abort(comm, EXIT_FAILURE);
         }
-        logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, qpStart, qpEnd, comm);
+        logIpOld = CalculateLogIPGC_fcmp(PfM, Ncur, TmpEleNum, qpStart, qpEnd,
+                                         comm);
         GCRequireRebuiltAmplitude(logIpOld, "periodic", comm);
         nAccept = 0;
       }

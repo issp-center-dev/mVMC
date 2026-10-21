@@ -691,8 +691,11 @@ INPUT_CASES = {
     # INT_MAX/7 < G <= INT_MAX/2: missed by a 2G-only bound.
     "g_workspace_sum_over": ({"gauss_token": "400000000"},
                              "NSPGaussLeg workspace"),
-    "s_negative": ({"stot_token": "-1"}, "NSPStot=0"),
-    "s_nonzero": ({"stot_token": "1"}, "NSPStot=0"),
+    "s_negative": ({"stot_token": "-1"}, "0 <= NSPStot <= Nsite/2"),
+    "s_over": ({"stot_token": "3"}, "0 <= NSPStot <= Nsite/2"),
+    "s_int_max": ({"stot_token": "2147483647"}, "0 <= NSPStot <= Nsite/2"),
+    "positive_s1": ({"stot_token": "1"}, None),
+    "positive_s2": ({"stot_token": "2"}, None),
     "s_fraction": ({"stot_token": "0.5"}, "NSPStot must be an exact integer"),
     "s_decimal": ({"stot_token": "0.0"}, "NSPStot must be an exact integer"),
     "s_nan": ({"stot_token": "nan"}, "NSPStot must be an exact integer"),

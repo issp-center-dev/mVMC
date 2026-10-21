@@ -182,30 +182,51 @@ double complex CalculateIP_fcmp(double complex * const pfM, const int qpStart, c
   return ip;
 }
 
-/* Vacuum/full filling are translation invariant; pure-triplet S=0 states
- * also exclude odd pair number. Remove only finite roundoff in those proven
- * sectors, keeping the QP reduction order and nonfinite propagation. */
-int GCProjectionSectorZero(const int newN) {
-  return (FlagGrandCanonical && GCTransWeightSumExactlyZero &&
-          (newN == 0 || newN == Nsite2)) ||
-         GCSpinForbiddenSector(FlagGrandCanonical, iFlgOrbitalGeneral,
+int GCFiniteSpinActive(void) {
+  return FlagGrandCanonical && !iFlgOrbitalGeneral && NSPGaussLeg > 1 &&
+         NSPStot > 0;
+}
+
+/* Vacuum/full filling are translation invariant; pure-triplet states also
+ * exclude the pair parity (N/2-S) odd. A finite S>0 state additionally
+ * vanishes on configurations with fewer than 2S singles (a parameter-free
+ * mask that also removes finite-G quadrature residue there by definition)
+ * and entirely for a pure singlet. Remove only those proven zeros, keeping
+ * the QP reduction order and nonfinite propagation. */
+int GCProjectionSectorZero(const int newN, const int *eleNum) {
+  if (FlagGrandCanonical && GCTransWeightSumExactlyZero &&
+      (newN == 0 || newN == Nsite2))
+    return 1;
+  if (GCFiniteSpinActive()) {
+    const int singles = GCSpinCountSingles(eleNum, Nsite);
+    int rs, electrons = 0;
+    if (singles < 0) return -1;
+    for (rs = 0; rs < Nsite2; ++rs) electrons += eleNum[rs];
+    if (electrons != newN) return -1;
+    if (GCSpinSinglet == 1) return 1;
+    if (GCSpinConfigurationZero(NSPStot, singles)) return 1;
+  }
+  return GCSpinForbiddenSector(FlagGrandCanonical, iFlgOrbitalGeneral,
                                NSPGaussLeg, NSPStot, GCSpinTriplet, newN);
 }
 
 double complex CalculateIPGC_fcmp(double complex *const pfM, const int newN,
+                                  const int *const eleNum,
                                   const int qpStart, const int qpEnd,
                                   MPI_Comm comm) {
   const double complex ip = CalculateIP_fcmp(pfM, qpStart, qpEnd, comm);
-  if (GCProjectionSectorZero(newN) &&
-      isfinite(creal(ip)) && isfinite(cimag(ip)))
+  const int zero = GCProjectionSectorZero(newN, eleNum);
+  if (zero < 0) return NAN + NAN * I;
+  if (zero && isfinite(creal(ip)) && isfinite(cimag(ip)))
     return 0.0 + 0.0 * I;
   return ip;
 }
 
 double complex CalculateLogIPGC_fcmp(double complex *const pfM, const int newN,
+                                     const int *const eleNum,
                                      const int qpStart, const int qpEnd,
                                      MPI_Comm comm) {
-  return clog(CalculateIPGC_fcmp(pfM, newN, qpStart, qpEnd, comm));
+  return clog(CalculateIPGC_fcmp(pfM, newN, eleNum, qpStart, qpEnd, comm));
 }
 
 void UpdateQPWeight() {

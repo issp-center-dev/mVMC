@@ -295,6 +295,71 @@ if(MPI_FOUND)
         PROCESSORS 2 TIMEOUT 60)
 endif()
 
+# Finite total spin S>0: direct production evaluation, Green, derivatives,
+# sampler kernels and initialization through a Testing-only binary.
+# Its probe/chain modes are compared with the independent oracle by
+# python/runtest_gc_finite_spin.py; public-input tests use the E2E helper.
+add_executable(gc_finite_spin_unit gc_finite_spin_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/gc_exact_sum.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c
+    ${CMAKE_SOURCE_DIR}/src/sfmt/SFMT.c)
+target_include_directories(gc_finite_spin_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include
+    ${CMAKE_SOURCE_DIR}/src/sfmt)
+target_link_libraries(gc_finite_spin_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(gc_finite_spin_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(gc_finite_spin_unit ${MPI_C_LIBRARIES})
+endif()
+foreach(gc_fs_mode mask transactions init restart support kernel)
+    add_test(NAME GC_FS_Unit_${gc_fs_mode}
+        COMMAND gc_finite_spin_unit --${gc_fs_mode})
+    set_tests_properties(GC_FS_Unit_${gc_fs_mode} PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 120)
+endforeach()
+add_test(NAME GC_FS_Unit_transactions_DebugRebuild
+    COMMAND gc_finite_spin_unit --transactions)
+set_tests_properties(GC_FS_Unit_transactions_DebugRebuild PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_GC_DEBUG_REBUILD_INTERVAL=1"
+    TIMEOUT 120)
+foreach(gc_fs_death singlet explicit-n explicit-range swap-nonfinite
+        restart-same-generation)
+    add_test(NAME GC_FS_Death_${gc_fs_death}
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+            $<TARGET_FILE:gc_finite_spin_unit> --death-${gc_fs_death})
+    set_tests_properties(GC_FS_Death_${gc_fs_death} PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 60)
+endforeach()
+if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+    add_test(NAME GC_FS_Death_chain-singlet_np2_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+            $<TARGET_FILE:gc_finite_spin_unit> --death-chain-singlet 2)
+    set_tests_properties(GC_FS_Death_chain-singlet_np2_mpi PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};OMPI_MCA_rmaps_base_oversubscribe=1"
+        PROCESSORS 2 TIMEOUT 60)
+    add_test(NAME GC_FS_Death_rank-singlet_np2_mpi
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+            $<TARGET_FILE:gc_finite_spin_unit> --death-rank-singlet 2)
+    set_tests_properties(GC_FS_Death_rank-singlet_np2_mpi PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE}"
+        PROCESSORS 2 TIMEOUT 60)
+    foreach(np 2 3)
+        add_test(NAME GC_FS_Death_swap-nonfinite_np${np}_mpi
+            COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/runtest_gc_antiparallel_death.py
+                $<TARGET_FILE:gc_finite_spin_unit> --death-swap-nonfinite ${np})
+        set_tests_properties(GC_FS_Death_swap-nonfinite_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};OMPI_MCA_rmaps_base_oversubscribe=1"
+            PROCESSORS ${np} TIMEOUT 60)
+    endforeach()
+endif()
+
 add_executable(gc_slater_diff_unit gc_slater_diff_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/absolute_pfaffian.c)
 target_compile_definitions(gc_slater_diff_unit PRIVATE
