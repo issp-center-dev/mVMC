@@ -652,10 +652,56 @@ a_g=\tfrac12\sin\beta_g\,w_g\]</div>
 対応する符号付き <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> を使い、周期・反周期境界条件の両方に対応します。
 workspaceの <span class="math notranslate nohighlight">\(2GR+5G\)</span> はCの <code class="docutils literal notranslate"><span class="pre">int</span></code> 範囲に収まる必要があり、
 過大な入力はメモリ確保前にエラーにします。
-<span class="math notranslate nohighlight">\(\exp(\sum_{ij}v_{ij}m_im_j)\)</span> はスピンscalarでなく <span class="math notranslate nohighlight">\(S=0\)</span> を
+<span class="math notranslate nohighlight">\(\exp(\sum_{ij}v_{ij}m_im_j)\)</span> はスピンscalarでなく固定した全スピンを
 壊すため、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> では <code class="docutils literal notranslate"><span class="pre">SpinJastrow</span></code> をエラーにします。
-一般pairと0でない <code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> はスピン射影と併用できず、GC modeでの
+一般pairはスピン射影と併用できません。通常GCでは以下の整数
+<code class="docutils literal notranslate"><span class="pre">NSPStot=S&gt;0</span></code> にも対応します。GC modeでの
 <code class="docutils literal notranslate"><span class="pre">OptTrans</span></code> の禁止も引き続き適用されます。</p>
+<p><strong>Lanczosを併用しない有限全スピン射影</strong></p>
+<p>反平行pair、<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code> の通常測定・dense SR最適化では、
+整数 <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">NSPStot</span> <span class="pre">&lt;=</span> <span class="pre">Nsite/2</span></code> （整数除算）を指定できます。
+<code class="docutils literal notranslate"><span class="pre">NSPStot</span></code> は <span class="math notranslate nohighlight">\(S\)</span> であり、<span class="math notranslate nohighlight">\(2S\)</span> や <span class="math notranslate nohighlight">\(S^z\)</span> ではありません。
+<span class="math notranslate nohighlight">\(S&gt;0\)</span> の重みはLegendre多項式 <span class="math notranslate nohighlight">\(P_S\)</span> を用いた
+<span class="math notranslate nohighlight">\(a_g(S)=\frac12\sin\beta_g\,w_g P_S(\cos\beta_g)\)</span> です。
+収束極限の生の対状態は、全スピン射影演算子
+<span class="math notranslate nohighlight">\(\mathcal{P}_S^2=\mathcal{P}_S\)</span> を用いて
+<span class="math notranslate nohighlight">\(\mathcal{P}_S|\phi\rangle/(2S+1)\)</span> になります。この係数は
+全粒子数sectorに共通のため相対重みを変えません。<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> は
+従来どおり非射影で、有限Sの処理を有効にしません。運動量射影および
+PBC/APBCと併用できます。有限SとLanczosの併用は入力エラーにします。</p>
+<p>配置には少なくとも <span class="math notranslate nohighlight">\(2S\)</span> 個の一重占有siteが必要で、
+<span class="math notranslate nohighlight">\(2S\le N\le2N_{\rm site}-2S\)</span> の範囲だけが寄与できます。
+条件を満たさない配置は有限求積でも厳密零にします。このmaskは有限G状態の
+定義の一部であり、丸め誤差だけの補正ではありません。対関数が厳密に反対称なら
+<span class="math notranslate nohighlight">\(N/2-S\)</span> が偶数であることも必要です。厳密に対称な対関数には
+<span class="math notranslate nohighlight">\(S&gt;0\)</span> 成分がないため停止します。実際の符号付きparameterを許容誤差なしで
+分類し、小さい非零振幅を切り捨てません。対称性による振幅零でも、
+対称性を破る方向の微分は非零になり得ます。</p>
+<p><strong>パラメータに依存する節でのSRの制約</strong></p>
+<p>通常SRは波動関数が非零の配置だけを標本化します。振幅零でもパラメータ微分が
+非零の配置があると、エネルギー勾配と重なり行列への寄与が欠け得ます。
+特に厳密な純triplet初期状態からの制約なしSRは検証済みの対応範囲外です。
+粒子数を変えるHamiltonianでは、エネルギー勾配自体も誤り得ます。
+S=0にも同じ制約があり、コードはこの種の節をすべて自動検出しません。
+制約なしSRにはsinglet成分とtriplet成分を持つ一般の反平行対関数を使い、
+標本化と初期値への依存を確認してください。任意に小さい摂動を加えるだけでは
+十分な標本化を保証できません。固定した純triplet状態の通常測定には対応します。
+エネルギー二乗出力は非零支持内の <span class="math notranslate nohighlight">\(|E_{\rm local}|^2\)</span> 平均であり、
+節上の <span class="math notranslate nohighlight">\(H\Psi\)</span> の寄与を含みません。</p>
+<p>明示した <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> は指定Sと対関数の対称性で許される必要があります。
+未指定（または <code class="docutils literal notranslate"><span class="pre">-1</span></code>）なら通常の既定値に最も近い許容偶数Nを選び、
+等距離なら小さい方を優先します。十分な一重占有を持つ配置を生成し、
+許容Nごとに最大100候補を試します。SR更新で保存配置が振幅零になった場合は、
+再初期化して全warm-upを実施します。有限Sの提案確率は全balanced配置が1/64、
+2対の追加・削除が各1/8、upのみ/downのみのsite間スピン交換が1/8、
+従来の局所moveが39/64です。不可能なmoveはその場に留まります。
+最大SでNが固定され通常hopがすべて禁止される場合にも、スピン交換で移動できます。</p>
+<p><code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> を増やした収束、粒子数分布、独立seedと初期配置への依存を
+確認してください。<span class="math notranslate nohighlight">\(\langle S^2\rangle=S(S+1)\)</span> だけでは他Sの混入を
+排除できません。小系の参照では <span class="math notranslate nohighlight">\(\|(S^2-S(S+1))\Psi\|/\|\Psi\|\)</span>
+と対象外Sへの重みも確認できます。一般の相殺零や混合の遅さは、構造零のmaskだけで
+解消されるものではありません。<span class="math notranslate nohighlight">\(S=1\)</span> と複数Nを持つ <span class="math notranslate nohighlight">\(S=2\)</span> の例は
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/FiniteSpin</span></code> にあります。</p>
 <p>実際の未回転対関数が厳密に反対称（<span class="math notranslate nohighlight">\(F^T=-F\)</span>、純triplet pair）の場合、
 <span class="math notranslate nohighlight">\(S=0\)</span> 射影は <span class="math notranslate nohighlight">\(N=2\pmod 4\)</span> の全sectorを消します。
 orbitalの符号を含めたparameter値を更新ごとに検査し、QP和が非有限値でないことを
@@ -665,7 +711,7 @@ orbitalの符号を含めたparameter値を更新ごとに検査し、QP和が�
 射影振幅が非零である必要があります。最適化更新で保存済みの粒子数が禁止された場合は、
 許されるsectorから初期化してwarm-upをやり直します。反対称に近いだけの対関数を
 この対称性へ丸めることはしません。</p>
-<p>スピン射影が有効な通常GCの提案には、反平行pairを2対同時に追加・削除するmove
+<p>S=0スピン射影が有効な通常GCの提案には、反平行pairを2対同時に追加・削除するmove
 （各1/8）と全balanced配置からの一様提案（1/64）を含めます。残り47/64では従来の
 局所moveを使い、各提案固有のMetropolis比で判定します。不可能なmoveはその場に
 とどまります。これにより、禁止された中間粒子数を飛び越えてsector間を移動できます。
