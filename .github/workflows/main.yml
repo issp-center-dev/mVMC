@@ -237,6 +237,8 @@ jobs:
       - name: Check AUTO and OFF fallback, and required ON failure
         shell: bash
         run: |
+          # checkout trusts this path only in its temporary Git configuration.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           for mode in AUTO OFF; do
             cmake -S . -B "../build-$mode" -DCONFIG=gcc -DTesting=ON \
               -DUSE_GEMMT=OFF -DMVMC_GC_REFINEMENT="$mode" \
