@@ -396,6 +396,50 @@ optimized <span class="math notranslate nohighlight">\(|\phi_1\rangle\)</span> i
 = \frac{h_{2(11)} + 2\alpha h_{3(12)} + \alpha^2 h_{4(22)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}}.
 \end{aligned}\]</div>
 </section>
+<section id="grand-canonical-first-step-refinement-and-resource-limits">
+<h3>Grand-canonical first-step refinement and resource limits<a class="headerlink" href="#grand-canonical-first-step-refinement-and-resource-limits" title="Permalink to this heading">¶</a></h3>
+<p>For the supported grand-canonical first-step stabilized estimator
+(<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=1</span></code>), an optional GMP/MPFR backend resolves ambiguous
+final-chain decisions using the exact binary64 inputs. It reuses the proposal
+and uniform random number. A failure to certify a decision stops the run;
+it does not reinterpret an unresolved amplitude as zero.</p>
+<p>Configure with <code class="docutils literal notranslate"><span class="pre">-DMVMC_GC_REFINEMENT=ON</span></code> to require GMP and MPFR development
+packages (<code class="docutils literal notranslate"><span class="pre">libgmp-dev</span> <span class="pre">libmpfr-dev</span></code> on Debian/Ubuntu, <code class="docutils literal notranslate"><span class="pre">gmp</span> <span class="pre">mpfr</span></code> on Homebrew).
+The default <code class="docutils literal notranslate"><span class="pre">AUTO</span></code> enables refinement only when these dependencies are found;
+<code class="docutils literal notranslate"><span class="pre">OFF</span></code> retains explicit numerical stops. Check the configure output.
+GNU/Clang-family compilers disable fast-math and contraction for this backend;
+Intel/IntelLLVM use strict floating-point mode. Other compiler IDs are rejected
+when the backend is enabled until a floating-point contract is provided.</p>
+<p>The backend has separate resource limits from the ordinary bounded engine:
+16,384 occupied-matrix entries, 8,192 cached (depth, configuration) pairs,
+8,192 stored expression terms in total, 65,536 bits per rational numerator or
+denominator, 2,000,000 recursive calls (including cache hits), and 4,096 bits of
+MPFR precision. These defaults are fixed in the production adapter, not ModPara
+options. In particular, refined acceptance also evaluates the local energy,
+which requires one more Hamiltonian application than the acceptance decision.
+A model accepted by the ordinary engine can therefore still stop with
+<code class="docutils literal notranslate"><span class="pre">RESOURCE_LIMIT</span></code> in refinement. The error line identifies the refinement
+stage. Increasing only the ordinary engine limit does not remove this limit.</p>
+<p>Production regression coverage for this backend comprises two- and four-site
+fixtures, including projected four-site forced-refinement checks. This is a
+verified scope, not a guarantee for every model of those sizes. A separate
+synthetic two-dimensional hopping probe with a constant base amplitude,
+checkerboard occupation, and uniform value zero succeeds at 4 by 4 sites
+(128 Hamiltonian terms), but reaches the default limits at 6 by 6 sites
+(288 terms). Enlarging limits allowed that synthetic probe to reach 16 by 16;
+this does not establish support for a physical 16 by 16 calculation. There is
+no universal lattice-size cutoff: connectivity, occupation, projection, and
+exponent diversity all affect resource use. Large-system throughput has not
+been established. Exact Pfaffian arithmetic can be expensive, and each rank
+in a chain currently repeats the refinement computation.</p>
+<p>A completed run also needs adequate statistical coverage. Extremely rare
+nonzero sectors may never appear in a finite sample; a zero empirical error
+bar then does not certify agreement with the exact expectation. Such cases
+must remain statistically inconclusive. The final <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">refinement:</span></code>
+line reports calls, accepted proposals, exact zeros, and maximum precision;
+GEVP failures and refinement failures are reported on stderr.</p>
+</section>
 <section id="second-power-lanczos-step">
 <h3>Second power-Lanczos step<a class="headerlink" href="#second-power-lanczos-step" title="Permalink to this heading">¶</a></h3>
 <section id="variational-determination-of-alpha-and-beta">
@@ -811,6 +855,7 @@ numerical diagnostics.</p>
 </li>
 <li><a class="reference internal" href="#power-lanczos-method">Power Lanczos method</a><ul>
 <li><a class="reference internal" href="#first-power-lanczos-step-and-determination-of-alpha">First power-Lanczos step and determination of <span class="math notranslate nohighlight">\(\alpha\)</span></a></li>
+<li><a class="reference internal" href="#grand-canonical-first-step-refinement-and-resource-limits">Grand-canonical first-step refinement and resource limits</a></li>
 <li><a class="reference internal" href="#second-power-lanczos-step">Second power-Lanczos step</a><ul>
 <li><a class="reference internal" href="#variational-determination-of-alpha-and-beta">Variational determination of <span class="math notranslate nohighlight">\(\alpha\)</span> and <span class="math notranslate nohighlight">\(\beta\)</span></a></li>
 <li><a class="reference internal" href="#numerically-stable-implementation">Numerically stable implementation</a></li>

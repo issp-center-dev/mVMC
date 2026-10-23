@@ -461,6 +461,55 @@ optimized :math:`|\phi_1\rangle` is also calculated as
    = \frac{h_{2(11)} + 2\alpha h_{3(12)} + \alpha^2 h_{4(22)}}{1 + 2\alpha h_1 + \alpha^2 h_{2(11)}}.
    \end{aligned}
 
+Grand-canonical first-step refinement and resource limits
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For the supported grand-canonical first-step stabilized estimator
+(``NGrandCanonical=1``, ``NLanczosMode=1``, ``NLanczosStep=1``,
+``NLanczosEstimatorMode=1``), an optional GMP/MPFR backend resolves ambiguous
+final-chain decisions using the exact binary64 inputs. It reuses the proposal
+and uniform random number. A failure to certify a decision stops the run;
+it does not reinterpret an unresolved amplitude as zero.
+
+Configure with ``-DMVMC_GC_REFINEMENT=ON`` to require GMP and MPFR development
+packages (``libgmp-dev libmpfr-dev`` on Debian/Ubuntu, ``gmp mpfr`` on Homebrew).
+The default ``AUTO`` enables refinement only when these dependencies are found;
+``OFF`` retains explicit numerical stops. Check the configure output.
+GNU/Clang-family compilers disable fast-math and contraction for this backend;
+Intel/IntelLLVM use strict floating-point mode. Other compiler IDs are rejected
+when the backend is enabled until a floating-point contract is provided.
+
+The backend has separate resource limits from the ordinary bounded engine:
+16,384 occupied-matrix entries, 8,192 cached (depth, configuration) pairs,
+8,192 stored expression terms in total, 65,536 bits per rational numerator or
+denominator, 2,000,000 recursive calls (including cache hits), and 4,096 bits of
+MPFR precision. These defaults are fixed in the production adapter, not ModPara
+options. In particular, refined acceptance also evaluates the local energy,
+which requires one more Hamiltonian application than the acceptance decision.
+A model accepted by the ordinary engine can therefore still stop with
+``RESOURCE_LIMIT`` in refinement. The error line identifies the refinement
+stage. Increasing only the ordinary engine limit does not remove this limit.
+
+Production regression coverage for this backend comprises two- and four-site
+fixtures, including projected four-site forced-refinement checks. This is a
+verified scope, not a guarantee for every model of those sizes. A separate
+synthetic two-dimensional hopping probe with a constant base amplitude,
+checkerboard occupation, and uniform value zero succeeds at 4 by 4 sites
+(128 Hamiltonian terms), but reaches the default limits at 6 by 6 sites
+(288 terms). Enlarging limits allowed that synthetic probe to reach 16 by 16;
+this does not establish support for a physical 16 by 16 calculation. There is
+no universal lattice-size cutoff: connectivity, occupation, projection, and
+exponent diversity all affect resource use. Large-system throughput has not
+been established. Exact Pfaffian arithmetic can be expensive, and each rank
+in a chain currently repeats the refinement computation.
+
+A completed run also needs adequate statistical coverage. Extremely rare
+nonzero sectors may never appear in a finite sample; a zero empirical error
+bar then does not certify agreement with the exact expectation. Such cases
+must remain statistically inconclusive. The final ``GC Lanczos refinement:``
+line reports calls, accepted proposals, exact zeros, and maximum precision;
+GEVP failures and refinement failures are reported on stderr.
+
 Second power-Lanczos step
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

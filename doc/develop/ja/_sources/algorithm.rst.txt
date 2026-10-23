@@ -445,6 +445,46 @@ Lanczos計算はエラーとして終了します)。
 
 から同様に計算できます。
 
+グランドカノニカル1st-step精密化と資源上限
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+対応するグランドカノニカル1st-step安定化推定
+（``NGrandCanonical=1``, ``NLanczosMode=1``, ``NLanczosStep=1``,
+``NLanczosEstimatorMode=1``）では、任意のGMP/MPFR backendが、final chainの
+曖昧な判定を入力binary64値の厳密評価で解決します。提案配置と一様乱数は再利用し、
+判定を保証できない場合は停止します。未確定の振幅を零とは見なしません。
+
+``-DMVMC_GC_REFINEMENT=ON`` を指定するとGMP/MPFR開発用packageを必須にできます
+（Debian/Ubuntu: ``libgmp-dev libmpfr-dev``、Homebrew: ``gmp mpfr``）。
+既定の ``AUTO`` は依存が見つかった場合だけ精密化を有効にし、``OFF`` は従来の
+明示的な数値停止を維持します。configure出力で有効化を確認してください。
+このbackendではGNU/Clang系のfast-mathと演算融合を無効にし、Intel/IntelLLVMには
+strict浮動小数点modeを指定します。それ以外のcompiler IDでは、浮動小数点の
+設定が追加されるまでbackend有効時のconfigureを拒否します。
+
+精密化には通常のbounded engineと独立した上限があります。占有部分行列16,384要素、
+(depth, configuration)のcache 8,192件、保存する式の項の総数8,192、
+有理数の分子・分母各65,536 bit、再帰呼出し2,000,000回（cache hitを含む）、
+MPFR精度4,096 bitです。これらはproduction adapterの固定値で、ModParaの設定項目
+ではありません。精密受理ではlocal energyも必要なため、受理判定より1段深く
+Hamiltonianを作用させます。通常engineが許すmodelでも、精密化の ``RESOURCE_LIMIT``
+で停止する場合があります。失敗行には精密化の段階であることを表示します。
+通常engine側だけの上限を増やしても、この制約は解消しません。
+
+本backendのproduction回帰検証は2 siteと4 siteの入力で行い、射影を含む4 siteでは
+精密受理を強制した確認も行っています。これは検証範囲であり、そのsizeの全modelを
+保証するものではありません。別の2次元hopping合成probe（定数基底振幅、checkerboard
+配置、一様乱数0）では4×4 site・128項で成功し、6×6 site・288項で既定上限に達しました。
+上限拡大で同じ合成probeは16×16まで通りますが、物理的な16×16計算の対応を確認した
+結果ではありません。必要資源は接続、占有、射影、指数の種類に依存し、普遍的な格子size
+上限は示せません。大規模系の処理性能は未検証です。厳密Pfaffianの計算は高コストに
+なり得て、現状はchain内の各rankが同じ精密計算を行います。
+
+正常終了後も統計的な検証が必要です。非零の重みが極端に小さいsectorは有限標本で
+一度も観測できず、経験的誤差が0になる場合があります。この場合は厳密期待値との
+一致を保証できず、統計的判定を保留します。終了時の ``GC Lanczos refinement:`` 行は
+呼出し数、受理数、厳密零数、最大精度を報告し、GEVP失敗と精密化失敗はstderrへ出力します。
+
 2nd power-Lanczos step
 ~~~~~~~~~~~~~~~~~~~~~~
 
