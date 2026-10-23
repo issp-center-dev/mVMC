@@ -40,6 +40,7 @@ struct MVMCGCKrylovAmplitudeWorkspace {
   double complex *slater;
   double complex *global_weights;
   double complex *projection_parameters;
+  size_t projection_parameter_count;
   double complex *matrix;
   int *ele_idx;
   int *ele_num;
@@ -347,6 +348,7 @@ MVMCKrylovStatus mvmc_gc_krylov_amplitude_workspace_create(
   created->scaled_pivot_tolerance = layout->scaled_pivot_tolerance;
   created->boundary_exact_zero = boundary;
   created->spin_triplet_s0 = layout->spin_triplet_s0;
+  created->projection_parameter_count = (size_t)layout->projection.nproj;
   status = checked_multiply(created->orbital_count, created->orbital_count,
                             &created->slater_matrix_count) &&
                    created->word_count != 0 &&
@@ -511,6 +513,90 @@ static MVMCKrylovStatus apply_projection(
   amplitude->value = projected;
   return MVMC_KRYLOV_STATUS_OK;
 }
+
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+static MVMCKrylovStatus refined_base(
+    const uint64_t *words, size_t word_count, void *context,
+    MVMCRefinedBase *result) {
+  MVMCGCKrylovAmplitudeWorkspace *w = context;
+  int n = 0;
+  int64_t *counts = NULL;
+  double log_projection = 0.0;
+  MVMCKrylovStatus status;
+  if (!decode_configuration(w, words, word_count, &n))
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  if (w->projection_parameter_count) {
+    counts = calloc(w->projection_parameter_count, sizeof(*counts));
+    if (counts == NULL) return MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE;
+  }
+  status = mvmc_classic_krylov_projection_evaluate(
+      w->projection_workspace, w->ele_num, w->orbital_count, counts,
+      w->projection_parameter_count, &log_projection);
+  if (status == MVMC_KRYLOV_STATUS_OK)
+    status = mvmc_refined_base_build(
+        result, w->slater, w->orbital_count, w->ele_idx, (size_t)n,
+        w->global_weights, (size_t)w->qp_total,
+        (w->boundary_exact_zero && (n == 0 || (size_t)n == w->orbital_count)) ||
+            (w->spin_triplet_s0 && n % 4 == 2),
+        w->projection_parameters, counts, w->projection_parameter_count);
+  free(counts);
+  return status;
+}
+
+MVMCKrylovStatus mvmc_gc_krylov_refine_final(
+    MVMCGCKrylovAmplitudeWorkspace *w, const MVMCKrylovFockModel *model,
+    const MVMCKrylovFinalStatePolicy *policy, const uint64_t *current,
+    const uint64_t *proposal, size_t word_count, double uniform,
+    MVMCKrylovRefinementResult *result) {
+  MVMCKrylovRefinementResult candidate;
+  MVMCKrylovFinalStateSnapshot snapshot;
+  MVMCKrylovStatus status;
+  uint64_t agreement[5];
+  int equal = 0;
+  if (w == NULL) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  status = synchronize(w, result != NULL && model != NULL && policy != NULL &&
+      current != NULL && proposal != NULL && word_count == w->word_count
+      ? MVMC_KRYLOV_STATUS_OK : MVMC_KRYLOV_STATUS_INVALID_ARGUMENT);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  if (mvmc_classic_pfaffian_collective_all_equal_u64(
+          w->collective_workspace, current, word_count, &equal) !=
+          MVMC_PFAFFIAN_STATUS_OK || !equal ||
+      mvmc_classic_pfaffian_collective_all_equal_u64(
+          w->collective_workspace, proposal, word_count, &equal) !=
+          MVMC_PFAFFIAN_STATUS_OK || !equal)
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  agreement[0] = policy->policy_hash;
+  memcpy(agreement + 1, &uniform, sizeof(uniform));
+  if (mvmc_classic_pfaffian_collective_all_equal_u64(
+          w->collective_workspace, agreement, 2, &equal) !=
+          MVMC_PFAFFIAN_STATUS_OK || !equal)
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  memset(&candidate, 0, sizeof(candidate));
+  status = mvmc_krylov_refine_final(model, policy, current, proposal,
+      word_count, uniform, refined_base, w, NULL, &candidate);
+  status = synchronize(w, status);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  candidate.krylov.statistics.amplitude_generation_hash = w->generation_hash;
+  agreement[0] = (uint64_t)candidate.accepted;
+  agreement[1] = (uint64_t)candidate.exact_zero_proposal;
+  agreement[2] = (uint64_t)candidate.precision;
+  agreement[3] = candidate.node_calls;
+  agreement[4] = 0;
+  if (candidate.accepted) {
+    status = mvmc_krylov_final_state_snapshot_from_evaluation(policy, proposal,
+        word_count, &candidate.krylov, &candidate.evaluation, &snapshot);
+    if (status == MVMC_KRYLOV_STATUS_OK) agreement[4] = snapshot.integrity_hash;
+  }
+  status = synchronize(w, status);
+  if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  if (mvmc_classic_pfaffian_collective_all_equal_u64(
+          w->collective_workspace, agreement, 5, &equal) !=
+          MVMC_PFAFFIAN_STATUS_OK || !equal)
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  *result = candidate;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+#endif
 
 MVMCKrylovStatus mvmc_gc_krylov_scaled_amplitude(
     const uint64_t *words, size_t word_count, void *context,

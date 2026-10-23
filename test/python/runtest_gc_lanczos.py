@@ -307,10 +307,13 @@ def run_probe(probe, case, workdir, nproc):
         command = ["mpirun", "-np", str(nproc)] + command
     done = subprocess.run(command, stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT, text=True, timeout=180)
+    (work / (case["name"] + ".process.log")).write_text(done.stdout)
     if not target.exists():
         raise CheckFailure("%s: probe produced no output (exit %d)\n%s" %
                            (case["name"], done.returncode, done.stdout))
-    return done.returncode, parse_probe(target)
+    result = parse_probe(target)
+    result["PROCESS_OUTPUT"] = done.stdout
+    return done.returncode, result
 
 
 def parse_probe(path):
@@ -504,9 +507,10 @@ def oracle_mode(args):
             continue
         try:
             code, result = run_probe(args.probe, case, args.workdir, args.np)
-            summary = compare_case(case, result)
             require(code == 0 or case.get("expect_rank") == 0,
-                    "%s: probe exit %d" % (case["name"], code))
+                    "%s: probe exit %d\n%s" %
+                    (case["name"], code, result.get("PROCESS_OUTPUT", "")))
+            summary = compare_case(case, result)
             print("PASS %-26s %s" % (case["name"], summary))
         except CheckFailure as error:
             failures += 1

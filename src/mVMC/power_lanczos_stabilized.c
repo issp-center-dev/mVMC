@@ -16,6 +16,7 @@
 #include <float.h>
 #include <limits.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
@@ -243,6 +244,8 @@ typedef struct {
   uint64_t bootstrap_exact_zero;
   uint64_t bootstrap_numeric_zero;
   uint64_t bootstrap_local_energy;
+  uint64_t refinement_calls, refinement_accepted, refinement_exact_zero;
+  unsigned refinement_max_precision;
   int bootstrap_exhausted;
   int failure_recorded;
   MVMCPowerLanczosGCStage failure_stage;
@@ -549,6 +552,34 @@ static MVMCKrylovStatus coefficient_step_any(
   return status;
 }
 
+/* Agree before entering a conditional collective.  Return OK only when
+ * every rank has the same status and decision, even for an error status. */
+static MVMCKrylovStatus gc_agree_value(const MVMCPowerLanczosGCRun *gc,
+                                 MVMCKrylovStatus status,
+                                 int value) {
+#ifdef _mpi_use
+  int local[2];
+  int minimum[2];
+  int maximum[2];
+  local[0] = (int)status;
+  local[1] = value;
+  if (MPI_Allreduce(local, minimum, 2, MPI_INT, MPI_MIN,
+                    gc->chain_communicator) != MPI_SUCCESS ||
+      MPI_Allreduce(local, maximum, 2, MPI_INT, MPI_MAX,
+                    gc->chain_communicator) != MPI_SUCCESS) {
+    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
+  }
+  if (minimum[0] != maximum[0] || minimum[1] != maximum[1]) {
+    return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+  }
+#else
+  (void)gc;
+  (void)value;
+  (void)status;
+#endif
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
 static MVMCKrylovStatus final_step_any(
     MVMCPowerLanczosGCRun *gc, MVMCKrylovBoundedWorkspace *workspace,
     const MVMCKrylovFinalStatePolicy *policy,
@@ -579,6 +610,62 @@ static MVMCKrylovStatus final_step_any(
         workspace, policy, words, word_count, snapshot, proposal_words,
         word_count, 0.0, uniform, amplitude, amplitude_context, &step,
         &diagnostic);
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+    /* The failed ordinary step is transactional. Reuse its proposal and
+     * uniform; do not redraw or reinterpret NUMERIC_ZERO as a node.
+     * PFAPACK singularity alone is not an exact-zero proof either. */
+    int needs_refinement =
+        (status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+         diagnostic.evaluation_available &&
+         (diagnostic.retry_reason == MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO ||
+          diagnostic.retry_reason == MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY)) ||
+        (status == MVMC_KRYLOV_STATUS_OK && step.acceptance.exact_zero_proposal);
+    MVMCKrylovStatus agreement;
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    if (gc->chain_rank == 1) {
+      if (gc_testing_fault == MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_DECISION)
+        needs_refinement = !needs_refinement;
+      if (gc_testing_fault == MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_STATUS)
+        status = MVMC_KRYLOV_STATUS_NONFINITE;
+    }
+#endif
+    agreement = gc_agree_value(gc, status, needs_refinement);
+    if (agreement != MVMC_KRYLOV_STATUS_OK) {
+      status = agreement;
+      needs_refinement = 0;
+    }
+    if (needs_refinement) {
+      MVMCKrylovRefinementResult refined;
+      MVMCKrylovFinalStateSnapshot updated;
+      status = mvmc_gc_krylov_refine_final(amplitude_context, model, policy,
+          words, proposal_words, word_count, uniform, &refined);
+      ++gc->refinement_calls;
+      if (status != MVMC_KRYLOV_STATUS_OK && gc->chain_rank == 0)
+        fprintf(stderr, "GC Lanczos refinement failed: %s (chain=%llu).\n",
+                mvmc_krylov_status_string(status),
+                (unsigned long long)gc->chain_index);
+      if (status == MVMC_KRYLOV_STATUS_OK) {
+        gc->refinement_accepted += refined.accepted != 0;
+        gc->refinement_exact_zero += refined.exact_zero_proposal != 0;
+        if (refined.precision > gc->refinement_max_precision)
+          gc->refinement_max_precision = refined.precision;
+      }
+      if (status == MVMC_KRYLOV_STATUS_OK && refined.accepted) {
+        status = snapshot->accepted_generation == UINT64_MAX
+            ? MVMC_KRYLOV_STATUS_RESOURCE_LIMIT
+            : mvmc_krylov_final_state_snapshot_from_evaluation(policy,
+                  proposal_words, word_count, &refined.krylov,
+                  &refined.evaluation, &updated);
+        status = synchronize_status(status, gc->chain_communicator);
+        if (status == MVMC_KRYLOV_STATUS_OK) {
+          updated.accepted_generation = snapshot->accepted_generation + 1;
+          memcpy(words, proposal_words, word_count * sizeof(*words));
+          *snapshot = updated;
+        }
+      }
+      if (status == MVMC_KRYLOV_STATUS_OK) step.accepted = refined.accepted;
+    }
+#endif
     if (status == MVMC_KRYLOV_STATUS_OK) gc_b0_step(gc, step.accepted);
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
     /* A genuine numeric zero with a finite error bound, never EXACT_ZERO. */
@@ -602,30 +689,12 @@ static MVMCKrylovStatus final_step_any(
   return status;
 }
 
-/* Reasons and statuses must agree inside the chain. */
+/* Bootstrap reasons and statuses must also agree inside the chain. */
 static MVMCKrylovStatus gc_agree(const MVMCPowerLanczosGCRun *gc,
-                                 MVMCKrylovStatus status,
-                                 MVMCKrylovBootstrapReason reason) {
-#ifdef _mpi_use
-  int local[2];
-  int minimum[2];
-  int maximum[2];
-  local[0] = (int)status;
-  local[1] = (int)reason;
-  if (MPI_Allreduce(local, minimum, 2, MPI_INT, MPI_MIN,
-                    gc->chain_communicator) != MPI_SUCCESS ||
-      MPI_Allreduce(local, maximum, 2, MPI_INT, MPI_MAX,
-                    gc->chain_communicator) != MPI_SUCCESS) {
-    return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
-  }
-  if (minimum[0] != maximum[0] || minimum[1] != maximum[1]) {
-    return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
-  }
-#else
-  (void)gc;
-  (void)reason;
-#endif
-  return status;
+                                MVMCKrylovStatus status,
+                                MVMCKrylovBootstrapReason reason) {
+  MVMCKrylovStatus agreement = gc_agree_value(gc, status, (int)reason);
+  return agreement == MVMC_KRYLOV_STATUS_OK ? status : agreement;
 }
 
 /*
@@ -1014,6 +1083,13 @@ static MVMCKrylovStatus solve_gevp(
           policy, dimension, matrix->overlap, matrix->hamiltonian,
           matrix->hamiltonian_adjoint, matrix->hamiltonian_squared,
           upper_count, result);
+  if (status != MVMC_KRYLOV_GEVP_OK) {
+    fprintf(stderr, "Lanczos GEVP failed: %s (count=%llu, residual=%.17g, "
+            "variance=%.17g).\n", mvmc_krylov_gevp_status_string(status),
+            (unsigned long long)matrix->count,
+            result->gevp_relative_residual, result->variance);
+
+  }
   return map_gevp_status(status);
 }
 
@@ -1848,6 +1924,16 @@ MVMCKrylovStatus mvmc_power_lanczos_gc_run_diagnosed(
   core.sample_count = input->sample_count;
   core.interval = input->interval;
   status = stabilized_core(&core, input->gc_view, &gc, result);
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+  if (gc.topology_ready && gc.chain_rank == 0 && gc.refinement_calls != 0)
+    fprintf(stdout, "GC Lanczos refinement: chain=%llu calls=%llu "
+            "accepted=%llu exact_zero=%llu max_precision=%u\n",
+            (unsigned long long)gc.chain_index,
+            (unsigned long long)gc.refinement_calls,
+            (unsigned long long)gc.refinement_accepted,
+            (unsigned long long)gc.refinement_exact_zero,
+            gc.refinement_max_precision);
+#endif
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
   gc_b0_finish(&gc, status);
 #endif

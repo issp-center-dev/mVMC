@@ -40,6 +40,7 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../pfapack)
 add_executable(vmcdry.out vmcdry.c version.c)
 target_link_libraries(vmcdry.out StdFace_mvmc m)
 add_executable(vmc.out ${SOURCES_vmcmain} ${SOURCES_sfmt})
+mvmc_enable_gc_refinement(vmc.out)
 target_compile_definitions(vmc.out PRIVATE
     MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE
     MVMC_ENABLE_POWER_LANCZOS_P5_CORE)

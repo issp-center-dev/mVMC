@@ -1412,8 +1412,10 @@ MVMCPfaffianStatus mvmc_scaled_complex_make_finite(
   }
   if (isfinite(log_abs_error_bound) &&
       log_abs <= log_abs_error_bound) {
-    candidate = scaled_numeric_zero(log_abs_error_bound, log_abs, log_abs,
-                                    1.0);
+    /* NUMERIC_ZERO propagates a disk centered at zero.  Its discarded
+     * central value is part of that disk's radius, not just a diagnostic. */
+    candidate = scaled_numeric_zero(
+        log_add_bounds(log_abs_error_bound, log_abs), log_abs, log_abs, 1.0);
   } else {
     candidate.state = MVMC_SCALED_COMPLEX_FINITE_NONZERO;
     candidate.phase = normalized;
@@ -1679,8 +1681,9 @@ MVMCPfaffianStatus mvmc_scaled_complex_sum_ordered(
     return MVMC_PFAFFIAN_STATUS_OK;
   }
   if (central_log <= error_bound) {
-    *result = scaled_numeric_zero(error_bound, max_input, central_log,
-                                  cancellation_ratio);
+    *result = scaled_numeric_zero(
+        log_add_bounds(error_bound, central_log), max_input, central_log,
+        cancellation_ratio);
     return MVMC_PFAFFIAN_STATUS_OK;
   }
   if (mvmc_scaled_complex_make_finite(central / central_abs, central_log,

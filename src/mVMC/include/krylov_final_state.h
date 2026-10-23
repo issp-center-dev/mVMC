@@ -120,6 +120,14 @@ uint64_t mvmc_krylov_final_state_policy_hash(
 uint64_t mvmc_krylov_final_state_snapshot_integrity_hash(
     const MVMCKrylovFinalStateSnapshot *snapshot);
 
+/* Construct a checked snapshot from an independently refined evaluation.
+ * No configuration or existing snapshot is changed on failure. */
+MVMCKrylovStatus mvmc_krylov_final_state_snapshot_from_evaluation(
+    const MVMCKrylovFinalStatePolicy *policy, const uint64_t *words,
+    size_t word_count, const MVMCKrylovBoundedResult *krylov,
+    const MVMCKrylovFinalStateEvaluation *evaluation,
+    MVMCKrylovFinalStateSnapshot *snapshot);
+
 MVMCKrylovStatus mvmc_krylov_final_state_evaluate(
     const MVMCKrylovFinalStatePolicy *policy,
     const MVMCKrylovBoundedResult *krylov,

@@ -408,6 +408,21 @@ static void test_faults_and_rejections(void) {
         MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE, -1);
   }
 
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+  if (world_size() > 1) {
+    const MVMCPowerLanczosGCFault faults[] = {
+        MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_DECISION,
+        MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_STATUS};
+    size_t i;
+    for (i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
+      run_gc(&chain, 0, 2, 4, 256, 1, faults[i], &run);
+      CHECK(run.status == MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE &&
+                !run.result.valid && !run.result.gc_number.valid,
+            "rank-1 refinement entry disagreement fails without a hang");
+    }
+  }
+#endif
+
   /* Decision A: zero H is rejected as in the canonical path. */
   run_gc(&chain, 1, 2, 4, 16, 1, MVMC_POWER_LANCZOS_GC_FAULT_NONE, &run);
   CHECK(run.status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&

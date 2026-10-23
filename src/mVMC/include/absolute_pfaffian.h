@@ -105,6 +105,11 @@ typedef struct {
   MVMCScaledComplexState state;
   double complex phase;
   double log_abs;
+  /* Radius about phase * exp(log_abs) for FINITE_NONZERO, about zero for
+   * NUMERIC_ZERO.  On conversion to NUMERIC_ZERO the discarded center is
+   * included in this radius; cancellation_log_abs is then diagnostic only.
+   * Propagation relies on producer-supplied error estimates.  In particular,
+   * this field alone does not certify PFAPACK's factorization error. */
   double log_abs_error_bound;
   double max_input_log_abs;
   double cancellation_log_abs;
@@ -231,6 +236,9 @@ MVMCPfaffianStatus mvmc_scaled_complex_make_finite(
     MVMCScaledComplex *result);
 MVMCPfaffianStatus mvmc_scaled_complex_make_exact_zero(
     MVMCScaledComplex *result);
+/* log_abs_error_bound must already describe a disk centered at zero.
+ * cancellation_log_abs records an earlier center, without enlarging the
+ * supplied radius a second time. */
 MVMCPfaffianStatus mvmc_scaled_complex_make_numeric_zero(
     double log_abs_error_bound, double max_input_log_abs,
     double cancellation_log_abs, double cancellation_ratio,

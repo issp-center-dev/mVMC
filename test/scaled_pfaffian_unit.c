@@ -205,6 +205,89 @@ static void test_scaled_pure_math(void) {
         "non-unit input phase is rejected transactionally");
 }
 
+static void test_numeric_zero_recentering(void) {
+  MVMCScaledComplex value, other, product, sum, copy, terms[2];
+  double radius;
+
+  /* The original disk is centered at 0.75 i with radius 1.  In particular
+   * 1.75 i belongs to it.  Dropping the center must still enclose that point.
+   * These tests check containment, not the particular log-add formula. */
+  CHECK(mvmc_scaled_complex_make_finite(I, log(0.75), 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            exp(value.log_abs_error_bound) >= 1.75 - 1.0e-14,
+        "numeric-zero conversion encloses the discarded center");
+  CHECK(value.cancellation_log_abs == log(0.75) &&
+            value.cancellation_ratio == 1.0,
+        "recentering preserves the cancellation diagnostic");
+  other = finite_value(1.0, log(2.0));
+  CHECK(mvmc_scaled_complex_multiply(&value, &other, &product) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            product.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            exp(product.log_abs_error_bound) >= 3.5 - 1.0e-14,
+        "numeric-zero times finite encloses the original disk endpoint");
+  CHECK(mvmc_scaled_complex_multiply(&value, &value, &product) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            product.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            exp(product.log_abs_error_bound) >= 3.0625 - 1.0e-14,
+        "two numeric-zero factors preserve both discarded centers");
+  terms[0] = value;
+  terms[1] = value;
+  CHECK(mvmc_scaled_complex_sum_ordered(terms, 2, &sum) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            sum.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            exp(sum.log_abs_error_bound) >= 3.5 - 1.0e-14,
+        "numeric-zero sum encloses both original disk endpoints");
+
+  /* The public numeric-zero constructor receives an already zero-centered
+   * radius.  Diagnostic metadata must not be added again on reconstruction. */
+  CHECK(mvmc_scaled_complex_make_numeric_zero(
+            value.log_abs_error_bound, value.max_input_log_abs,
+            value.cancellation_log_abs, value.cancellation_ratio, &copy) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            copy.log_abs_error_bound == value.log_abs_error_bound,
+        "reconstructing numeric zero does not double count its center");
+  CHECK(mvmc_scaled_complex_sum_ordered(&copy, 1, &sum) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            sum.log_abs_error_bound == copy.log_abs_error_bound,
+        "propagating an already recentered radius adds no second center");
+
+  /* Finite input disks: [0.25,1.75] + [-0.6,-0.4] contains 1.35.
+   * The central sum 0.5 is unresolved against the radius 0.85. */
+  CHECK(mvmc_scaled_complex_make_finite(1.0, 0.0, log(0.75), &terms[0]) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            mvmc_scaled_complex_make_finite(
+                -1.0, log(0.5), log(0.1), &terms[1]) ==
+                MVMC_PFAFFIAN_STATUS_OK,
+        "finite sum disk fixtures");
+  CHECK(mvmc_scaled_complex_sum_ordered(terms, 2, &sum) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            sum.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            exp(sum.log_abs_error_bound) >= 1.35 - 1.0e-14,
+        "unresolved finite sum recenters the residual as well as its error");
+  CHECK(mvmc_scaled_complex_make_finite(1.0, 0.0, log(0.5), &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            mvmc_scaled_complex_multiply(&value, &value, &product) ==
+                MVMC_PFAFFIAN_STATUS_OK &&
+            product.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            exp(product.log_abs_error_bound) >= 2.25 - 1.0e-14,
+        "unresolved finite product encloses the product of disk endpoints");
+
+  CHECK(mvmc_scaled_complex_make_finite(1.0, 0.0, 0.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            exp(value.log_abs_error_bound) >= 2.0 - 1.0e-14,
+        "equal center magnitude and error still require recentering");
+  CHECK(mvmc_scaled_complex_make_finite(I, 1000.0, 1000.0, &value) ==
+            MVMC_PFAFFIAN_STATUS_OK &&
+            value.state == MVMC_SCALED_COMPLEX_NUMERIC_ZERO &&
+            isfinite(value.log_abs_error_bound),
+        "recentering never exports an overflowing raw magnitude");
+  radius = exp(value.log_abs_error_bound - 1000.0);
+  CHECK(close_double(radius, 2.0, 1.0e-13),
+        "large common-scale disk encloses the doubled endpoint");
+}
+
 static void test_real_scaled_pfaffian(void) {
   double matrix[16] = {0.0};
   MVMCAbsolutePfaffianScaledValueResult result;
@@ -512,6 +595,7 @@ int main(int argc, char **argv) {
   (void)argv;
 #endif
   test_scaled_pure_math();
+  test_numeric_zero_recentering();
   test_real_scaled_pfaffian();
   test_complex_dense_oracle();
   test_scaled_projection();

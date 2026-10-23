@@ -180,7 +180,10 @@ typedef enum {
   /* Every final bootstrap candidate is a numeric zero (1024 exhausted). */
   MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_EXHAUSTED,
   /* The first final-sampling proposal is a numeric zero (run fails). */
-  MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC
+  MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC,
+  /* Rank 1 disagrees before the refinement collective (run fails). */
+  MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_DECISION,
+  MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_STATUS
 } MVMCPowerLanczosGCFault;
 
 void mvmc_power_lanczos_gc_testing_counters(
