@@ -70,6 +70,18 @@ MVMCKrylovStatus mvmc_gc_krylov_scaled_amplitude(
     const uint64_t *words, size_t word_count, void *context,
     MVMCKrylovScaledAmplitudeResult *result);
 
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+#include "krylov_refinement.h"
+/* Collective, transactional refinement on this workspace's communicator.
+ * Uses immutable replicated inputs; does not draw random numbers. */
+MVMCKrylovStatus mvmc_gc_krylov_refine_final(
+    MVMCGCKrylovAmplitudeWorkspace *workspace,
+    const MVMCKrylovFockModel *model,
+    const MVMCKrylovFinalStatePolicy *policy,
+    const uint64_t *current, const uint64_t *proposal, size_t word_count,
+    double uniform, MVMCKrylovRefinementResult *result);
+#endif
+
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
 typedef enum {
   MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE = 0,

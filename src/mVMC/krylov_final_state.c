@@ -741,6 +741,41 @@ static MVMCKrylovStatus evaluate_krylov(
       workspace, words, word_count, amplitude, amplitude_context, result);
 }
 
+MVMCKrylovStatus mvmc_krylov_final_state_snapshot_from_evaluation(
+    const MVMCKrylovFinalStatePolicy *policy, const uint64_t *words,
+    size_t word_count, const MVMCKrylovBoundedResult *krylov,
+    const MVMCKrylovFinalStateEvaluation *evaluation,
+    MVMCKrylovFinalStateSnapshot *snapshot) {
+  MVMCKrylovFinalStateSnapshot candidate;
+  int k;
+  if (!policy_valid(policy) || words == NULL || word_count == 0 ||
+      krylov == NULL || !krylov->valid ||
+      krylov->status != MVMC_KRYLOV_STATUS_OK ||
+      krylov->evaluated_order != policy->order + 1 ||
+      !evaluation_valid(evaluation) || !evaluation->sampleable ||
+      evaluation->order != policy->order ||
+      evaluation->policy_hash != policy->policy_hash || snapshot == NULL)
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  for (k = 0; k <= krylov->evaluated_order; ++k)
+    if (!mvmc_scaled_complex_is_valid(krylov->value + k))
+      return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  memset(&candidate, 0, sizeof(candidate));
+  candidate.valid = 1;
+  candidate.word_count = word_count;
+  candidate.policy_hash = policy->policy_hash;
+  candidate.configuration_hash = configuration_hash(words, word_count);
+  candidate.amplitude_generation_hash =
+      krylov->statistics.amplitude_generation_hash;
+  candidate.krylov = *krylov;
+  candidate.final_state = *evaluation;
+  candidate.integrity_hash =
+      mvmc_krylov_final_state_snapshot_integrity_hash(&candidate);
+  if (candidate.integrity_hash == 0)
+    return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+  *snapshot = candidate;
+  return MVMC_KRYLOV_STATUS_OK;
+}
+
 static MVMCKrylovStatus evaluate_snapshot(
     MVMCKrylovBoundedWorkspace *workspace,
     const MVMCKrylovFinalStatePolicy *policy,
@@ -768,6 +803,7 @@ static MVMCKrylovStatus evaluate_snapshot(
   }
   status = evaluate_core(policy, &candidate.krylov, &candidate.final_state,
                          diagnostic);
+
   if (status != MVMC_KRYLOV_STATUS_OK) {
     if (diagnostic != NULL) diagnostic->status = status;
     invalidate_snapshot(status, snapshot);

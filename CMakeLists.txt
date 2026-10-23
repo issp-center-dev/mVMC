@@ -117,6 +117,10 @@ else()
 endif()
 
 # Build and enable tests
+# C++ support for exact-input refinement, pfupdates and ltl2inv.
+enable_language(CXX)
+set(CMAKE_CXX_STANDARD 11)
+include(cmake/gc_refinement.cmake)
 # testing setup
 # enable_testing() must be called in the top-level CMakeLists.txt before any add_subdirectory() is called.
 option(Testing "Enable testing" ON)
@@ -158,10 +162,6 @@ else()
   endif()
 endif()
 add_subdirectory("${STDFACE_DIR}")
-
-# C++ support for pfupdates & ltl2inv.
-enable_language(CXX)
-set(CMAKE_CXX_STANDARD 11)
 
 if(Require_BLIS)
   include("download_blis_artifact.cmake")

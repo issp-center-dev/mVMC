@@ -1317,6 +1317,7 @@ set(MVMC_GC_LANCZOS_CORE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c)
 
 function(mvmc_gc_lanczos_target target)
+    mvmc_enable_gc_refinement(${target})
     target_include_directories(${target} PRIVATE
         ${CMAKE_SOURCE_DIR}/src/mVMC/include)
     target_compile_definitions(${target} PRIVATE
@@ -1341,6 +1342,22 @@ endfunction()
 add_executable(gc_krylov_amplitude_unit gc_krylov_amplitude_unit.c
     ${MVMC_GC_LANCZOS_CORE_SOURCES})
 mvmc_gc_lanczos_target(gc_krylov_amplitude_unit)
+if(TARGET mvmc_gc_refinement)
+    add_executable(krylov_refinement_unit krylov_refinement_unit.c
+        ${MVMC_GC_LANCZOS_CORE_SOURCES})
+    mvmc_gc_lanczos_target(krylov_refinement_unit)
+    add_test(NAME GCLanczos_Refinement_Unit COMMAND krylov_refinement_unit)
+    if(MPI_FOUND)
+        foreach(np 2 3)
+            add_test(NAME GCLanczos_Refinement_Unit_np${np}_mpi
+                COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                        ${MPIEXEC_PREFLAGS} $<TARGET_FILE:krylov_refinement_unit>
+                        ${MPIEXEC_POSTFLAGS})
+            set_tests_properties(GCLanczos_Refinement_Unit_np${np}_mpi
+                PROPERTIES PROCESSORS ${np} TIMEOUT 120)
+        endforeach()
+    endif()
+endif()
 add_test(NAME GCLanczos_Amplitude_Unit COMMAND gc_krylov_amplitude_unit)
 if(MPI_FOUND)
     foreach(np 2 3)

@@ -37,12 +37,12 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt update
-          sudo apt install liblapack-dev openmpi-bin libopenmpi-dev libscalapack-openmpi-dev
+          sudo apt install liblapack-dev openmpi-bin libopenmpi-dev libscalapack-openmpi-dev libgmp-dev libmpfr-dev
 
       - name: brew
         if: ${{ runner.os == 'macOS' }}
         run: |
-          brew install openmpi scalapack libomp blis
+          brew install openmpi scalapack libomp blis gmp mpfr
 
       - name: Setup Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -54,28 +54,36 @@ jobs:
           python3 -m pip install numpy
 
       - name: make workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
+        run: cmake -E make_directory ${{ github.workspace }}/../build
 
       - name: cmake
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{ github.workspace }}/../build
         shell: bash
         run: |
           cmake --version
           if [ ${{ runner.os }} = "macOS" ] ; then
             # CONFIG=apple requires gfortran but macOS runner has not, but gfortran-11, 12, ...
-            cmake -DCONFIG=apple -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_Fortran_COMPILER=gfortran-14 $GITHUB_WORKSPACE
+            cmake -DMVMC_GC_REFINEMENT=ON -DCONFIG=apple -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_Fortran_COMPILER=gfortran-14 "$GITHUB_WORKSPACE"
           else
-            cmake -DCMAKE_VERBOSE_MAKEFILE=ON $GITHUB_WORKSPACE
+            cmake -DMVMC_GC_REFINEMENT=ON -DCMAKE_VERBOSE_MAKEFILE=ON "$GITHUB_WORKSPACE"
           fi
 
       - name: build
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{ github.workspace }}/../build
         shell: bash
         run: cmake --build ./ -j4
 
+      - name: Require refinement regression tests
+        working-directory: ${{ github.workspace }}/../build
+        shell: bash
+        run: |
+          ctest --show-only=json-v1 > refinement-inventory.json
+          python3 "$GITHUB_WORKSPACE/test/python/check_gc_refinement_inventory.py" \
+            refinement-inventory.json --mpi on
+
       - name: ctest without MPI
         if: ${{ matrix.mpi == false }}
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{ github.workspace }}/../build
         shell: bash
         run: |
           if [ ${{ matrix.ompsize }} == 1 ]; then
@@ -86,7 +94,7 @@ jobs:
 
       - name: ctest with MPI
         if: ${{ matrix.mpi == true }}
-        working-directory: ${{runner.workspace}}/build
+        working-directory: ${{ github.workspace }}/../build
         shell: bash
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
@@ -111,7 +119,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install --yes gfortran liblapack-dev openmpi-bin libopenmpi-dev
+          sudo apt install --yes gfortran liblapack-dev openmpi-bin libopenmpi-dev libgmp-dev libmpfr-dev
 
       - name: Setup Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -129,6 +137,7 @@ jobs:
           cmake -S "$GITHUB_WORKSPACE" -B build-nompi \
             -DCONFIG=gcc -DCMAKE_BUILD_TYPE=Release -DTesting=ON -DUSE_GEMMT=OFF \
             -DCMAKE_DISABLE_FIND_PACKAGE_MPI=ON -DUSE_SCALAPACK=OFF \
+            -DMVMC_GC_REFINEMENT=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             2>&1 | tee build-nompi/ci-evidence/configure.log
           cp build-nompi/CMakeCache.txt build-nompi/ci-evidence/
@@ -147,6 +156,8 @@ jobs:
             exit 1
           fi
           ctest --show-only=json-v1 > ci-evidence/inventory.json
+          python3 "$GITHUB_WORKSPACE/test/python/check_gc_refinement_inventory.py" \
+            ci-evidence/inventory.json --mpi off
           python3 - <<'PYCODE'
           import json
           import pathlib
@@ -208,3 +219,39 @@ jobs:
           name: nompi-ctest-evidence
           path: ${{ github.workspace }}/ci-evidence
           if-no-files-found: warn
+
+  refinement-fallback:
+    name: "GC refinement without development dependencies"
+    runs-on: ubuntu-latest
+    container: debian:bookworm-slim
+    env:
+      OMP_NUM_THREADS: "1"
+    steps:
+      - name: Install dependencies except GMP/MPFR headers
+        run: |
+          apt-get update
+          apt-get install --yes git cmake g++ gfortran liblapack-dev python3 python3-numpy
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+      - name: Check AUTO and OFF fallback, and required ON failure
+        shell: bash
+        run: |
+          # checkout trusts this path only in its temporary Git configuration.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          for mode in AUTO OFF; do
+            cmake -S . -B "../build-$mode" -DCONFIG=gcc -DTesting=ON \
+              -DUSE_GEMMT=OFF -DMVMC_GC_REFINEMENT="$mode" \
+              -DCMAKE_DISABLE_FIND_PACKAGE_MPI=ON -DUSE_SCALAPACK=OFF
+            cmake --build "../build-$mode" --target vmc.out --parallel 2
+            ctest --test-dir "../build-$mode" --show-only=json-v1 > "../inventory-$mode.json"
+            python3 -c 'import json,sys; assert not any(t["name"].startswith("GCLanczos_Refinement_") for t in json.load(open(sys.argv[1]))["tests"])' "../inventory-$mode.json"
+            nm "../build-$mode/src/mVMC/vmc.out" > "../symbols-$mode.txt"
+            if grep -E 'mvmc_krylov_refine_final|mpfr_|__gmp' "../symbols-$mode.txt"; then exit 1; fi
+          done
+          if cmake -S . -B ../build-required -DCONFIG=gcc \
+              -DMVMC_GC_REFINEMENT=ON > ../required.log 2>&1; then
+            cat ../required.log
+            exit 1
+          fi
+          grep 'GC refinement requires MPFR and GMP development packages' ../required.log

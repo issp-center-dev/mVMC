@@ -720,6 +720,38 @@ static void test_alias_rejection(void) {
         "output alias rejection performs no write");
 }
 
+static void test_zero_energy_variance_roundoff(void) {
+  /* L2 near-triplet leave-one-block matrix.  <H^2> cancels to zero;
+   * E is about 4e-16.  Comparing -E^2 only with |E^2| spuriously fails. */
+  const double s0[3] = {
+    0x1.f6bffffffbe5p+11,0x1.c93ffffffe36dp+10,0x1.c93ffffffe36bp+10};
+  const double h0[3] = {
+    0x1.c93ffffffe36dp+11,0x1.c93ffffffe36cp+11,0x1.c93ffffffe36bp+11};
+  const double h20[3] = {
+    0x1.c93ffffffe36dp+12,0x1.c93ffffffe36bp+12,0x1.c93ffffffe36bp+12};
+  const int exponent[3] = {-500,0,500};
+  MVMCKrylovGEVPPolicy policy;
+  MVMCKrylovGEVPResult result;
+  int k,j;
+  CHECK(mvmc_krylov_gevp_default_policy(1e-10,&policy)==MVMC_KRYLOV_GEVP_OK,
+        "zero energy variance policy");
+  for(k=0;k<3;++k) {
+    double s[3],h[3],reverse[3],h2[3];
+    for(j=0;j<3;++j) {
+      s[j]=scalbn(s0[j],exponent[k]);
+      h[j]=scalbn(h0[j],exponent[k]);
+      reverse[j]=h[j];
+      h2[j]=scalbn(h20[j],exponent[k]);
+    }
+    CHECK(mvmc_krylov_gevp_solve_real_packed(&policy,2,s,h,reverse,h2,3,&result)
+            ==MVMC_KRYLOV_GEVP_OK,
+          "cancelled variance common scale %d: %s",exponent[k],
+          mvmc_krylov_gevp_status_string(result.status));
+    CHECK(fabs(result.energy)<1e-12 && fabs(result.variance)<1e-12,
+          "near-zero physical energy and variance");
+  }
+}
+
 int main(void) {
   test_policy();
   test_real_exact_and_common_scale();
@@ -728,6 +760,7 @@ int main(void) {
   test_relative_rank_cutoff();
   test_registered_cutoff_scan();
   test_variance_and_discarded_residual();
+  test_zero_energy_variance_roundoff();
   test_residual_denominator_overflow();
   test_extreme_finite_hermitian_average();
   test_zero_residual_denominator();

@@ -332,6 +332,22 @@ static double complex quadratic_form(const double complex *coefficient,
   return value;
 }
 
+/* Forward-roundoff scale before cancellation in c^* A c.  Scaling each
+ * entry by the already checked positive normalization avoids multiplying
+ * the common matrix scale into the variance error budget. */
+static double quadratic_absolute_scale(
+    const double complex *coefficient, const double complex *matrix,
+    int dimension, double normalization) {
+  double value = 0.0;
+  int row, column;
+  for (row = 0; row < dimension; ++row)
+    for (column = 0; column < dimension; ++column)
+      value += cabs(coefficient[row]) *
+          (cabs(matrix[MATRIX_INDEX(row, column, dimension)]) /
+           normalization) * cabs(coefficient[column]);
+  return value;
+}
+
 static double vector_norm(const double complex *value, int dimension) {
   double norm = 0.0;
   int index;
@@ -427,6 +443,7 @@ static MVMCKrylovGEVPStatus finalize_result(
   double scaled_denominator;
   double absolute_energy;
   double variance_scale;
+  double variance_roundoff;
   double maximum = -1.0;
   double complex phase;
   int pivot = 0;
@@ -528,12 +545,35 @@ static MVMCKrylovGEVPStatus finalize_result(
       result->energy_squared - result->energy * result->energy;
   variance_scale =
       fmax(fabs(result->energy_squared), result->energy * result->energy);
+  {
+    /* Complex products and summation use at most 16*d*d+16 real rounded
+     * operations. Include normalization and E^2 propagation as well.
+     * A cancelled E or <H^2> is not the scale of those operations. */
+    const double operations = 16.0 * result->dimension * result->dimension + 16.0;
+    const double gamma = operations * DBL_EPSILON /
+                         (1.0 - operations * DBL_EPSILON);
+    const double s_scale = quadratic_absolute_scale(
+        result->coefficient, overlap, result->dimension, result->normalization);
+    const double h_scale = quadratic_absolute_scale(
+        result->coefficient, hamiltonian, result->dimension, result->normalization);
+    const double h2_scale = quadratic_absolute_scale(
+        result->coefficient, squared, result->dimension, result->normalization);
+    const double normalization_error = gamma * s_scale;
+    variance_roundoff = normalization_error < 0.25
+        ? gamma * (h2_scale + 2.0 * fabs(result->energy) * h_scale +
+                   (fabs(result->energy_squared) +
+                    2.0 * result->energy * result->energy) * s_scale) /
+                  (1.0 - normalization_error)
+        : NAN;
+  }
   if (!isfinite(result->variance) || !isfinite(variance_scale)) {
     return MVMC_KRYLOV_GEVP_NORMALIZATION_FAILURE;
   }
   if (result->variance < 0.0) {
     if (result->variance >=
-        -policy->negative_variance_relative_tolerance * variance_scale) {
+        -policy->negative_variance_relative_tolerance * variance_scale ||
+        (isfinite(variance_roundoff) &&
+         result->variance >= -variance_roundoff)) {
       result->variance = 0.0;
       result->variance_clamped = 1;
     } else {
