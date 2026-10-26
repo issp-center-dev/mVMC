@@ -23,6 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/mman.h>
+#endif
 
 static int failure_count = 0;
 
@@ -638,6 +641,34 @@ static int reference_allowed(int L, int S, int triplet, int n) {
          (!triplet || (m - S) % 2 == 0);
 }
 
+static void test_initial_sector_boundary(void) {
+#if defined(__unix__) || defined(__APPLE__)
+  const int L = INT_MAX / 2, S = L / 2;
+  const size_t capacity = (size_t)L + 1;
+  const size_t bytes = capacity * sizeof(int);
+  MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, L);
+  MVMCGCSpinSupport support = spin_support(S, MVMC_GC_PAIR_GENERAL);
+  /* Reserve the promised capacity but touch only two entries. Maximal S
+   * bounds the enumeration to two sectors even at the largest allowed L. */
+  int *sectors = mmap(NULL, bytes, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_ANON, -1, 0);
+  size_t count = 0;
+  CHECK(sectors != MAP_FAILED, "reserve sparse selector boundary buffer");
+  if (sectors == MAP_FAILED) return;
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 2 * L, 0,
+                                      sectors, capacity, &count) ==
+            MVMC_KRYLOV_STATUS_OK && count == 2 &&
+            sectors[0] == 2 * (L - S) && sectors[1] == 2 * S,
+        "largest L/request uses wide addition and orders upper sectors");
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 0, 0,
+                                      sectors, capacity, &count) ==
+            MVMC_KRYLOV_STATUS_OK && count == 2 &&
+            sectors[0] == 2 * S && sectors[1] == 2 * (L - S),
+        "largest L/zero request orders lower sectors");
+  CHECK(munmap(sectors, bytes) == 0, "release boundary reservation");
+#endif
+}
+
 static void test_initial_sectors(void) {
   int sectors[16], expected[16];
   size_t count = 0, k;
@@ -1177,6 +1208,7 @@ int main(int argc, char **argv) {
   test_errors();
   test_two_pair_kernel();
   test_initial_sectors();
+  test_initial_sector_boundary();
   test_spin_initial_draw();
   test_spin_swap();
   test_mixture();

@@ -2907,12 +2907,21 @@ if(MPI_FOUND)
             PROCESSORS ${np})
     endforeach()
 endif()
+if(TARGET mvmc_gc_refinement)
+    set(gc_entry_refinement on)
+else()
+    set(gc_entry_refinement off)
+endif()
 add_gc_lanczos_test(GCLanczos_FiniteSpinEntry finite-spin-entry
+    --refinement ${gc_entry_refinement}
     --vmc $<TARGET_FILE:vmc.out> --workdir work/GCLanczos_FiniteSpinEntry)
+add_test(NAME GCLanczos_FiniteSpinEntry_Contract
+    COMMAND ${PYTHON_EXECUTABLE} -B
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_gc_lanczos_entry_contract.py)
 if(MPI_FOUND)
     foreach(np 2 3)
         add_gc_lanczos_test(GCLanczos_FiniteSpinEntry_np${np}_mpi
-            finite-spin-entry --np ${np} --vmc $<TARGET_FILE:vmc.out>
+            finite-spin-entry --refinement ${gc_entry_refinement} --np ${np} --vmc $<TARGET_FILE:vmc.out>
             --workdir work/GCLanczos_FiniteSpinEntry_np${np})
         set_tests_properties(GCLanczos_FiniteSpinEntry_np${np}_mpi PROPERTIES
             ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"

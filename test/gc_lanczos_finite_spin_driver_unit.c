@@ -199,16 +199,79 @@ static int all_ranks_equal_int(int value) {
  * as before Task 5); the start and bootstrap under test happened earlier. */
 static int completed(const Run *run) {
 #if defined(MVMC_HAVE_MPFR_REFINEMENT)
-  return run->status == MVMC_KRYLOV_STATUS_OK && run->result.valid;
+  return run->status == MVMC_KRYLOV_STATUS_OK && run->result.valid &&
+         run->result.status == MVMC_KRYLOV_STATUS_OK;
 #else
-  if (run->status == MVMC_KRYLOV_STATUS_OK) return run->result.valid;
+  if (run->status == MVMC_KRYLOV_STATUS_OK)
+    return run->result.valid && run->result.status == MVMC_KRYLOV_STATUS_OK;
   return run->status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+         !run->result.valid && run->result.status == run->status &&
          (world_rank() != 0 ||
-          run->diagnostics.failure_stage ==
+          (run->diagnostics.failure_recorded &&
+           run->diagnostics.failure_status == run->status &&
+           ((run->diagnostics.failure_retry_reason ==
+                 MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO &&
+             run->diagnostics.failure_amplitude_state ==
+                 MVMC_SCALED_COMPLEX_NUMERIC_ZERO) ||
+            (run->diagnostics.failure_retry_reason ==
+                 MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY &&
+             run->diagnostics.failure_amplitude_state ==
+                 MVMC_SCALED_COMPLEX_FINITE_NONZERO)) &&
+          (run->diagnostics.failure_stage ==
               MVMC_POWER_LANCZOS_GC_STAGE_FINAL_WARM_UP ||
           run->diagnostics.failure_stage ==
-              MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE);
+              MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE)));
 #endif
+}
+
+/* The acceptance predicate must reject unrelated failures and stale results. */
+static void test_completed_contract(void) {
+  Run good, bad;
+  const MVMCKrylovStatus rejected[] = {
+      MVMC_KRYLOV_STATUS_NONFINITE, MVMC_KRYLOV_STATUS_RESOURCE_LIMIT,
+      MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE};
+  size_t k;
+  memset(&good, 0, sizeof(good));
+  good.status = good.result.status = MVMC_KRYLOV_STATUS_OK;
+  good.result.valid = 1;
+  CHECK(completed(&good), "accept a valid successful run");
+  good.status = good.result.status = MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+  good.result.valid = 0;
+  good.diagnostics.failure_recorded = 1;
+  good.diagnostics.failure_status = good.status;
+  good.diagnostics.failure_stage = MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE;
+  good.diagnostics.failure_retry_reason = MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO;
+  good.diagnostics.failure_amplitude_state = MVMC_SCALED_COMPLEX_NUMERIC_ZERO;
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+  CHECK(!completed(&good), "backend ON requires completion");
+#else
+  CHECK(completed(&good), "backend OFF permits only a diagnosed final retry");
+  good.diagnostics.failure_retry_reason = MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY;
+  good.diagnostics.failure_amplitude_state = MVMC_SCALED_COMPLEX_FINITE_NONZERO;
+  CHECK(completed(&good), "backend OFF permits unavailable final local energy");
+#endif
+  bad = good;
+  bad.result.valid = 1;
+  CHECK(!completed(&bad), "failed run cannot publish a valid result");
+  for (k = 0; k < sizeof(rejected) / sizeof(rejected[0]); ++k) {
+    bad = good;
+    bad.status = bad.result.status = rejected[k];
+    CHECK(!completed(&bad), "unrelated errors never count as completion");
+  }
+  if (world_rank() == 0) {
+    bad = good;
+    bad.diagnostics.failure_stage = MVMC_POWER_LANCZOS_GC_STAGE_FINAL_BOOTSTRAP;
+    CHECK(!completed(&bad), "bootstrap failure is not a final proposal retry");
+    bad = good;
+    bad.diagnostics.failure_retry_reason = MVMC_KRYLOV_BOOTSTRAP_NO_RETRY;
+    CHECK(!completed(&bad), "nonretry failure is rejected");
+    bad = good;
+    bad.diagnostics.failure_recorded = 0;
+    CHECK(!completed(&bad), "missing failure diagnostic is rejected");
+    bad = good;
+    bad.diagnostics.failure_amplitude_state = MVMC_SCALED_COMPLEX_NONFINITE;
+    CHECK(!completed(&bad), "nonfinite amplitude is rejected");
+  }
 }
 
 static void report(const char *label, const Run *run) {
@@ -578,6 +641,7 @@ int main(int argc, char **argv) {
   (void)argc;
   (void)argv;
 #endif
+  test_completed_contract();
   test_sectors(0);
   if (world_size() > 1) test_sectors(1);
   if (world_size() > 3) test_sectors(2);

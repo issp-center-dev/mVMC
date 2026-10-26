@@ -167,6 +167,7 @@ typedef struct {
   uint64_t failure_chain;
   MVMCPowerLanczosGCStage failure_stage;
   MVMCKrylovStatus failure_status;
+  int failure_retry_reason; /* MVMCKrylovBootstrapReason; never implies success */
   int failure_electron_count;
   int failure_amplitude_state;
   double failure_log_abs;

@@ -243,6 +243,8 @@ typedef struct {
  */
 typedef struct {
   const MVMCKrylovFockModel *model;
+  /* Reused transaction buffer; current is committed after chain agreement. */
+  uint64_t *step_words;
   MVMCClassicPfaffianCommunicator chain_communicator;
   int topology_ready;
   int chain_rank;
@@ -268,6 +270,7 @@ typedef struct {
   int failure_recorded;
   MVMCPowerLanczosGCStage failure_stage;
   MVMCKrylovStatus failure_status;
+  MVMCKrylovBootstrapReason failure_retry_reason;
   int failure_electron_count;
   int failure_amplitude_state;
   double failure_log_abs;
@@ -449,12 +452,14 @@ static void gc_record_failure(MVMCPowerLanczosGCRun *gc,
   gc->failure_recorded = 1;
   gc->failure_stage = gc->stage;
   gc->failure_status = status;
+  gc->failure_retry_reason = MVMC_KRYLOV_BOOTSTRAP_NO_RETRY;
   gc->failure_electron_count =
       words != NULL ? popcount_words(words, word_count) : -1;
   gc->failure_amplitude_state = -1;
   gc->failure_log_abs = NAN;
   gc->failure_log_error_bound = NAN;
   if (diagnostic != NULL && diagnostic->evaluation_available) {
+    gc->failure_retry_reason = diagnostic->retry_reason;
     gc->failure_amplitude_state = (int)diagnostic->evaluation.amplitude.state;
     gc->failure_log_abs = diagnostic->evaluation.amplitude.log_abs;
     gc->failure_log_error_bound =
@@ -686,7 +691,9 @@ static MVMCKrylovStatus gc_final_proposal_step(
     MVMCKrylovFinalDiagnostic *diagnostic,
     MVMCPowerLanczosGCStepOutcome *outcome) {
   MVMCKrylovFinalStateStepResult step;
+  MVMCKrylovFinalStateSnapshot pending = *snapshot;
   MVMCKrylovStatus status;
+  memcpy(gc->step_words, words, word_count * sizeof(*words));
   memset(&step, 0, sizeof(step));
   memset(diagnostic, 0, sizeof(*diagnostic));
   memset(outcome, 0, sizeof(*outcome));
@@ -702,7 +709,7 @@ static MVMCKrylovStatus gc_final_proposal_step(
 #endif
   {
     status = mvmc_krylov_final_state_sampler_step_diagnosed(
-        workspace, policy, words, word_count, snapshot, proposal_words,
+        workspace, policy, gc->step_words, word_count, &pending, proposal_words,
         word_count, 0.0, uniform, amplitude, amplitude_context, &step,
         diagnostic);
   }
@@ -768,8 +775,8 @@ static MVMCKrylovStatus gc_final_proposal_step(
         status = synchronize_status(status, gc->chain_communicator);
         if (status == MVMC_KRYLOV_STATUS_OK) {
           updated.accepted_generation = snapshot->accepted_generation + 1;
-          memcpy(words, proposal_words, word_count * sizeof(*words));
-          *snapshot = updated;
+          memcpy(gc->step_words, proposal_words, word_count * sizeof(*words));
+          pending = updated;
         }
       }
       if (status == MVMC_KRYLOV_STATUS_OK) step.accepted = refined.accepted;
@@ -777,6 +784,8 @@ static MVMCKrylovStatus gc_final_proposal_step(
   }
 #endif
   if (status == MVMC_KRYLOV_STATUS_OK) {
+    memcpy(words, gc->step_words, word_count * sizeof(*words));
+    *snapshot = pending;
     gc_b0_step(gc, step.accepted);
     outcome->accepted = step.accepted;
   }
@@ -1714,9 +1723,11 @@ static MVMCKrylovStatus stabilized_core(
     words = (uint64_t *)calloc(word_count, sizeof(*words));
     proposal_words =
         (uint64_t *)calloc(word_count, sizeof(*proposal_words));
+    if (gc != NULL) gc->step_words = (uint64_t *)calloc(word_count, sizeof(*words));
     energy_series =
         (double *)calloc(input->sample_count, sizeof(*energy_series));
-    if (words == NULL || proposal_words == NULL || energy_series == NULL) {
+    if (words == NULL || proposal_words == NULL || energy_series == NULL ||
+        (gc != NULL && gc->step_words == NULL)) {
       status = MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE;
     }
   }
@@ -2176,6 +2187,10 @@ static MVMCKrylovStatus stabilized_core(
 
   free(energy_series);
   free(proposal_words);
+  if (gc != NULL) {
+    free(gc->step_words);
+    gc->step_words = NULL;
+  }
   free(words);
   mvmc_bounded_krylov_workspace_destroy(workspace);
   mvmc_bounded_krylov_plan_destroy(plan);
@@ -2192,7 +2207,7 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
 
 enum {
   GC_CHAIN_FIELDS = 10,
-  GC_FAILURE_FIELDS = 7,
+  GC_FAILURE_FIELDS = 8,
   GC_REPORT_VALUES = MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS * GC_CHAIN_FIELDS +
                      GC_CHAIN_FIELDS + 1 + GC_FAILURE_FIELDS
 };
@@ -2261,6 +2276,7 @@ static void gc_collect_diagnostics(
       failure[4] = (double)gc->failure_amplitude_state;
       failure[5] = gc->failure_log_abs;
       failure[6] = gc->failure_log_error_bound;
+      failure[7] = (double)gc->failure_retry_reason;
     }
   }
   memcpy(reduced, values, sizeof(values));
@@ -2319,6 +2335,7 @@ static void gc_collect_diagnostics(
     diagnostics->failure_amplitude_state = (int)failure[4];
     diagnostics->failure_log_abs = failure[5];
     diagnostics->failure_log_error_bound = failure[6];
+    diagnostics->failure_retry_reason = (int)failure[7];
   }
   diagnostics->coefficient_available = gc->coefficient_available;
   diagnostics->coefficient[0] = gc->coefficient[0];
@@ -2592,7 +2609,8 @@ MVMCKrylovStatus mvmc_power_lanczos_gc_testing_final_steps(
     gc.stage = MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE;
     words = (uint64_t *)calloc(script->word_count, sizeof(*words));
     proposal = (uint64_t *)calloc(script->word_count, sizeof(*proposal));
-    status = words == NULL || proposal == NULL
+    gc.step_words = (uint64_t *)calloc(script->word_count, sizeof(*words));
+    status = words == NULL || proposal == NULL || gc.step_words == NULL
                  ? MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE
                  : create_limits(model, 1, generation_hash, &limits);
     if (status == MVMC_KRYLOV_STATUS_OK) {
@@ -2685,6 +2703,7 @@ MVMCKrylovStatus mvmc_power_lanczos_gc_testing_final_steps(
   status = synchronize_status(status, script->world_communicator);
   *written = count;
   free(proposal);
+  free(gc.step_words);
   free(words);
   mvmc_bounded_krylov_workspace_destroy(workspace);
   mvmc_bounded_krylov_plan_destroy(plan);

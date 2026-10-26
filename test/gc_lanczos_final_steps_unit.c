@@ -664,6 +664,32 @@ static void test_refinement_faults(int mode) {
           "chain rank 1 refinement fault fails every rank, current kept");
   }
   task5_free(&built);
+  CHECK(task5_build(&task5_e1, &built), "E1 build for ordinary faults");
+  {
+    const Step ordinary = {53, 0.125, MVMC_GC_FINAL_FORCE_NONE};
+    run_script(&built, &chain, built.coefficient[1], 60, &ordinary, 1,
+               MAX_STEPS, &run);
+    CHECK(run.status == MVMC_KRYLOV_STATUS_OK && run.written == 1 &&
+              run.trace[0].accepted && !run.trace[0].used_refinement &&
+              run.trace[0].after_words[0] == 53 &&
+              run.trace[0].after.accepted_generation == 1,
+          "ordinary control commits the accepted proposal");
+    for (f = 0; f < 2; ++f) {
+      mvmc_power_lanczos_gc_testing_set_fault(faults[f]);
+      run_script(&built, &chain, built.coefficient[1], 60, &ordinary, 1,
+                 MAX_STEPS, &run);
+      mvmc_power_lanczos_gc_testing_set_fault(MVMC_POWER_LANCZOS_GC_FAULT_NONE);
+      CHECK(run.status == MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE &&
+                run.written == 1 && unchanged(run.trace) &&
+                !run.trace[0].accepted && !run.trace[0].used_refinement &&
+                run.trace[0].after_words[0] == 60 &&
+                run.trace[0].after.accepted_generation == 0 &&
+                all_ranks_equal_int((int)run.status) &&
+                all_ranks_equal_u64(run.trace[0].after.integrity_hash),
+            "ordinary acceptance waits for chain agreement before commit");
+    }
+  }
+  task5_free(&built);
   free_chain(&chain);
 }
 

@@ -463,6 +463,15 @@ static const char *GCLanczosAmplitudeStateName(int state) {
   }
 }
 
+static const char *GCLanczosRetryReasonName(int reason) {
+  switch (reason) {
+    case MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO: return "exact_zero";
+    case MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO: return "numeric_zero";
+    case MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY: return "local_energy";
+    default: return "no_retry";
+  }
+}
+
 /* Called only on the world root after a successful final chain. */
 static int WriteGCLanczosNumberResult(
     int outputIndex, const MVMCPowerLanczosStabilizedResult *result,
@@ -738,7 +747,8 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
       if (diagnostics.failure_recorded) {
         fprintf(stderr,
                 "GC Lanczos failure: stage=%s chain=%llu N=%d status=%s "
-                "amplitude_state=%s log_abs=%.17g log_error_bound=%.17g\n",
+                "amplitude_state=%s log_abs=%.17g log_error_bound=%.17g "
+                "retry_reason=%s\n",
                 mvmc_power_lanczos_gc_stage_name(diagnostics.failure_stage),
                 (unsigned long long)diagnostics.failure_chain,
                 diagnostics.failure_electron_count,
@@ -746,7 +756,8 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
                 GCLanczosAmplitudeStateName(
                     diagnostics.failure_amplitude_state),
                 diagnostics.failure_log_abs,
-                diagnostics.failure_log_error_bound);
+                diagnostics.failure_log_error_bound,
+                GCLanczosRetryReasonName(diagnostics.failure_retry_reason));
       }
     }
   }

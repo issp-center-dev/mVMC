@@ -14,6 +14,7 @@ the Free Software Foundation, either version 3 of the License, or
     defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int gc_domain(const MVMCKrylovFockModel *model) {
@@ -404,7 +405,8 @@ MVMCKrylovStatus mvmc_gc_krylov_initial_sectors(
     int requested_n, int explicit_n,
     int *sectors, size_t capacity, size_t *count) {
   MVMCKrylovStatus status = finite_spin_support(model, support);
-  int L, distance;
+  int L;
+  int64_t distance, first_distance, last_distance, lower, upper;
   size_t written = 0;
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
   L = (int)model->site_count;
@@ -421,16 +423,26 @@ MVMCKrylovStatus mvmc_gc_krylov_initial_sectors(
     *count = 1;
     return MVMC_KRYLOV_STATUS_OK;
   }
-  /* Nearest first; the smaller N first at equal distance.  Every even
-   * distance is visited once, so no scratch is needed. */
-  for (distance = 0; distance <= 2 * L; distance += 2) {
-    const int below = requested_n - distance, above = requested_n + distance;
-    if (below >= 0 && spin_sector_allowed(L, support, below)) {
-      sectors[written++] = below;
+  /* Restrict the search to the support interval. Use wide arithmetic for
+   * both candidate sums and the loop's final increment at L=INT_MAX/2. */
+  lower = 2 * (int64_t)support->total_spin;
+  upper = 2 * ((int64_t)L - support->total_spin);
+  first_distance = requested_n < lower ? lower - requested_n
+                    : requested_n > upper ? requested_n - upper : 0;
+  last_distance = llabs((int64_t)requested_n - lower);
+  if (llabs((int64_t)requested_n - upper) > last_distance)
+    last_distance = llabs((int64_t)requested_n - upper);
+  /* Nearest first; the smaller N first at equal distance. */
+  for (distance = first_distance; distance <= last_distance; distance += 2) {
+    const int64_t below = (int64_t)requested_n - distance;
+    const int64_t above = (int64_t)requested_n + distance;
+    if (below >= lower && below <= upper &&
+        spin_sector_allowed(L, support, (int)below)) {
+      sectors[written++] = (int)below;
     }
-    if (distance != 0 && above <= 2 * L &&
-        spin_sector_allowed(L, support, above)) {
-      sectors[written++] = above;
+    if (distance != 0 && above >= lower && above <= upper &&
+        spin_sector_allowed(L, support, (int)above)) {
+      sectors[written++] = (int)above;
     }
   }
   if (written == 0 || written > (size_t)L + 1) {

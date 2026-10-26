@@ -1370,6 +1370,36 @@ def initialization_lines(stdout):
     return lines
 
 
+def require_finite_spin_entry_outcome(label, done, work, chains, refinement):
+    """Backend ON must finish; OFF may stop only at a diagnosed final retry."""
+    require(refinement in ("on", "off"), label + ": backend expectation missing")
+    if refinement == "on" or done.returncode == 0:
+        return require_success(label, done, work, STAT_SAMPLES, chains)
+    require(done.returncode == 1, "%s: unexpected exit %d" % (label, done.returncode))
+    require_failure(label, done, work,
+                    ["Error: stabilized power-Lanczos failed: amplitude failure."])
+    failures = [line for line in done.stderr.splitlines()
+                if line.startswith("GC Lanczos failure: ")]
+    require(len(failures) == 1, label + ": expected exactly one failure record")
+    match = re.fullmatch(
+        r"GC Lanczos failure: stage=(final-warm-up|final-sample) "
+        r"chain=(\d+) N=(\d+) status=amplitude failure "
+        r"amplitude_state=(numeric_zero|finite) log_abs=(\S+) "
+        r"log_error_bound=(\S+) retry_reason=(numeric_zero|local_energy)",
+        failures[0])
+    require(match is not None, label + ": unexpected final failure: " + failures[0])
+    stage, chain, n, state, log_abs, log_error, reason = match.groups()
+    require(int(chain) < chains and int(n) in (0, 2, 4, 6, 8) and
+            (state, reason) in (("numeric_zero", "numeric_zero"),
+                                ("finite", "local_energy")),
+            label + ": inconsistent failure record")
+    require(not math.isnan(float(log_abs)) and not math.isnan(float(log_error)),
+            label + ": invalid failure bounds")
+    require(not list(pathlib.Path(work).glob("output/*_gc_pl_number_*.dat")) and
+            not SUMMARY.findall(done.stdout),
+            label + ": failed run published valid results")
+
+
 def finite_spin_entry_mode(args):
     """Production-shaped vmc.out entry of the unreleased finite-S Lanczos
     path (Testing gate only): auto N picks the nearest allowed sector,
@@ -1412,6 +1442,7 @@ def finite_spin_entry_mode(args):
                 for f in lines.values()),
             "auto: expected N2 selected on every chain, got %r\n%s" %
             (lines, (done.stdout + done.stderr)[-3000:]))
+    require_finite_spin_entry_outcome("auto", done, work, chains, args.refinement)
     auto_code = done.returncode
     # Explicit N4: rejected with the parity reason, no draw.
     work = pathlib.Path(args.workdir)/"explicit_N4"
@@ -1444,6 +1475,7 @@ def finite_spin_entry_mode(args):
     require(sorted(lines) == [(c, 2) for c in range(chains)] and
             all(f["selected"] == "1" for f in lines.values()),
             "explicit N2: expected N2 kept, got %r" % lines)
+    require_finite_spin_entry_outcome("explicit N2", done, work, chains, args.refinement)
     print("GC Lanczos finite-S entry: PASS (auto exit %d, explicit N2 exit %d)"
           % (auto_code, done.returncode))
     return 0
@@ -1977,6 +2009,7 @@ def main():
                                          "production", "mpi", "failure",
                                          "sample", "spin-sector", "number",
                                          "finite-spin-entry"))
+    parser.add_argument("--refinement", choices=("on", "off"))
     parser.add_argument("--unit")
     parser.add_argument("--probe")
     parser.add_argument("--vmc")
@@ -1985,6 +2018,8 @@ def main():
     parser.add_argument("--workdir", default="work/GCLanczos")
     parser.add_argument("--sample")
     args = parser.parse_args()
+    if args.mode == "finite-spin-entry" and args.refinement is None:
+        parser.error("finite-spin-entry requires --refinement on/off")
     if args.mode == "oracle":
         if not args.probe:
             parser.error("oracle mode requires --probe")
