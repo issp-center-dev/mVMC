@@ -573,6 +573,17 @@ static MVMCKrylovStatus refined_base(
   return status;
 }
 
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+static MVMCKrylovRefinementLimits testing_refinement_limits;
+static int testing_refinement_limits_set = 0;
+
+void mvmc_gc_krylov_amplitude_testing_set_refinement_limits(
+    const MVMCKrylovRefinementLimits *limits) {
+  testing_refinement_limits_set = limits != NULL;
+  if (limits != NULL) testing_refinement_limits = *limits;
+}
+#endif
+
 MVMCKrylovStatus mvmc_gc_krylov_refine_final(
     MVMCGCKrylovAmplitudeWorkspace *w, const MVMCKrylovFockModel *model,
     const MVMCKrylovFinalStatePolicy *policy, const uint64_t *current,
@@ -603,7 +614,13 @@ MVMCKrylovStatus mvmc_gc_krylov_refine_final(
     return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
   memset(&candidate, 0, sizeof(candidate));
   status = mvmc_krylov_refine_final(model, policy, current, proposal,
-      word_count, uniform, refined_base, w, NULL, &candidate);
+      word_count, uniform, refined_base, w,
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+      testing_refinement_limits_set ? &testing_refinement_limits : NULL,
+#else
+      NULL,
+#endif
+      &candidate);
   status = synchronize(w, status);
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
   candidate.krylov.statistics.amplitude_generation_hash = w->generation_hash;

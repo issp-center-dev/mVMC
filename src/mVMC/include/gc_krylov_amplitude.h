@@ -103,6 +103,12 @@ typedef enum {
 /* Testing only; world_rank selects the MPI_COMM_WORLD rank (0 serial). */
 void mvmc_gc_krylov_amplitude_testing_set_fault(
     MVMCGCKrylovAmplitudeFault fault, int world_rank);
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+/* Testing only: refinement limits of mvmc_gc_krylov_refine_final (NULL
+ * restores the defaults).  Never widened after a failure. */
+void mvmc_gc_krylov_amplitude_testing_set_refinement_limits(
+    const MVMCKrylovRefinementLimits *limits);
+#endif
 #endif
 
 #endif /* MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */

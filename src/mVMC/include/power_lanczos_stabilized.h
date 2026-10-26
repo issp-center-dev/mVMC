@@ -246,6 +246,74 @@ void mvmc_power_lanczos_gc_testing_set_fault(MVMCPowerLanczosGCFault fault);
 void mvmc_power_lanczos_gc_testing_set_initial_fault(
     MVMCPowerLanczosGCInitialFault fault, uint64_t count,
     uint64_t chain_index);
+
+/*
+ * Testing final-step harness: fixed raw coefficients (SYNTHETIC policy, no
+ * scaled basis, no GEVP/pilot/bootstrap), a fixed start configuration and a
+ * script of proposals/uniforms run through the same private final-step
+ * helper as production (ordinary step, refinement decision agreement,
+ * refinement and transaction).  force replaces the ordinary step of that
+ * entry by a synthesized NUMERIC_ZERO or unavailable-local-energy
+ * diagnostic, which then enters the production refinement path.
+ * Collective on the world; the chain root consumes each entry once and
+ * broadcasts it.  The global fault may only be NONE or REFINEMENT_DECISION/
+ * STATUS and must agree on every rank; the testing counters are reset.
+ */
+#include "krylov_final_state.h"
+
+typedef enum {
+  MVMC_GC_FINAL_FORCE_NONE = 0,
+  MVMC_GC_FINAL_FORCE_NUMERIC_ZERO = 1,
+  MVMC_GC_FINAL_FORCE_LOCAL_ENERGY = 2
+} MVMCGCFinalForce;
+
+typedef struct {
+  const uint64_t *proposal_words; /* word_count elements */
+  double uniform;                 /* finite, 0 <= u < 1 */
+  MVMCGCFinalForce force;
+} MVMCGCFinalScriptStep;
+
+typedef struct {
+  const MVMCPowerLanczosGCView *gc_view;
+  MVMCClassicPfaffianCommunicator world_communicator, chain_communicator;
+  double complex coefficient[2]; /* raw c0, c1; order 1 */
+  const uint64_t *initial_words;
+  size_t word_count, step_count;
+  const MVMCGCFinalScriptStep *steps;
+} MVMCGCFinalScript;
+
+/* One step; before/after_words are caller buffers of word_count words that
+ * alias neither the script nor another buffer.  Counters are cumulative;
+ * precision/node_calls are of this step (0 without refinement).  N and N^2
+ * are of the current configuration after the step. */
+typedef struct MVMCGCFinalStepTrace {
+  uint64_t *before_words;
+  uint64_t *after_words;
+  MVMCKrylovFinalStateSnapshot before;
+  MVMCKrylovFinalStateSnapshot after;
+  MVMCKrylovStatus status;
+  int accepted;
+  int used_refinement;
+  int exact_zero_proposal;
+  uint64_t refinement_calls;
+  uint64_t refinement_accepted;
+  uint64_t refinement_exact_zero;
+  unsigned precision;
+  uint64_t node_calls;
+  uint64_t proposal_copies;
+  uint64_t uniform_copies;
+  uint64_t rng_draws;
+  int electron_count;
+  uint64_t electron_count_square;
+} MVMCGCFinalStepTrace;
+
+/* Invalid input (pointers, shapes, capacity, enums, fault mode, script
+ * agreement) is INVALID_ARGUMENT on every rank before any step, with the
+ * trace untouched and *written = 0.  A failing step is recorded (with its
+ * unchanged snapshots) and ends the script; *written includes it. */
+MVMCKrylovStatus mvmc_power_lanczos_gc_testing_final_steps(
+    const MVMCGCFinalScript *script, MVMCGCFinalStepTrace *trace,
+    size_t trace_capacity, size_t *written);
 #endif
 
 #endif /* MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */

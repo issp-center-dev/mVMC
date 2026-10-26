@@ -194,6 +194,23 @@ static int all_ranks_equal_int(int value) {
 #endif
 }
 
+/* A full run completed.  Without the refinement backend a NUMERIC_ZERO or
+ * unavailable local energy of a final proposal ends the run (fail closed,
+ * as before Task 5); the start and bootstrap under test happened earlier. */
+static int completed(const Run *run) {
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+  return run->status == MVMC_KRYLOV_STATUS_OK && run->result.valid;
+#else
+  if (run->status == MVMC_KRYLOV_STATUS_OK) return run->result.valid;
+  return run->status == MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+         (world_rank() != 0 ||
+          run->diagnostics.failure_stage ==
+              MVMC_POWER_LANCZOS_GC_STAGE_FINAL_WARM_UP ||
+          run->diagnostics.failure_stage ==
+              MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE);
+#endif
+}
+
 static void report(const char *label, const Run *run) {
   if (world_rank() != 0) return;
   fprintf(stderr,
@@ -220,9 +237,10 @@ static void test_sectors(int mode) {
   RunSpec spec = spec_for(&task5_e1, 4, 0);
   uint64_t chain_index;
   run_gc(&chain, &spec, &run);
-  if (run.status != MVMC_KRYLOV_STATUS_OK) report("E1 auto N4", &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK && run.result.valid &&
-            run.result.sampling_chains == chains,
+  if (!completed(&run)) report("E1 auto N4", &run);
+  CHECK(completed(&run) &&
+            (run.status != MVMC_KRYLOV_STATUS_OK ||
+             run.result.sampling_chains == chains),
         "E1 finite-S run with auto N4 completes");
   CHECK(run.counters.coefficient_rng_draws_at_pilot == 0 &&
             run.counters.final_rng_draws_at_bootstrap == 0,
@@ -253,7 +271,7 @@ static void test_sectors(int mode) {
    * before any start draw on every rank, explicit N2 is kept. */
   spec.symmetry = MVMC_GC_PAIR_TRIPLET;
   run_gc(&chain, &spec, &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK, "triplet auto N4 run");
+  CHECK(completed(&run), "triplet auto N4 run");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.initial_selected_n[0] == 2,
           "triplet auto N4 selects N2 first");
@@ -275,7 +293,7 @@ static void test_sectors(int mode) {
   }
   spec.initial_n = 2;
   run_gc(&chain, &spec, &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK, "explicit N2 run");
+  CHECK(completed(&run), "explicit N2 run");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.initial_selected_n[0] == 2,
           "explicit allowed N2 is kept");
@@ -300,14 +318,13 @@ static void test_retries(void) {
   Run base, run;
   RunSpec spec = spec_for(&task5_e1, 4, 0);
   run_gc(&chain, &spec, &base);
-  CHECK(base.status == MVMC_KRYLOV_STATUS_OK, "E1 base run");
+  CHECK(completed(&base), "E1 base run");
 
   spec.initial_fault = MVMC_POWER_LANCZOS_GC_INITIAL_FAULT_EXACT_ZERO;
   spec.initial_count = 99;
   run_gc(&chain, &spec, &run);
-  if (run.status != MVMC_KRYLOV_STATUS_OK) report("99 exact zeros", &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK && run.result.valid,
-        "the 100th attempt succeeds");
+  if (!completed(&run)) report("99 exact zeros", &run);
+  CHECK(completed(&run), "the 100th attempt succeeds");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.initial_selected_n[0] == 4 &&
               run.diagnostics.initial_attempts[0] == 100 &&
@@ -324,7 +341,7 @@ static void test_retries(void) {
   spec.initial_fault = MVMC_POWER_LANCZOS_GC_INITIAL_FAULT_NUMERIC_ZERO;
   spec.initial_count = 100;
   run_gc(&chain, &spec, &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK, "100 numeric zeros, next N");
+  CHECK(completed(&run), "100 numeric zeros, next N");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.initial_selected_n[0] == 2 &&
               run.diagnostics.initial_attempts[0] == 101 &&
@@ -398,8 +415,7 @@ static void test_chain_local(void) {
   spec.initial_count = 5;
   spec.initial_chain = 1;
   run_gc(&chain, &spec, &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK && run.result.valid,
-        "chain-local retries merge at the pilot");
+  CHECK(completed(&run), "chain-local retries merge at the pilot");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.initial_attempts[0] == 1 &&
               run.diagnostics.initial_attempts[1] == 6 &&
@@ -437,8 +453,7 @@ static void test_final_bootstrap(void) {
         "1024 exhausted: alternating structured N4 and whole-domain draws");
   spec.fault = MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_LAST;
   run_gc(&chain, &spec, &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK && run.result.valid,
-        "the 1024th bootstrap candidate succeeds");
+  CHECK(completed(&run), "the 1024th bootstrap candidate succeeds");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.total_bootstrap_attempts == 1024 &&
               run.diagnostics.total_bootstrap_numeric_zero == 1023 &&
@@ -447,7 +462,7 @@ static void test_final_bootstrap(void) {
   }
   spec.fault = MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_LOCAL_ENERGY;
   run_gc(&chain, &spec, &run);
-  CHECK(run.status == MVMC_KRYLOV_STATUS_OK, "local-energy retry");
+  CHECK(completed(&run), "local-energy retry");
   if (world_rank() == 0) {
     CHECK(run.diagnostics.total_bootstrap_local_energy == 1 &&
               run.diagnostics.total_bootstrap_attempts >= 2,
@@ -473,8 +488,8 @@ static void test_final_bootstrap(void) {
     spec.seed = seed;
     spec.fault = MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_NUMERIC;
     run_gc(&chain, &spec, &run);
-    CHECK(run.status == MVMC_KRYLOV_STATUS_OK, "E1 finite-S run");
-    if (run.status != MVMC_KRYLOV_STATUS_OK) {
+    CHECK(completed(&run), "E1 finite-S run");
+    if (!completed(&run)) {
       report("E1 bootstrap", &run);
       continue;
     }

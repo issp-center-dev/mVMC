@@ -8,9 +8,11 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("inventory", type=Path)
 parser.add_argument("--mpi", choices=("on", "off"), required=True)
 args = parser.parse_args()
-expected = {"GCLanczos_Refinement_Unit"}
+expected = {"GCLanczos_Refinement_Unit", "GCLanczos_Refinement_FinalSteps"}
 if args.mpi == "on":
     expected |= {f"GCLanczos_Refinement_Unit_np{n}_mpi" for n in (2, 3)}
+    expected |= {f"GCLanczos_Refinement_FinalSteps_np{n}_mpi"
+                 for n in (2, 3, 4)}
 tests = json.loads(args.inventory.read_text())["tests"]
 actual = {t["name"]: t for t in tests
           if t["name"].startswith("GCLanczos_Refinement_")}
