@@ -345,6 +345,8 @@ static int GCLanczosTestingSetup(MPI_Comm world, int *summary) {
         values[1] = 4;
       } else if (strcmp(faultEnv, "final_numeric") == 0) {
         values[1] = 5;
+      } else if (strcmp(faultEnv, "refine_final") == 0) {
+        values[1] = 6;
       } else {
         values[1] = -1;
       }
@@ -379,6 +381,10 @@ static int GCLanczosTestingSetup(MPI_Comm world, int *summary) {
     case 5:
       mvmc_power_lanczos_gc_testing_set_fault(
           MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC);
+      break;
+    case 6:
+      mvmc_power_lanczos_gc_testing_set_fault(
+          MVMC_POWER_LANCZOS_GC_FAULT_REFINE_FINAL);
       break;
     default:
       break;

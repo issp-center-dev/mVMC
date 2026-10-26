@@ -1825,7 +1825,7 @@ foreach(gc_fs_fixture L2_S1 L4_S2 L4_S1_triplet_stat L4_S1_general)
         --work ${CMAKE_CURRENT_BINARY_DIR}/gc-fs-chain-${gc_fs_fixture})
 endforeach()
 
-# Ordinary finite-S projection; Lanczos remains rejected by the reader.
+# Ordinary finite-S projection; Lanczos has separate acceptance tests.
 function(add_gc_fs_e2e name)
     add_test(NAME ${name}
         COMMAND ${PYTHON_EXECUTABLE} runtest_gc_finite_spin_e2e.py ${ARGN})
@@ -2930,6 +2930,47 @@ if(MPI_FOUND)
 endif()
 add_gc_lanczos_test(GCLanczos_Number number --vmc $<TARGET_FILE:vmc.out>
     --workdir work/GCLanczos_Number)
+# Full finite-S acceptance. Keep the independent physical oracle available
+# without the refinement backend; successful final chains require it here.
+function(add_gc_finite_lanczos_test name mode)
+    add_test(NAME ${name}
+        COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/runtest_gc_lanczos_finite_spin.py
+            --mode ${mode} --unique-run --workdir work/${name} ${ARGN})
+    set_tests_properties(${name} PROPERTIES TIMEOUT 600
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}")
+endfunction()
+add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Oracle oracle
+    --probe $<TARGET_FILE:gc_krylov_probe>)
+add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Convergence convergence)
+if(TARGET mvmc_gc_refinement)
+    add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Contract contract
+        --vmc $<TARGET_FILE:vmc.out>)
+    add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Replay replay
+        --vmc $<TARGET_FILE:vmc.out>)
+    add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Initial initial
+        --vmc $<TARGET_FILE:vmc.out>)
+    if(MPI_FOUND)
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Refined refined
+            --vmc $<TARGET_FILE:vmc.out>)
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_MPI mpi
+            --vmc $<TARGET_FILE:vmc.out>)
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Fault fault
+            --vmc $<TARGET_FILE:vmc.out>)
+        set_tests_properties(GCLanczos_FiniteSpin_MPI GCLanczos_FiniteSpin_Fault
+            GCLanczos_FiniteSpin_Refined
+            PROPERTIES PROCESSORS 4)
+    else()
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Fault fault --no-mpi
+            --vmc $<TARGET_FILE:vmc.out>)
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Refined refined --no-mpi
+            --vmc $<TARGET_FILE:vmc.out>)
+    endif()
+    foreach(case general triplet maximal multi pbc_k1 apbc_k1)
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Statistics_${case}
+            confirm --case ${case} --vmc $<TARGET_FILE:vmc.out>)
+    endforeach()
+endif()
 add_gc_lanczos_test(GCLanczos_Failure failure --vmc $<TARGET_FILE:vmc.out>
     --workdir work/GCLanczos_Failure)
 add_gc_lanczos_test(GCLanczos_Sample sample --vmc $<TARGET_FILE:vmc.out>

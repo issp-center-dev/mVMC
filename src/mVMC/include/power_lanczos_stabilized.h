@@ -226,7 +226,10 @@ typedef enum {
   /* The first final bootstrap candidate has no local energy (retried). */
   MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_LOCAL_ENERGY,
   /* The first final bootstrap candidate is nonfinite (run fails). */
-  MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_NONFINITE
+  MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_NONFINITE,
+  /* Route the first 128 finite-S final sampling proposals to refinement,
+   * preserving the proposed configuration and its acceptance uniform. */
+  MVMC_POWER_LANCZOS_GC_FAULT_REFINE_FINAL
 } MVMCPowerLanczosGCFault;
 
 /* Finite-S coefficient start faults.  EXACT_ZERO/NUMERIC_ZERO classify the

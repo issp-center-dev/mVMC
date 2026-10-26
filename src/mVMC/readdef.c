@@ -163,18 +163,6 @@ char *ReadBuffInt(FILE *fp, int *iNbuf) {
   return cerr;
 }
 
-/* Finite-S + Lanczos stays unreleased (rejected below).  Testing builds
- * only: MVMC_GC_LANCZOS_TEST_FINITE_SPIN=1 admits it for production-shaped
- * entry tests of the driver; release binaries contain no such switch. */
-#ifdef MVMC_ENABLE_FAULT_INJECTION
-static int GCLanczosFiniteSpinTestingGate(void) {
-  const char *value = getenv("MVMC_GC_LANCZOS_TEST_FINITE_SPIN");
-  return value != NULL && strcmp(value, "1") == 0;
-}
-#else
-#define GCLanczosFiniteSpinTestingGate() 0
-#endif
-
 static int LineTailIsWhitespace(const char *line, int offset) {
   const unsigned char *cursor;
   if (line == NULL || offset < 0) return 0;
@@ -1346,13 +1334,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
             fprintf(stderr,
                     "Error: GC spin projection requires "
                     "0 <= NSPStot <= Nsite/2.\n");
-            info = 1;
-          }
-          if (bufInt[IdxSPStot] > 0 && bufInt[IdxLanczosMode] > 0 &&
-              !GCLanczosFiniteSpinTestingGate()) {
-            fprintf(stderr,
-                    "Error: GC finite-S spin projection does not yet "
-                    "support Lanczos.\n");
             info = 1;
           }
           /* SpinJastrow exp(sum v m_i m_j) is not a spin scalar and would

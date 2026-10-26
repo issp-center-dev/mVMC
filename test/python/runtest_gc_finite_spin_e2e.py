@@ -710,8 +710,8 @@ def negative_case(args, root):
         ("initial_high", "L4_S1_general", {"NGCInitNelec": 8}, "cannot carry total spin"),
         ("initial_triplet_parity", "L4_S1_triplet_stat", {"NGCInitNelec": 4}, "cannot carry total spin"),
         ("singlet", "L4_S1_singlet", {}, "has no total spin"),
-        ("lanczos", "L4_S1_general", {"NLanczosMode": 1, "NLanczosStep": 1,
-             "NLanczosEstimatorMode": 1}, "finite-S spin projection does not yet support Lanczos")]
+        ("lanczos", "L4_S1_general", {"NLanczosMode": 1, "NLanczosStep": 2,
+             "NLanczosEstimatorMode": 1}, "NLanczosStep=1")]
     for order in ("early", "late"):
         for name, fixture, options, message in cases:
             f = Fixture(fixture)
@@ -726,7 +726,7 @@ def negative_case(args, root):
             path.write_text(text.replace(marker, "NGrandCanonical 1\n" + marker)
                             if order == "early" else text + "NGrandCanonical 1\n")
             if name == "lanczos":
-                # Make the finite-S guard the only unsupported feature.
+                # Isolate the unsupported Lanczos order from other features.
                 names = work / "namelist.def"
                 names.write_text("\n".join(line for line in names.read_text().splitlines()
                     if not line.startswith(("OneBodyG ", "TwoBodyG ", "NBodyG ",

@@ -283,6 +283,7 @@ typedef struct {
   size_t sector_capacity;
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
   int final_sample_seen;
+  unsigned final_refinement_steps;
   int b0_enabled, b0_io_failed, b0_kind, b0_different;
   FILE *b0_trace;
   double b0_started;
@@ -408,6 +409,36 @@ static void gc_b0_step(MVMCPowerLanczosGCRun *gc, int accepted) {
     count[3] += accepted != 0 && gc->b0_different;
   }
 }
+/* Finite-S acceptance evidence: copy the sampled snapshot, without new
+ * amplitude evaluations, random draws, or collectives. The existing S=0
+ * trace format and execution remain unchanged. */
+static void gc_b0_final_snapshot(
+    MVMCPowerLanczosGCRun *gc, size_t sample, const uint64_t *words,
+    size_t word_count, const MVMCKrylovFinalStateSnapshot *snapshot,
+    double complex local_energy) {
+  size_t i;
+  if (gc == NULL || !gc_finite_spin(gc) || !gc->b0_enabled ||
+      gc->chain_rank != 0 || gc->b0_io_failed || gc->b0_trace == NULL)
+    return;
+  if (fprintf(gc->b0_trace, "F1 %zu %llu %llu %zu", sample,
+              (unsigned long long)snapshot->accepted_generation,
+              (unsigned long long)snapshot->integrity_hash, word_count) < 0)
+    gc->b0_io_failed = 1;
+  for (i = 0; i < word_count; ++i)
+    if (fprintf(gc->b0_trace, " %016llx", (unsigned long long)words[i]) < 0)
+      gc->b0_io_failed = 1;
+  if (fprintf(gc->b0_trace, " %.17g %.17g", creal(local_energy),
+              cimag(local_energy)) < 0) gc->b0_io_failed = 1;
+  for (i = 0; i < 5; ++i) {
+    const MVMCScaledComplex *v = i < 3 ? &snapshot->krylov.value[i] :
+        (i == 3 ? &snapshot->final_state.amplitude :
+                  &snapshot->final_state.hamiltonian_amplitude);
+    if (fprintf(gc->b0_trace, " %d %.17g %.17g %.17g", (int)v->state,
+                creal(v->phase), cimag(v->phase), v->log_abs) < 0)
+      gc->b0_io_failed = 1;
+  }
+  if (fputc('\n', gc->b0_trace) == EOF) gc->b0_io_failed = 1;
+}
 static void gc_b0_finish(MVMCPowerLanczosGCRun *gc, MVMCKrylovStatus status) {
   int stage, kind;
   if (!gc->b0_enabled || gc->chain_rank != 0) return;
@@ -438,6 +469,7 @@ static void gc_b0_finish(MVMCPowerLanczosGCRun *gc, MVMCKrylovStatus status) {
 #define gc_b0_stage(gc, value) ((gc)->stage = (value))
 #define gc_b0_sample(gc, sample, words, count) ((void)0)
 #define gc_b0_step(gc, accepted) ((void)0)
+#define gc_b0_final_snapshot(gc, sample, words, count, snapshot, energy) ((void)0)
 #endif
 
 /* The first failure of a chain: stage, candidate N and classification. */
@@ -675,7 +707,7 @@ static MVMCKrylovStatus gc_forced_diagnostic(
 
 /*
  * One final-stage step for a broadcast proposal and uniform, shared by
- * production (force always 0) and the Testing final-step harness: the
+ * production (force always 0 in release builds) and the Testing harness: the
  * ordinary diagnosed step (replaced by a synthesized diagnostic when the
  * harness forces one), the chain agreement on status and refinement entry,
  * the exact-input refinement with its transactional snapshot replacement,
@@ -805,6 +837,7 @@ static MVMCKrylovStatus final_step_any(
   MVMCKrylovFinalDiagnostic diagnostic;
   MVMCPowerLanczosGCStepOutcome outcome;
   double uniform = 0.0;
+  int force = 0;
   MVMCKrylovStatus status;
   if (gc == NULL) {
     GC_COUNT(fixed_sector_calls);
@@ -815,10 +848,19 @@ static MVMCKrylovStatus final_step_any(
   memset(&diagnostic, 0, sizeof(diagnostic));
   status = gc_propose(gc, rng, words, proposal_words, word_count, &uniform);
   if (status == MVMC_KRYLOV_STATUS_OK) {
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+    if (gc_testing_fault == MVMC_POWER_LANCZOS_GC_FAULT_REFINE_FINAL &&
+        gc_finite_spin(gc) &&
+        gc->stage == MVMC_POWER_LANCZOS_GC_STAGE_FINAL_SAMPLE &&
+        gc->final_refinement_steps < 128) {
+      force = MVMC_GC_FINAL_FORCE_NUMERIC_ZERO;
+      ++gc->final_refinement_steps;
+    }
+#endif
     status = gc_final_proposal_step(gc, workspace, policy, model, words,
                                     word_count, snapshot, amplitude,
                                     amplitude_context, proposal_words,
-                                    uniform, 0, &diagnostic, &outcome);
+                                    uniform, force, &diagnostic, &outcome);
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
     /* A genuine numeric zero with a finite error bound, never EXACT_ZERO.
      * Kept outside the shared helper (the harness never reaches it). */
@@ -2012,6 +2054,8 @@ static MVMCKrylovStatus stabilized_core(
     }
     if (status == MVMC_KRYLOV_STATUS_OK && gc != NULL) {
       gc_b0_sample(gc, sample, words, word_count);
+      gc_b0_final_snapshot(gc, sample, words, word_count,
+                           &final_snapshot, local_energy);
       const int count = popcount_words(words, word_count);
       const double n = (double)count;
       if (count < 0 || (size_t)count > 2 * model->site_count) {

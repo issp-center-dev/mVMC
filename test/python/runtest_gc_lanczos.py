@@ -909,8 +909,9 @@ def e2e_modpara(case, seed, samples, warmup, nsplit, init_nelec):
         ("NDataIdxStart", 1), ("NDataQtySmp", 1), None,
         ("Nsite", case["L"]), ("Ne", case["L"] // 2),
         ("2Sz", -1 if general else 0),
-        ("NSPGaussLeg", case["gauss"]), ("NSPStot", 0),
-        ("NMPTrans", len(case["translations"])),
+        ("NSPGaussLeg", case["gauss"]), ("NSPStot", case.get("S", 0)),
+        ("NMPTrans", (-1 if case["boundary"] == "apbc" else 1) *
+                      len(case["translations"])),
         ("NSROptItrStep", 1), ("NSROptItrSmp", 1),
         ("DSROptRedCut", "0.000000000001"), ("DSROptStaDel", "0.01"),
         ("DSROptStepDt", "0.002"),
@@ -978,6 +979,8 @@ def write_e2e_input(case, workdir, seed=17, samples=STAT_SAMPLES,
     if case["pairing"] == "antiparallel":
         pairs = [(i, j) for i in range(nsite) for j in range(nsite)]
         rows = ["%d %d %d\n" % (i, j, k) for k, (i, j) in enumerate(pairs)]
+        if case["boundary"] == "apbc":
+            rows = [row.rstrip() + " 1\n" for row in rows]
         values = [complex(case["F"][i][j]) for i, j in pairs]
         name = ("OrbitalAntiParallel", "orbitalidx.def")
     else:
@@ -1401,29 +1404,21 @@ def require_finite_spin_entry_outcome(label, done, work, chains, refinement):
 
 
 def finite_spin_entry_mode(args):
-    """Production-shaped vmc.out entry of the unreleased finite-S Lanczos
-    path (Testing gate only): auto N picks the nearest allowed sector,
-    an explicit forbidden N is rejected with its reason before any draw,
-    an explicit allowed N is kept.  The public reader gate stays closed."""
+    """Public finite-S Lanczos entry: auto N picks the nearest allowed
+    sector, an explicit forbidden N is rejected before any draw, and an
+    explicit allowed N is kept. Backend OFF retains strict failure checks."""
     rng = np.random.default_rng(7)
     raw = rng.normal(size=(4, 4)) + 1j*rng.normal(size=(4, 4))
     F = ((raw-raw.T)/4).tolist()
     case = fixture("triplet_S1", 4, "antiparallel", F, gauss=4)
     chains = chain_count(args.np, 1)
-    gate = {"MVMC_GC_LANCZOS_TEST_FINITE_SPIN": "1"}
-    work = pathlib.Path(args.workdir)/"closed_gate"
-    write_e2e_input(case, work, nsplit=1, init_nelec=None,
-                    overrides={"NSPStot": 1})
-    done = run_vmc(args.vmc, work, args.np)
-    require_failure("finite-S Lanczos without the testing gate", done, work,
-                    ["finite-S spin projection does not yet support Lanczos"])
     # Auto (NGCInitNelec unspecified: N = L = 4 is forbidden by N/2-S odd),
     # with the B0 trace: four move kinds (3 = swap) for finite S only.
     work = pathlib.Path(args.workdir)/"auto"
     write_e2e_input(case, work, nsplit=1, init_nelec=None,
                     overrides={"NSPStot": 1})
     done = run_vmc(args.vmc, work, args.np,
-                   env=dict(gate, MVMC_GC_B0_LANCZOS_TRACE="1"))
+                   env={"MVMC_GC_B0_LANCZOS_TRACE": "1"})
     trace = (work / "gc-b0-lanczos.chain0").read_text().splitlines()
     kinds = {}
     for line in trace:
@@ -1448,7 +1443,7 @@ def finite_spin_entry_mode(args):
     work = pathlib.Path(args.workdir)/"explicit_N4"
     write_e2e_input(case, work, nsplit=1, init_nelec=4,
                     overrides={"NSPStot": 1})
-    done = run_vmc(args.vmc, work, args.np, env=gate)
+    done = run_vmc(args.vmc, work, args.np)
     require_failure("explicit N4", done, work,
                     ["NGCInitNelec=4 (explicit)", "S=1",
                      "N/2-S must be even", "invalid argument"])
@@ -1460,7 +1455,7 @@ def finite_spin_entry_mode(args):
     work = pathlib.Path(args.workdir)/"explicit_N8"
     write_e2e_input(case, work, nsplit=1, init_nelec=8,
                     overrides={"NSPStot": 1})
-    done = run_vmc(args.vmc, work, args.np, env=gate)
+    done = run_vmc(args.vmc, work, args.np)
     require_failure("explicit N8", done, work,
                     ["NGCInitNelec=8 (explicit)", "2S <= N <= 2L-2S",
                      "N/2-S must be even"])
@@ -1470,7 +1465,7 @@ def finite_spin_entry_mode(args):
     work = pathlib.Path(args.workdir)/"explicit_N2"
     write_e2e_input(case, work, nsplit=1, init_nelec=2,
                     overrides={"NSPStot": 1})
-    done = run_vmc(args.vmc, work, args.np, env=gate)
+    done = run_vmc(args.vmc, work, args.np)
     lines = initialization_lines(done.stdout)
     require(sorted(lines) == [(c, 2) for c in range(chains)] and
             all(f["selected"] == "1" for f in lines.values()),
