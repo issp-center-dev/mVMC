@@ -19,6 +19,7 @@
 #include "gc_krylov_proposal.h"
 #include "gc_lanczos_task5_fixture.h"
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -645,6 +646,10 @@ static void test_initial_sector_boundary(void) {
 #if defined(__unix__) || defined(__APPLE__)
   const int L = INT_MAX / 2, S = L / 2;
   const size_t capacity = (size_t)L + 1;
+  if (capacity > SIZE_MAX / sizeof(int)) {
+    fprintf(stderr, "SKIP: selector boundary buffer exceeds size_t\n");
+    return;
+  }
   const size_t bytes = capacity * sizeof(int);
   MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, L);
   MVMCGCSpinSupport support = spin_support(S, MVMC_GC_PAIR_GENERAL);
@@ -653,8 +658,11 @@ static void test_initial_sector_boundary(void) {
   int *sectors = mmap(NULL, bytes, PROT_READ | PROT_WRITE,
                      MAP_PRIVATE | MAP_ANON, -1, 0);
   size_t count = 0;
-  CHECK(sectors != MAP_FAILED, "reserve sparse selector boundary buffer");
-  if (sectors == MAP_FAILED) return;
+  if (sectors == MAP_FAILED) {
+    fprintf(stderr, "SKIP: selector boundary buffer (%zu bytes): %s\n",
+            bytes, strerror(errno));
+    return;
+  }
   CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 2 * L, 0,
                                       sectors, capacity, &count) ==
             MVMC_KRYLOV_STATUS_OK && count == 2 &&
@@ -666,6 +674,8 @@ static void test_initial_sector_boundary(void) {
             sectors[0] == 2 * S && sectors[1] == 2 * (L - S),
         "largest L/zero request orders lower sectors");
   CHECK(munmap(sectors, bytes) == 0, "release boundary reservation");
+#else
+  fprintf(stderr, "SKIP: selector boundary buffer requires mmap\n");
 #endif
 }
 
