@@ -284,9 +284,15 @@ typedef struct {
   FILE *b0_trace;
   double b0_started;
   double b0_seconds[MVMC_POWER_LANCZOS_GC_STAGE_COUNT];
-  uint64_t b0_counts[MVMC_POWER_LANCZOS_GC_STAGE_COUNT][3][4];
+  uint64_t b0_counts[MVMC_POWER_LANCZOS_GC_STAGE_COUNT][4][4];
 #endif
 } MVMCPowerLanczosGCRun;
+
+/* Active S > 0 projection: structured start and finite-S proposals. */
+static int gc_finite_spin(const MVMCPowerLanczosGCRun *gc) {
+  return gc != NULL && gc->spin_support.active &&
+         gc->spin_support.total_spin > 0;
+}
 
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
 static MVMCPowerLanczosGCTestingCounters gc_testing_counters;
@@ -408,7 +414,8 @@ static void gc_b0_finish(MVMCPowerLanczosGCRun *gc, MVMCKrylovStatus status) {
       if (fprintf(gc->b0_trace, "T %s %.9f\n",
                   mvmc_power_lanczos_gc_stage_name((MVMCPowerLanczosGCStage)stage),
                   gc->b0_seconds[stage]) < 0) gc->b0_io_failed = 1;
-      for (kind = 0; kind < 3; ++kind) {
+      /* kind 3 (swap) exists for finite S only; S = 0 keeps 3 rows. */
+      for (kind = 0; kind < (gc_finite_spin(gc) ? 4 : 3); ++kind) {
         const uint64_t *c = gc->b0_counts[stage][kind];
         if (fprintf(gc->b0_trace, "C %s %d %llu %llu %llu %llu\n",
                     mvmc_power_lanczos_gc_stage_name((MVMCPowerLanczosGCStage)stage), kind,
@@ -487,19 +494,10 @@ static MVMCKrylovStatus gc_broadcast(const MVMCPowerLanczosGCRun *gc,
 #endif
 }
 
-/* Active S > 0 projection: structured start and finite-S proposals. */
-static int gc_finite_spin(const MVMCPowerLanczosGCRun *gc) {
-  return gc != NULL && gc->spin_support.active &&
-         gc->spin_support.total_spin > 0;
-}
-
-/* Active S = 0 projection of an exactly antisymmetric pair function. */
-static int gc_s0_triplet(const MVMCPowerLanczosGCRun *gc) {
-  return gc->spin_support.active && gc->spin_support.total_spin == 0 &&
-         gc->spin_support.pair_symmetry == MVMC_GC_PAIR_TRIPLET;
-}
-
-/* Chain root: 1/16 whole-domain uniform, 15/16 local; log ratio is 0. */
+/* Chain root: the fixed symmetric mixture of mvmc_gc_krylov_draw_mixture
+ * (global 1/16; finite S: two-pair 8/16, swap 2/16, local 5/16; S = 0
+ * triplet: two-pair 8/16, local 7/16; otherwise local 15/16), then the
+ * acceptance uniform.  log ratio is 0. */
 static MVMCKrylovStatus gc_propose(MVMCPowerLanczosGCRun *gc,
                                    MVMCKrylovPositiveSamplerRng *rng,
                                    const uint64_t *current,
@@ -508,26 +506,16 @@ static MVMCKrylovStatus gc_propose(MVMCPowerLanczosGCRun *gc,
   MVMCKrylovStatus status = MVMC_KRYLOV_STATUS_OK;
   *uniform = 0.0;
   if (gc->chain_rank == 0) {
-    size_t kind = 0;
-    status = mvmc_krylov_positive_sampler_rng_draw_bounded(rng, 16, &kind);
-    if (status == MVMC_KRYLOV_STATUS_OK) {
-      if (kind == 0) {
-        status = mvmc_gc_krylov_draw_uniform(gc->model, draw_bounded, rng,
-                                            proposal, word_count);
-      } else if (gc_s0_triplet(gc) && kind <= 8) {
-        status = mvmc_gc_krylov_draw_two_pairs(gc->model, current,
-                         draw_bounded, rng, proposal, word_count);
-      } else {
-        status = mvmc_gc_krylov_draw_local(gc->model, current,
-                         draw_bounded, rng, proposal, word_count);
-      }
-    }
+    MVMCGCMoveKind kind = MVMC_GC_MOVE_LOCAL;
+    status = mvmc_gc_krylov_draw_mixture(gc->model, &gc->spin_support,
+                                         current, draw_bounded, rng, proposal,
+                                         word_count, &kind);
     if (status == MVMC_KRYLOV_STATUS_OK) {
       status = mvmc_krylov_positive_sampler_rng_draw_uniform(rng, uniform);
     }
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
     if (gc->b0_enabled) {
-      gc->b0_kind = kind == 0 ? 0 : (gc_s0_triplet(gc) && kind <= 8 ? 1 : 2);
+      gc->b0_kind = (int)kind;
       gc->b0_different = status == MVMC_KRYLOV_STATUS_OK &&
           memcmp(current, proposal, word_count * sizeof(*current)) != 0;
     }

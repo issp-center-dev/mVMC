@@ -236,6 +236,25 @@ def oracle_cases():
                     rows=f2_rows("pbc"))
     rank0["expect_rank"] = 0
     cases.append(rank0)
+    # Finite S (Task 5): the base support mask only, raw P_S/(2S+1)
+    # normalization from the independent a_g(S) nodes, H on every
+    # balanced configuration.
+    finite = [("S1_triplet_L2_G8", 2, [[0, 1], [-1, 0]], 8, 1, None, False),
+              ("S1_F2_L2_G4_correlation", 2, F2, 4, 1, None, True),
+              ("S1_F4_L4_G4", 4, f4_matrix(), 4, 1, None, False),
+              ("S2_F4_L4_G2_max", 4, f4_matrix(), 2, 2, None, False),
+              ("S1_triplet_L4_G4", 4, ((raw - raw.T) / 4).tolist(), 4, 1,
+               None, False),
+              ("S1_F4_SMP_L4_G2_k1", 4, f4_matrix(), 2, 1, momentum(4, 1),
+               False)]
+    for name, nsite, matrix, gauss, spin, translations, correlation in finite:
+        rows = (model_rows(2, [(0, 1)], "pbc", V=0.125, J=0.0625)
+                if nsite == 2 else None)
+        item = fixture(name, nsite, "antiparallel", matrix, "pbc",
+                       translations, gauss=gauss, rows=rows,
+                       correlation=correlation)
+        item["S"] = spin
+        cases.append(item)
     for sign in (1, -1):
         F4 = f4_matrix()
         scaled = fixture("F4_scale_%s300" % ("+" if sign > 0 else "-"), 4,
@@ -439,6 +458,10 @@ def compare_case(case, probe_result):
         if gl.pure_triplet_s0(case) and gl.popcount(mask) % 4 == 2:
             require(all(value[0] == "EXACT_ZERO" for value in values),
                     "%s: forbidden N must give exact q0/q1/q2 zeros" % name)
+        if gl.support_zero(case, mask):
+            require(values[0][0] == "EXACT_ZERO",
+                    "%s: masked q0 of mask %d must be an exact zero" %
+                    (name, mask))
         if not case.get("compare_values", True):
             continue
         for order in range(3):
@@ -684,6 +707,70 @@ def local(domain, nsite, x, choose):
     return x
 
 
+def ordered_pair_of(count, choose):
+    a = choose(count)
+    b = choose(count - 1)
+    return a, b if b < a else b + 1
+
+
+def two_pairs(nsite, x, choose):
+    if nsite < 2:
+        return x
+    u0, u1 = ordered_pair_of(nsite, choose)
+    d0, d1 = ordered_pair_of(nsite, choose)
+    bits = [u0, u1, d0 + nsite, d1 + nsite]
+    values = set((x >> b) & 1 for b in bits)
+    if len(values) == 1:
+        for b in bits:
+            x ^= 1 << b
+    return x
+
+
+def spin_swap(nsite, x, choose):
+    up = [i for i in range(nsite)
+          if (x >> i) & 1 and not (x >> (i + nsite)) & 1]
+    down = [i for i in range(nsite)
+            if (x >> (i + nsite)) & 1 and not (x >> i) & 1]
+    if not up or not down:
+        return x
+    i, j = up[choose(len(up))], down[choose(len(down))]
+    return x ^ (1 << i) ^ (1 << (i + nsite)) ^ (1 << j) ^ (1 << (j + nsite))
+
+
+_UNIFORM_CACHE = {}
+
+
+def mixture_expected(nsite, extra, x):
+    """Fixed mixture over k = bounded(16): extra = 1000 active + 10 S +
+    symmetry.  The kernels are enumerated separately and weighted by the
+    number of k selecting them (the uniform rows are cached)."""
+    active, spin, symmetry = extra // 1000, (extra % 1000) // 10, extra % 10
+    finite = active and spin > 0
+    s0_triplet = active and spin == 0 and symmetry == PAIR_TRIPLET
+    counts = defaultdict(int)
+    for k in range(16):
+        if k == 0:
+            counts["global"] += 1
+        elif (finite or s0_triplet) and k <= 8:
+            counts["two"] += 1
+        elif finite and k <= 10:
+            counts["swap"] += 1
+        else:
+            counts["local"] += 1
+    if nsite not in _UNIFORM_CACHE:
+        _UNIFORM_CACHE[nsite] = enumerate_draws(
+            lambda c: balanced_uniform(nsite, c))
+    kernels = {"global": _UNIFORM_CACHE[nsite],
+               "two": enumerate_draws(lambda c: two_pairs(nsite, x, c)),
+               "swap": enumerate_draws(lambda c: spin_swap(nsite, x, c)),
+               "local": enumerate_draws(lambda c: local(1, nsite, x, c))}
+    result = defaultdict(Fraction)
+    for name, count in counts.items():
+        for y, value in kernels[name].items():
+            result[y] += Fraction(count, 16) * value
+    return result
+
+
 def proposal_mode(args):
     dump = pathlib.Path(args.workdir) / "proposal-dump.txt"
     dump.parent.mkdir(parents=True, exist_ok=True)
@@ -709,6 +796,10 @@ def proposal_mode(args):
         elif kind == "INITIAL":
             expected = enumerate_draws(
                 lambda c: initial(domain, nsite, extra, c))
+        elif kind == "SWAP":
+            expected = enumerate_draws(lambda c: spin_swap(nsite, x, c))
+        elif kind == "MIXTURE":
+            expected = mixture_expected(nsite, extra, x)
         else:
             expected = enumerate_draws(lambda c: local(domain, nsite, x, c))
         expected = dict((k, v) for k, v in expected.items() if v != 0)
@@ -721,12 +812,17 @@ def proposal_mode(args):
             print("FAIL row sum %s domain=%d L=%d x=%d" %
                   (kind, domain, nsite, x))
         rows += 1
-    # Exact symmetry of the local kernels from the dump itself.
+    # Exact symmetry of the local, swap and mixture kernels from the dump.
+    kinds = set(key[0] for key in actual)
+    for required in ("SWAP", "MIXTURE"):
+        if required not in kinds:
+            failures += 1
+            print("FAIL no %s rows in the dump" % required)
     for (kind, domain, nsite, extra, x), row in actual.items():
-        if kind != "LOCAL":
+        if kind not in ("LOCAL", "SWAP", "MIXTURE"):
             continue
         for y, value in row.items():
-            reverse = actual.get(("LOCAL", domain, nsite, 0, y), {}).get(x)
+            reverse = actual.get((kind, domain, nsite, extra, y), {}).get(x)
             if reverse != value:
                 failures += 1
                 print("FAIL symmetry domain=%d L=%d %d<->%d" %
@@ -1291,11 +1387,25 @@ def finite_spin_entry_mode(args):
     done = run_vmc(args.vmc, work, args.np)
     require_failure("finite-S Lanczos without the testing gate", done, work,
                     ["finite-S spin projection does not yet support Lanczos"])
-    # Auto (NGCInitNelec unspecified: N = L = 4 is forbidden by N/2-S odd).
+    # Auto (NGCInitNelec unspecified: N = L = 4 is forbidden by N/2-S odd),
+    # with the B0 trace: four move kinds (3 = swap) for finite S only.
     work = pathlib.Path(args.workdir)/"auto"
     write_e2e_input(case, work, nsplit=1, init_nelec=None,
                     overrides={"NSPStot": 1})
-    done = run_vmc(args.vmc, work, args.np, env=gate)
+    done = run_vmc(args.vmc, work, args.np,
+                   env=dict(gate, MVMC_GC_B0_LANCZOS_TRACE="1"))
+    trace = (work / "gc-b0-lanczos.chain0").read_text().splitlines()
+    kinds = {}
+    for line in trace:
+        fields = line.split()
+        if fields and fields[0] == "C":
+            kinds.setdefault(int(fields[2]), []).append(
+                [int(v) for v in fields[3:]])
+    require(sorted(kinds) == [0, 1, 2, 3] and
+            sum(row[0] for row in kinds[3]) > 0 and
+            all(len(rows) == 8 for rows in kinds.values()),
+            "auto: finite-S B0 trace must report kinds 0-3 with swaps: %r" %
+            dict((k, len(v)) for k, v in kinds.items()))
     lines = initialization_lines(done.stdout)
     require(sorted(lines) == [(c, 2) for c in range(chains)] and
             all(f["selected"] == "1" and f["status"] == "ok"

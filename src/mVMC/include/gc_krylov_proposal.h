@@ -64,6 +64,38 @@ MVMCKrylovStatus mvmc_gc_krylov_draw_two_pairs(
     MVMCKrylovFockProposalBoundedDraw draw, void *context,
     uint64_t *out, size_t word_count);
 
+/* Balanced-domain spin swap: choose one up-only and one down-only site
+ * uniformly and exchange their spins (self-loop when either set is empty).
+ * The number of singles is unchanged and the reverse probability equals
+ * the forward one; a candidate outside the support is not redrawn. */
+MVMCKrylovStatus mvmc_gc_krylov_draw_spin_swap(
+    const MVMCKrylovFockModel *model, const uint64_t *current,
+    MVMCKrylovFockProposalBoundedDraw draw, void *context,
+    uint64_t *out, size_t word_count);
+
+/* Kinds of the fixed GC proposal mixture (also the Testing B0 kinds). */
+typedef enum {
+  MVMC_GC_MOVE_GLOBAL = 0,
+  MVMC_GC_MOVE_TWO_PAIR = 1,
+  MVMC_GC_MOVE_LOCAL = 2,
+  MVMC_GC_MOVE_SWAP = 3
+} MVMCGCMoveKind;
+
+/*
+ * One symmetric GC proposal of every stage: a bounded(16) value k selects
+ *   k = 0      global whole-domain uniform,
+ *   k = 1..8   all-site two-pair (N +/- 4) for active S > 0 and for an
+ *              active S = 0 TRIPLET; legacy local otherwise,
+ *   k = 9..10  spin swap for active S > 0; legacy local otherwise,
+ *   k = 11..15 legacy local,
+ * then the kernel's own draws.  log(reverse/forward) is 0 for every kind.
+ * support NULL means inactive.  kind (may be NULL) receives the move.
+ */
+MVMCKrylovStatus mvmc_gc_krylov_draw_mixture(
+    const MVMCKrylovFockModel *model, const MVMCGCSpinSupport *support,
+    const uint64_t *current, MVMCKrylovFockProposalBoundedDraw draw,
+    void *context, uint64_t *out, size_t word_count, MVMCGCMoveKind *kind);
+
 /*
  * Finite-S (active, S > 0, GC_BALANCED) start sectors.  N = 2m is allowed
  * when max(0, 2m - L) <= m - S and, for a TRIPLET pair function, m - S is

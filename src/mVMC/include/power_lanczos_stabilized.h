@@ -91,8 +91,10 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
  * pilot.  The final chain tries initial-N (the selected N, structured, for
  * S > 0) and whole-domain uniform configurations alternately (at most 1024
  * attempts) and redraws only exact zero, numeric zero or unavailable local
- * energy of Phi.  All proposals are the symmetric GC kernels drawn by the
- * chain root and broadcast with the acceptance uniform.
+ * energy of Phi.  Every stage uses the same symmetric mixture drawn by the
+ * chain root (mvmc_gc_krylov_draw_mixture: global 1/16; finite S two-pair
+ * 8/16, spin swap 2/16, local 5/16; S = 0 triplet two-pair 8/16, local
+ * 7/16; otherwise local 15/16) and broadcast with the acceptance uniform.
  * initial_electron_count and initial_electron_count_explicit (0/1) must
  * agree on every world rank.
  */

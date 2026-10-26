@@ -10,6 +10,9 @@
  * and every bounded draw sequence of the structured initial draw against
  * the frozen leaf counts/probabilities and the combinatorial formula, with
  * every call bound >= 2 (a draw(1) mutation is rejected by that check).
+ * Spin swap and the fixed mixture: exact rows, symmetry, the mixture as
+ * 1/16 global + two-pair/swap/local weights per support, swap connectivity
+ * at maximal S, triplet N2 <-> N6 by two-pair, and removed-kernel mutants.
  *
  * usage: gc_krylov_proposal_unit [--dump path]   (dump for runtest_gc_lanczos)
  */
@@ -113,7 +116,9 @@ typedef enum {
   KIND_LOCAL,
   KIND_TWO_PAIRS,
   KIND_SPIN_INITIAL,
-  KIND_SPIN_INITIAL_MUTATED
+  KIND_SPIN_INITIAL_MUTATED,
+  KIND_SWAP,
+  KIND_MIXTURE
 } Kind;
 
 typedef struct {
@@ -186,6 +191,13 @@ static MVMCKrylovStatus run_proposal(const Proposal *proposal, Script *script,
           script_draw, script, out, 1);
     case KIND_SPIN_INITIAL_MUTATED:
       return mutated_spin_initial(proposal, script_draw, script, out);
+    case KIND_SWAP:
+      return mvmc_gc_krylov_draw_spin_swap(proposal->model, &proposal->current,
+                                           script_draw, script, out, 1);
+    case KIND_MIXTURE:
+      return mvmc_gc_krylov_draw_mixture(proposal->model, &proposal->support,
+                                         &proposal->current, script_draw,
+                                         script, out, 1, NULL);
   }
   return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
 }
@@ -903,6 +915,255 @@ static void test_spin_initial_draw(void) {
   }
 }
 
+static int singles_of(uint64_t x, int L) {
+  const uint64_t low = (UINT64_C(1) << L) - 1;
+  return popcount64((x & low) ^ ((x >> L) & low));
+}
+
+static void test_spin_swap(void) {
+  int L;
+  for (L = 1; L <= 4; ++L) {
+    MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED,
+                                         (size_t)L);
+    const size_t states = (size_t)1 << (2 * L);
+    Fraction *matrix = calloc(states * states, sizeof(*matrix));
+    Proposal proposal;
+    size_t x, y;
+    CHECK(matrix != NULL, "swap matrix allocation");
+    if (matrix == NULL) return;
+    memset(&proposal, 0, sizeof(proposal));
+    proposal.model = &model;
+    proposal.kind = KIND_SWAP;
+    for (x = 0; x < states; ++x) {
+      const uint64_t low = (UINT64_C(1) << L) - 1;
+      const uint64_t up = x & low, down = (x >> L) & low;
+      const uint64_t up_only = up & ~down, down_only = down & ~up;
+      const uint64_t nu = (uint64_t)popcount64(up_only);
+      const uint64_t nd = (uint64_t)popcount64(down_only);
+      Fraction sum = fraction(0, 1);
+      if (!in_domain(model.domain, x, L)) continue;
+      proposal.current = x;
+      CHECK(enumerate(&proposal, matrix + x * states, states),
+            "swap enumeration");
+      dump_row("SWAP", (int)model.domain, L, 0, x, matrix + x * states,
+               states);
+      for (y = 0; y < states; ++y) {
+        Fraction expected = fraction(0, 1);
+        const uint64_t d = x ^ y;
+        if (nu == 0 || nd == 0) {
+          expected = fraction(y == x, 1);
+        } else if (popcount64(d & low) == 2 && popcount64((d >> L) & low) == 2 &&
+                   (d & low) == ((d >> L) & low) &&
+                   popcount64(d & low & up_only) == 1 &&
+                   popcount64(d & low & down_only) == 1) {
+          expected = fraction(1, nu * nd);
+        }
+        CHECK(fraction_equal(matrix[x * states + y], expected),
+              "swap probability is 1/(up-only * down-only)");
+        if (matrix[x * states + y].num != 0) {
+          CHECK(singles_of(y, L) == singles_of(x, L) &&
+                    in_domain(model.domain, y, L),
+                "swap keeps the singles and the domain");
+        }
+        sum = fraction_add(sum, matrix[x * states + y]);
+      }
+      CHECK(fraction_equal(sum, fraction(1, 1)), "swap row sums to one");
+    }
+    for (x = 0; x < states; ++x)
+      for (y = 0; y < states; ++y)
+        if (in_domain(model.domain, x, L) && in_domain(model.domain, y, L))
+          CHECK(fraction_equal(matrix[x * states + y], matrix[y * states + x]),
+                "swap exact detailed balance");
+    free(matrix);
+  }
+}
+
+/* Rows of one kernel for every domain state of L sites. */
+static int kernel_matrix(const MVMCKrylovFockModel *model, Kind kind,
+                         const MVMCGCSpinSupport *support, Fraction *matrix,
+                         size_t states) {
+  Proposal proposal;
+  size_t x;
+  int ok = 1;
+  memset(&proposal, 0, sizeof(proposal));
+  proposal.model = model;
+  proposal.kind = kind;
+  if (support != NULL) proposal.support = *support;
+  for (x = 0; x < states; ++x) {
+    if (!in_domain(model->domain, x, (int)model->site_count)) continue;
+    proposal.current = x;
+    ok = enumerate(&proposal, matrix + x * states, states) && ok;
+  }
+  return ok;
+}
+
+/* Connected components of the support graph of sum_k w_k K_k. */
+static int support_connected(const Fraction *const *kernels, int count,
+                             size_t states, int L,
+                             const MVMCGCSpinSupport *support,
+                             int forbid_kernel) {
+  int reached[256], stack[256], top = 0, start = -1, total = 0;
+  size_t x;
+  memset(reached, 0, sizeof(reached));
+  for (x = 0; x < states; ++x) {
+    MVMCGCSpinSupportResult result;
+    int occupation[16], orbital;
+    for (orbital = 0; orbital < 2 * L; ++orbital)
+      occupation[orbital] = (int)((x >> orbital) & 1);
+    reached[x] = -1;
+    if (!in_domain(MVMC_KRYLOV_DOMAIN_GC_BALANCED, x, L)) continue;
+    if (mvmc_gc_spin_support_evaluate(support, L,
+                                      MVMC_KRYLOV_DOMAIN_GC_BALANCED,
+                                      occupation, 2 * (size_t)L, &result) !=
+            MVMC_KRYLOV_STATUS_OK ||
+        result.zero_reasons != 0)
+      continue;
+    reached[x] = 0;
+    ++total;
+    if (start < 0) start = (int)x;
+  }
+  if (start < 0) return 1;
+  reached[start] = 1;
+  stack[top++] = start;
+  while (top > 0) {
+    const int u = stack[--top];
+    size_t v;
+    int k;
+    for (v = 0; v < states; ++v) {
+      int edge = 0;
+      if (reached[v] != 0) continue;
+      for (k = 0; k < count; ++k)
+        if (k != forbid_kernel && kernels[k][u * states + v].num != 0) edge = 1;
+      if (edge) {
+        reached[v] = 1;
+        stack[top++] = (int)v;
+        --total;
+      }
+    }
+  }
+  return total == 1;
+}
+
+static void test_mixture(void) {
+  /* (L, S, symmetry, active): finite S (S1, maximal S2, triplet S1), S=0
+   * triplet and inactive. */
+  static const int variants[][4] = {{4, 1, MVMC_GC_PAIR_GENERAL, 1},
+                                    {4, 2, MVMC_GC_PAIR_GENERAL, 1},
+                                    {4, 1, MVMC_GC_PAIR_TRIPLET, 1},
+                                    {3, 0, MVMC_GC_PAIR_TRIPLET, 1},
+                                    {3, 0, MVMC_GC_PAIR_GENERAL, 0}};
+  size_t v;
+  for (v = 0; v < sizeof(variants) / sizeof(variants[0]); ++v) {
+    const int L = variants[v][0];
+    MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED,
+                                         (size_t)L);
+    const size_t states = (size_t)1 << (2 * L);
+    MVMCGCSpinSupport support = variants[v][3]
+                                    ? spin_support(variants[v][1],
+                                                   variants[v][2])
+                                    : mvmc_gc_spin_support_inactive();
+    const int finite = support.active && support.total_spin > 0;
+    const int s0_triplet = support.active && support.total_spin == 0 &&
+                           support.pair_symmetry == MVMC_GC_PAIR_TRIPLET;
+    const uint64_t w_two = finite || s0_triplet ? 8 : 0;
+    const uint64_t w_swap = finite ? 2 : 0;
+    const uint64_t w_local = 15 - w_two - w_swap;
+    Fraction *mix = calloc(states * states, sizeof(*mix));
+    Fraction *global = calloc(states * states, sizeof(*global));
+    Fraction *two = calloc(states * states, sizeof(*two));
+    Fraction *swap = calloc(states * states, sizeof(*swap));
+    Fraction *local = calloc(states * states, sizeof(*local));
+    const int extra = 1000 * support.active + 10 * support.total_spin +
+                      (int)support.pair_symmetry;
+    size_t x, y;
+    int mutants_detected[3] = {0, 0, 0};
+    CHECK(mix && global && two && swap && local, "mixture allocation");
+    if (!(mix && global && two && swap && local)) return;
+    CHECK(kernel_matrix(&model, KIND_MIXTURE, &support, mix, states) &&
+              kernel_matrix(&model, KIND_UNIFORM, NULL, global, states) &&
+              kernel_matrix(&model, KIND_TWO_PAIRS, NULL, two, states) &&
+              kernel_matrix(&model, KIND_SWAP, NULL, swap, states) &&
+              kernel_matrix(&model, KIND_LOCAL, NULL, local, states),
+          "mixture and kernel enumeration");
+    for (x = 0; x < states; ++x) {
+      if (!in_domain(model.domain, x, L)) continue;
+      dump_row("MIXTURE", (int)model.domain, L, extra, x, mix + x * states,
+               states);
+      for (y = 0; y < states; ++y) {
+        const size_t i = x * states + y;
+        Fraction expected = fraction_mul(fraction(1, 16), global[i]);
+        Fraction no_swap, no_two, no_global;
+        expected = fraction_add(expected,
+                                fraction_mul(fraction(w_two, 16), two[i]));
+        expected = fraction_add(expected,
+                                fraction_mul(fraction(w_swap, 16), swap[i]));
+        expected = fraction_add(expected,
+                                fraction_mul(fraction(w_local, 16), local[i]));
+        CHECK(fraction_equal(mix[i], expected),
+              "fixed mixture weights 1/16 global + two-pair/swap/local");
+        if (in_domain(model.domain, y, L)) {
+          CHECK(fraction_equal(mix[i], mix[y * states + x]),
+                "mixture exact detailed balance");
+          CHECK(global[i].num != 0, "global reaches the whole domain");
+        }
+        /* Mutants: a removed kernel's weight given to local. */
+        no_swap = fraction_add(
+            fraction_add(fraction_mul(fraction(1, 16), global[i]),
+                         fraction_mul(fraction(w_two, 16), two[i])),
+            fraction_mul(fraction(w_local + w_swap, 16), local[i]));
+        no_two = fraction_add(
+            fraction_add(fraction_mul(fraction(1, 16), global[i]),
+                         fraction_mul(fraction(w_swap, 16), swap[i])),
+            fraction_mul(fraction(w_local + w_two, 16), local[i]));
+        no_global = fraction_add(
+            fraction_add(fraction_mul(fraction(w_two, 16), two[i]),
+                         fraction_mul(fraction(w_swap, 16), swap[i])),
+            fraction_mul(fraction(w_local + 1, 16), local[i]));
+        mutants_detected[0] |= !fraction_equal(mix[i], no_swap);
+        mutants_detected[1] |= !fraction_equal(mix[i], no_two);
+        mutants_detected[2] |= !fraction_equal(mix[i], no_global);
+      }
+    }
+    CHECK((mutants_detected[0] == (w_swap != 0)) &&
+              (mutants_detected[1] == (w_two != 0)) && mutants_detected[2],
+          "removing swap/two-pair/global is detected");
+    if (finite) {
+      const Fraction *kernels[3];
+      kernels[0] = two;
+      kernels[1] = swap;
+      kernels[2] = local;
+      CHECK(support_connected(kernels, 3, states, L, &support, -1),
+            "two-pair + swap + local connect the finite-S support");
+      if (support.total_spin == 2) {
+        CHECK(!support_connected(kernels, 3, states, L, &support, 1),
+              "without swap the maximal-S support is disconnected");
+      }
+      if (support.pair_symmetry == MVMC_GC_PAIR_TRIPLET) {
+        uint64_t n2 = 0, n6 = 0;
+        for (x = 0; x < states; ++x) {
+          for (y = 0; y < states; ++y) {
+            if (popcount64(x) == 2 && popcount64(y) == 6 &&
+                singles_of(x, L) >= 2 && singles_of(y, L) >= 2) {
+              n2 += two[x * states + y].num != 0;
+              n6 += local[x * states + y].num != 0 ||
+                    swap[x * states + y].num != 0;
+            }
+          }
+        }
+        CHECK(n2 > 0 && n6 == 0,
+              "triplet N2 <-> N6 is connected by two-pair only");
+        CHECK(!support_connected(kernels, 3, states, L, &support, 0),
+              "without two-pair the triplet support is disconnected");
+      }
+    }
+    free(mix);
+    free(global);
+    free(two);
+    free(swap);
+    free(local);
+  }
+}
+
 int main(int argc, char **argv) {
   if (argc == 3 && strcmp(argv[1], "--dump") == 0) {
     dump_stream = fopen(argv[2], "w");
@@ -917,6 +1178,8 @@ int main(int argc, char **argv) {
   test_two_pair_kernel();
   test_initial_sectors();
   test_spin_initial_draw();
+  test_spin_swap();
+  test_mixture();
   if (dump_stream != NULL) fclose(dump_stream);
   printf(failure_count == 0 ? "gc_krylov_proposal_unit: PASS\n"
                             : "gc_krylov_proposal_unit: FAIL\n");
