@@ -1256,6 +1256,89 @@ def spin_sector_mode(args):
     return 0
 
 
+INIT_LINE = "GC Lanczos initialization: "
+
+
+def initialization_lines(stdout):
+    """(chain, N) -> fields of the finite-S start lines; arrival order of
+    different chain roots is not part of the contract."""
+    lines = {}
+    for line in stdout.splitlines():
+        if not line.startswith(INIT_LINE):
+            continue
+        fields = dict(item.split("=", 1) for item in
+                      line[len(INIT_LINE):].split(" ") if "=" in item)
+        key = (int(fields["chain"]), int(fields["N"]))
+        require(key not in lines, "duplicate initialization line %r" % line)
+        lines[key] = fields
+    return lines
+
+
+def finite_spin_entry_mode(args):
+    """Production-shaped vmc.out entry of the unreleased finite-S Lanczos
+    path (Testing gate only): auto N picks the nearest allowed sector,
+    an explicit forbidden N is rejected with its reason before any draw,
+    an explicit allowed N is kept.  The public reader gate stays closed."""
+    rng = np.random.default_rng(7)
+    raw = rng.normal(size=(4, 4)) + 1j*rng.normal(size=(4, 4))
+    F = ((raw-raw.T)/4).tolist()
+    case = fixture("triplet_S1", 4, "antiparallel", F, gauss=4)
+    chains = chain_count(args.np, 1)
+    gate = {"MVMC_GC_LANCZOS_TEST_FINITE_SPIN": "1"}
+    work = pathlib.Path(args.workdir)/"closed_gate"
+    write_e2e_input(case, work, nsplit=1, init_nelec=None,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np)
+    require_failure("finite-S Lanczos without the testing gate", done, work,
+                    ["finite-S spin projection does not yet support Lanczos"])
+    # Auto (NGCInitNelec unspecified: N = L = 4 is forbidden by N/2-S odd).
+    work = pathlib.Path(args.workdir)/"auto"
+    write_e2e_input(case, work, nsplit=1, init_nelec=None,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np, env=gate)
+    lines = initialization_lines(done.stdout)
+    require(sorted(lines) == [(c, 2) for c in range(chains)] and
+            all(f["selected"] == "1" and f["status"] == "ok"
+                for f in lines.values()),
+            "auto: expected N2 selected on every chain, got %r\n%s" %
+            (lines, (done.stdout + done.stderr)[-3000:]))
+    auto_code = done.returncode
+    # Explicit N4: rejected with the parity reason, no draw.
+    work = pathlib.Path(args.workdir)/"explicit_N4"
+    write_e2e_input(case, work, nsplit=1, init_nelec=4,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np, env=gate)
+    require_failure("explicit N4", done, work,
+                    ["NGCInitNelec=4 (explicit)", "S=1",
+                     "N/2-S must be even", "invalid argument"])
+    require(not initialization_lines(done.stdout) and
+            "2S <= N <= 2L-2S" not in done.stderr and
+            "attempts=0" in done.stdout,
+            "explicit N4: a start was drawn or a wrong reason was given")
+    # Explicit N8: outside 2S <= N <= 2L-2S (and N/2-S odd).
+    work = pathlib.Path(args.workdir)/"explicit_N8"
+    write_e2e_input(case, work, nsplit=1, init_nelec=8,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np, env=gate)
+    require_failure("explicit N8", done, work,
+                    ["NGCInitNelec=8 (explicit)", "2S <= N <= 2L-2S",
+                     "N/2-S must be even"])
+    require(not initialization_lines(done.stdout),
+            "explicit N8: a start was drawn")
+    # Explicit N2 is kept.
+    work = pathlib.Path(args.workdir)/"explicit_N2"
+    write_e2e_input(case, work, nsplit=1, init_nelec=2,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np, env=gate)
+    lines = initialization_lines(done.stdout)
+    require(sorted(lines) == [(c, 2) for c in range(chains)] and
+            all(f["selected"] == "1" for f in lines.values()),
+            "explicit N2: expected N2 kept, got %r" % lines)
+    print("GC Lanczos finite-S entry: PASS (auto exit %d, explicit N2 exit %d)"
+          % (auto_code, done.returncode))
+    return 0
+
+
 def deterministic_match(label, first, second):
     """Same chain seeds, only the QP partition changed."""
     (r1, s1), (r2, s2) = first, second
@@ -1782,7 +1865,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("oracle", "proposal", "input",
                                          "production", "mpi", "failure",
-                                         "sample", "spin-sector", "number"))
+                                         "sample", "spin-sector", "number",
+                                         "finite-spin-entry"))
     parser.add_argument("--unit")
     parser.add_argument("--probe")
     parser.add_argument("--vmc")
@@ -1807,7 +1891,8 @@ def main():
         return sample_mode(args)
     modes = {"input": input_mode, "production": production_mode,
              "mpi": mpi_mode, "failure": failure_mode,
-             "spin-sector": spin_sector_mode, "number": number_mode}
+             "spin-sector": spin_sector_mode, "number": number_mode,
+             "finite-spin-entry": finite_spin_entry_mode}
     try:
         return modes[args.mode](args)
     except CheckFailure as error:

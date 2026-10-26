@@ -2907,6 +2907,18 @@ if(MPI_FOUND)
             PROCESSORS ${np})
     endforeach()
 endif()
+add_gc_lanczos_test(GCLanczos_FiniteSpinEntry finite-spin-entry
+    --vmc $<TARGET_FILE:vmc.out> --workdir work/GCLanczos_FiniteSpinEntry)
+if(MPI_FOUND)
+    foreach(np 2 3)
+        add_gc_lanczos_test(GCLanczos_FiniteSpinEntry_np${np}_mpi
+            finite-spin-entry --np ${np} --vmc $<TARGET_FILE:vmc.out>
+            --workdir work/GCLanczos_FiniteSpinEntry_np${np})
+        set_tests_properties(GCLanczos_FiniteSpinEntry_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+            PROCESSORS ${np})
+    endforeach()
+endif()
 add_gc_lanczos_test(GCLanczos_Number number --vmc $<TARGET_FILE:vmc.out>
     --workdir work/GCLanczos_Number)
 add_gc_lanczos_test(GCLanczos_Failure failure --vmc $<TARGET_FILE:vmc.out>

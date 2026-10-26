@@ -6,10 +6,15 @@
  * unit row sums, uniformity, initial-N conditioning, connectivity of the
  * 15/16 local + 1/16 uniform mixture).  Also: L = 33 word boundary,
  * vacuum/full filling, callback errors, out-of-range draws, invalid input.
+ * Finite-S start: the sector selector against an independent reference,
+ * and every bounded draw sequence of the structured initial draw against
+ * the frozen leaf counts/probabilities and the combinatorial formula, with
+ * every call bound >= 2 (a draw(1) mutation is rejected by that check).
  *
  * usage: gc_krylov_proposal_unit [--dump path]   (dump for runtest_gc_lanczos)
  */
 #include "gc_krylov_proposal.h"
+#include "gc_lanczos_task5_fixture.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -58,6 +63,9 @@ static Fraction fraction_add(Fraction a, Fraction b) {
                   a.den / g * b.den);
 }
 
+static uint64_t last_leaves = 0;
+static int last_small_bound = 0;
+
 static Fraction fraction_mul(Fraction a, Fraction b) {
   const uint64_t g1 = gcd64(a.num, b.den);
   const uint64_t g2 = gcd64(b.num, a.den);
@@ -75,6 +83,8 @@ typedef struct {
   size_t depth;
   size_t used;
   int inconsistent;
+  int small_bound; /* a call with bound < 2 was seen */
+  uint64_t leaves;
 } Script;
 
 static MVMCKrylovStatus script_draw(void *context, size_t bound,
@@ -84,6 +94,8 @@ static MVMCKrylovStatus script_draw(void *context, size_t bound,
     script->inconsistent = 1;
     return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
   }
+  /* Checked on every call, also before the prefix is extended. */
+  if (bound < 2) script->small_bound = 1;
   if (script->used < script->depth) {
     if (script->bounds[script->used] != bound) script->inconsistent = 1;
   } else {
@@ -95,14 +107,62 @@ static MVMCKrylovStatus script_draw(void *context, size_t bound,
   return MVMC_KRYLOV_STATUS_OK;
 }
 
-typedef enum { KIND_UNIFORM, KIND_INITIAL, KIND_LOCAL, KIND_TWO_PAIRS } Kind;
+typedef enum {
+  KIND_UNIFORM,
+  KIND_INITIAL,
+  KIND_LOCAL,
+  KIND_TWO_PAIRS,
+  KIND_SPIN_INITIAL,
+  KIND_SPIN_INITIAL_MUTATED
+} Kind;
 
 typedef struct {
   const MVMCKrylovFockModel *model;
   Kind kind;
   int initial_n;
   uint64_t current;
+  MVMCGCSpinSupport support;
 } Proposal;
+
+/* Test-local copy of the structured draw with one extra draw(1) for a
+ * single D value: the same leaves and probabilities, a different RNG use. */
+static MVMCKrylovStatus mutated_spin_initial(
+    const Proposal *proposal, MVMCKrylovFockProposalBoundedDraw draw,
+    void *context, uint64_t *out) {
+  const int L = (int)proposal->model->site_count;
+  const int m = proposal->initial_n / 2, S = proposal->support.total_spin;
+  const int low = 2 * m - L > 0 ? 2 * m - L : 0, high = m - S;
+  int D = low, pass, site;
+  size_t value;
+  if (draw(context, high > low ? (size_t)(high - low + 1) : 1, &value) !=
+      MVMC_KRYLOV_STATUS_OK)
+    return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+  if (high > low) D = low + (int)value;
+  *out = 0;
+  for (pass = 0; pass < 3; ++pass) {
+    int k = pass == 0 ? D : m - D, remaining = 0;
+    for (site = 0; site < L; ++site)
+      remaining += !((*out >> site) & 1) && !((*out >> (site + L)) & 1);
+    for (site = 0; site < L && k > 0; ++site) {
+      int selected;
+      if (((*out >> site) & 1) || ((*out >> (site + L)) & 1)) continue;
+      if (k == remaining) {
+        selected = 1;
+      } else {
+        if (draw(context, (size_t)remaining, &value) != MVMC_KRYLOV_STATUS_OK)
+          return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+        selected = (int)value < k;
+      }
+      if (selected) {
+        if (pass != 2) *out |= UINT64_C(1) << site;
+        if (pass != 1) *out |= UINT64_C(1) << (site + L);
+        --k;
+      }
+      --remaining;
+    }
+  }
+  return MVMC_KRYLOV_STATUS_OK;
+}
 
 static MVMCKrylovStatus run_proposal(const Proposal *proposal, Script *script,
                                      uint64_t *out) {
@@ -120,6 +180,12 @@ static MVMCKrylovStatus run_proposal(const Proposal *proposal, Script *script,
     case KIND_TWO_PAIRS:
       return mvmc_gc_krylov_draw_two_pairs(proposal->model, &proposal->current,
                                           script_draw, script, out, 1);
+    case KIND_SPIN_INITIAL:
+      return mvmc_gc_krylov_draw_spin_initial(
+          proposal->model, &proposal->support, proposal->initial_n,
+          script_draw, script, out, 1);
+    case KIND_SPIN_INITIAL_MUTATED:
+      return mutated_spin_initial(proposal, script_draw, script, out);
   }
   return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
 }
@@ -145,6 +211,7 @@ static int enumerate(const Proposal *proposal, Fraction *row,
       break;
     }
     script.depth = script.used;
+    ++script.leaves;
     for (k = 0; k < script.used; ++k) denominator *= script.bounds[k];
     row[out] = fraction_add(row[out], fraction(1, denominator));
     for (k = script.used; k > 0; --k) {
@@ -155,6 +222,8 @@ static int enumerate(const Proposal *proposal, Fraction *row,
     }
     if (k == 0) break;
   }
+  last_leaves = script.leaves;
+  last_small_bound = script.small_bound;
   return ok;
 }
 
@@ -540,6 +609,300 @@ static void test_two_pair_kernel(void) {
   }
 }
 
+/* ---- Finite-S start (Task 5) -------------------------------------------- */
+
+static MVMCGCSpinSupport spin_support(int spin, int symmetry) {
+  MVMCGCSpinSupport support;
+  support.active = 1;
+  support.gauss_count = 4;
+  support.total_spin = spin;
+  support.pair_symmetry = (MVMCGCPairSymmetry)symmetry;
+  return support;
+}
+
+static int reference_allowed(int L, int S, int triplet, int n) {
+  const int m = n / 2, low = 2 * m - L > 0 ? 2 * m - L : 0;
+  return n >= 0 && n <= 2 * L && n % 2 == 0 && low <= m - S &&
+         (!triplet || (m - S) % 2 == 0);
+}
+
+static void test_initial_sectors(void) {
+  int sectors[16], expected[16];
+  size_t count = 0, k;
+  int L, S, sym, requested, explicit_n;
+  MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, 4);
+  MVMCGCSpinSupport support = spin_support(1, MVMC_GC_PAIR_TRIPLET);
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 4, 0, sectors, 5,
+                                       &count) == MVMC_KRYLOV_STATUS_OK &&
+            count == 2 && sectors[0] == 2 && sectors[1] == 6,
+        "L4/S1/triplet auto default 4 -> [2,6]");
+  model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, 5);
+  support = spin_support(2, MVMC_GC_PAIR_GENERAL);
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 4, 0, sectors, 6,
+                                       &count) == MVMC_KRYLOV_STATUS_OK &&
+            count == 2 && sectors[0] == 4 && sectors[1] == 6,
+        "L5/S2/general auto default 4 -> [4,6]");
+  model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, 4);
+  support = spin_support(2, MVMC_GC_PAIR_GENERAL);
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 0, 0, sectors, 5,
+                                       &count) == MVMC_KRYLOV_STATUS_OK &&
+            count == 1 && sectors[0] == 4,
+        "helper example L4/S2 requested 0 auto -> [4]");
+  support = spin_support(1, MVMC_GC_PAIR_TRIPLET);
+  sectors[0] = -7;
+  count = 77;
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 4, 1, sectors, 5,
+                                       &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            sectors[0] == -7 && count == 77,
+        "explicit forbidden N4 rejected, outputs unchanged");
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 2, 1, sectors, 5,
+                                       &count) == MVMC_KRYLOV_STATUS_OK &&
+            count == 1 && sectors[0] == 2,
+        "explicit allowed N2 kept alone");
+  sectors[0] = -7;
+  count = 77;
+  CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 2, 1, sectors, 4,
+                                       &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            mvmc_gc_krylov_initial_sectors(&model, &support, 3, 0, sectors, 5,
+                                           &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            mvmc_gc_krylov_initial_sectors(&model, &support, 10, 0, sectors,
+                                           5, &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            mvmc_gc_krylov_initial_sectors(&model, &support, -2, 0, sectors,
+                                           5, &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            mvmc_gc_krylov_initial_sectors(&model, &support, 2, 2, sectors, 5,
+                                           &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            mvmc_gc_krylov_initial_sectors(&model, &support, 2, 0, NULL, 5,
+                                           &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+            sectors[0] == -7 && count == 77,
+        "capacity < L+1, odd/out-of-range N, explicit flag, NULL rejected");
+  {
+    const MVMCGCSpinSupport bad[] = {
+        {0, 1, 0, MVMC_GC_PAIR_GENERAL}, {1, 4, 0, MVMC_GC_PAIR_TRIPLET},
+        {1, 4, 3, MVMC_GC_PAIR_GENERAL}, {1, 1, 1, MVMC_GC_PAIR_GENERAL}};
+    for (k = 0; k < sizeof(bad) / sizeof(bad[0]); ++k) {
+      CHECK(mvmc_gc_krylov_initial_sectors(&model, bad + k, 2, 0, sectors, 5,
+                                           &count) ==
+                MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+            "inactive, S=0 and invalid descriptors rejected");
+    }
+    support = spin_support(1, MVMC_GC_PAIR_SINGLET);
+    CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 2, 0, sectors, 5,
+                                         &count) ==
+              MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+          "S>0 singlet stops with AMPLITUDE_FAILURE");
+    support = spin_support(1, MVMC_GC_PAIR_ZERO);
+    CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 2, 0, sectors, 5,
+                                         &count) ==
+              MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+          "S>0 zero stops with AMPLITUDE_FAILURE");
+    model = gc_model(MVMC_KRYLOV_DOMAIN_GC_EVEN, 4);
+    support = spin_support(1, MVMC_GC_PAIR_GENERAL);
+    CHECK(mvmc_gc_krylov_initial_sectors(&model, &support, 2, 0, sectors, 5,
+                                         &count) ==
+              MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+          "GC_EVEN rejected");
+  }
+  /* Exhaustive against the reference ordering (|N - r|, N). */
+  for (L = 1; L <= 6; ++L) {
+    model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, (size_t)L);
+    for (S = 1; S <= L / 2; ++S) {
+      for (sym = 0; sym < 2; ++sym) {
+        const int triplet = sym == 1;
+        support = spin_support(S, triplet ? MVMC_GC_PAIR_TRIPLET
+                                          : MVMC_GC_PAIR_GENERAL);
+        for (requested = 0; requested <= 2 * L; requested += 2) {
+          for (explicit_n = 0; explicit_n < 2; ++explicit_n) {
+            size_t n_expected = 0;
+            MVMCKrylovStatus status;
+            int distance;
+            if (explicit_n) {
+              if (reference_allowed(L, S, triplet, requested))
+                expected[n_expected++] = requested;
+            } else {
+              for (distance = 0; distance <= 2 * L; ++distance) {
+                if (reference_allowed(L, S, triplet, requested - distance))
+                  expected[n_expected++] = requested - distance;
+                if (distance > 0 &&
+                    reference_allowed(L, S, triplet, requested + distance))
+                  expected[n_expected++] = requested + distance;
+              }
+            }
+            count = 99;
+            status = mvmc_gc_krylov_initial_sectors(
+                &model, &support, requested, explicit_n, sectors,
+                (size_t)L + 1, &count);
+            if (n_expected == 0) {
+              CHECK(explicit_n && status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+                        count == 99,
+                    "only an explicit forbidden N has no sector");
+            } else {
+              CHECK(status == MVMC_KRYLOV_STATUS_OK && count == n_expected &&
+                        memcmp(sectors, expected,
+                               n_expected * sizeof(*sectors)) == 0,
+                    "sector list equals the independent ordering");
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+static uint64_t task5_choose(int n, int k) { return binomial(n, k); }
+
+static void test_spin_initial_draw(void) {
+  size_t item;
+  int L, S, n;
+  /* Frozen evidence: leaf counts and configuration probabilities. */
+  for (item = 0; item < sizeof(task5_draws) / sizeof(task5_draws[0]); ++item) {
+    const Task5Draw *draw = task5_draws + item;
+    MVMCKrylovFockModel model =
+        gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, (size_t)draw->site_count);
+    const size_t states = (size_t)1 << (2 * draw->site_count);
+    Fraction *row = calloc(states, sizeof(*row));
+    Proposal proposal;
+    size_t k, x;
+    Fraction total = fraction(0, 1);
+    int pass;
+    CHECK(row != NULL, "row allocation");
+    if (row == NULL) return;
+    for (pass = 0; pass < 2; ++pass) {
+      memset(&proposal, 0, sizeof(proposal));
+      proposal.model = &model;
+      proposal.kind = pass == 0 ? KIND_SPIN_INITIAL : KIND_SPIN_INITIAL_MUTATED;
+      proposal.initial_n = draw->electron_count;
+      proposal.support = spin_support(draw->total_spin, MVMC_GC_PAIR_GENERAL);
+      CHECK(enumerate(&proposal, row, states), "spin initial enumeration");
+      total = fraction(0, 1);
+      for (k = 0; k < draw->count; ++k) {
+        CHECK(fraction_equal(row[draw->probability[k].configuration],
+                             fraction(draw->probability[k].numerator,
+                                      draw->probability[k].denominator)),
+              "probability equals the frozen evidence");
+        total = fraction_add(total, row[draw->probability[k].configuration]);
+      }
+      for (x = 0; x < states; ++x) {
+        int listed = 0;
+        for (k = 0; k < draw->count; ++k)
+          listed = listed || draw->probability[k].configuration == x;
+        CHECK(listed || row[x].num == 0, "no unlisted configuration");
+      }
+      CHECK(fraction_equal(total, fraction(1, 1)), "probabilities sum to 1");
+      CHECK(last_leaves == draw->leaves, "leaf count equals the evidence");
+      if (pass == 0) {
+        CHECK(!last_small_bound, "every draw call has bound >= 2");
+      } else {
+        /* The mutation keeps leaves and probabilities; only the bound
+         * check sees it (it applies when D has a single value). */
+        const int m = draw->electron_count / 2;
+        const int low = 2 * m - draw->site_count > 0 ? 2 * m - draw->site_count
+                                                     : 0;
+        CHECK(last_small_bound == (low == m - draw->total_spin),
+              "a draw(1) mutation is rejected by the bound check");
+      }
+    }
+    free(row);
+  }
+  /* Independent combinatorial formula for every allowed N up to L = 5. */
+  for (L = 1; L <= 5; ++L) {
+    MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED,
+                                         (size_t)L);
+    const size_t states = (size_t)1 << (2 * L);
+    Fraction *row = calloc(states, sizeof(*row));
+    CHECK(row != NULL, "row allocation");
+    if (row == NULL) return;
+    for (S = 1; S <= L / 2; ++S) {
+      for (n = 0; n <= 2 * L; n += 2) {
+        Proposal proposal;
+        const int m = n / 2, low = 2 * m - L > 0 ? 2 * m - L : 0;
+        const int high = m - S;
+        size_t x;
+        if (!reference_allowed(L, S, 0, n)) continue;
+        memset(&proposal, 0, sizeof(proposal));
+        proposal.model = &model;
+        proposal.kind = KIND_SPIN_INITIAL;
+        proposal.initial_n = n;
+        proposal.support = spin_support(S, MVMC_GC_PAIR_GENERAL);
+        CHECK(enumerate(&proposal, row, states) && !last_small_bound,
+              "structured draw enumeration");
+        for (x = 0; x < states; ++x) {
+          const uint64_t low_mask = (UINT64_C(1) << L) - 1;
+          const uint64_t up = x & low_mask, down = (x >> L) & low_mask;
+          const int D = popcount64(up & down);
+          const int ups = popcount64(up & ~down), downs = popcount64(down & ~up);
+          Fraction expected = fraction(0, 1);
+          if (D >= low && D <= high && ups == m - D && downs == m - D) {
+            expected = fraction(
+                1, (uint64_t)(high - low + 1) * task5_choose(L, D) *
+                       task5_choose(L - D, m - D) *
+                       task5_choose(L - m, m - D));
+          }
+          CHECK(fraction_equal(row[x], expected),
+                "structured draw equals the combinatorial probability");
+        }
+      }
+    }
+    free(row);
+  }
+  /* Errors: no draw is consumed for a rejected request. */
+  {
+    MVMCKrylovFockModel model = gc_model(MVMC_KRYLOV_DOMAIN_GC_BALANCED, 4);
+    MVMCGCSpinSupport support = spin_support(1, MVMC_GC_PAIR_TRIPLET);
+    Script script;
+    uint64_t out = 0;
+    memset(&script, 0, sizeof(script));
+    CHECK(mvmc_gc_krylov_draw_spin_initial(&model, &support, 4, script_draw,
+                                           &script, &out, 1) ==
+                  MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+              script.used == 0,
+          "triplet parity-forbidden N4 is not drawn");
+    CHECK(mvmc_gc_krylov_draw_spin_initial(&model, &support, 0, script_draw,
+                                           &script, &out, 1) ==
+                  MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+              mvmc_gc_krylov_draw_spin_initial(&model, &support, 3,
+                                               script_draw, &script, &out,
+                                               1) ==
+                  MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+              mvmc_gc_krylov_draw_spin_initial(&model, &support, 10,
+                                               script_draw, &script, &out,
+                                               1) ==
+                  MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+              script.used == 0,
+          "out-of-range and odd N are not drawn");
+    support = spin_support(1, MVMC_GC_PAIR_SINGLET);
+    CHECK(mvmc_gc_krylov_draw_spin_initial(&model, &support, 2, script_draw,
+                                           &script, &out, 1) ==
+              MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE,
+          "S>0 singlet is an amplitude failure");
+    support = mvmc_gc_spin_support_inactive();
+    CHECK(mvmc_gc_krylov_draw_spin_initial(&model, &support, 2, script_draw,
+                                           &script, &out, 1) ==
+              MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+          "inactive support rejected");
+    support = spin_support(1, MVMC_GC_PAIR_GENERAL);
+    CHECK(mvmc_gc_krylov_draw_spin_initial(&model, &support, 2, failing_draw,
+                                           NULL, &out, 1) ==
+                  MVMC_KRYLOV_STATUS_RESOURCE_LIMIT &&
+              mvmc_gc_krylov_draw_spin_initial(&model, &support, 2,
+                                               out_of_range_draw, NULL, &out,
+                                               1) ==
+                  MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE,
+          "callback error propagated, out-of-range draw is an invariant "
+          "failure");
+    CHECK(mvmc_gc_krylov_draw_spin_initial(&model, &support, 2, script_draw,
+                                           &script, &out, 2) ==
+              MVMC_KRYLOV_STATUS_INVALID_ARGUMENT,
+          "word count checked");
+  }
+}
+
 int main(int argc, char **argv) {
   if (argc == 3 && strcmp(argv[1], "--dump") == 0) {
     dump_stream = fopen(argv[2], "w");
@@ -552,6 +915,8 @@ int main(int argc, char **argv) {
   test_word_boundary();
   test_errors();
   test_two_pair_kernel();
+  test_initial_sectors();
+  test_spin_initial_draw();
   if (dump_stream != NULL) fclose(dump_stream);
   printf(failure_count == 0 ? "gc_krylov_proposal_unit: PASS\n"
                             : "gc_krylov_proposal_unit: FAIL\n");

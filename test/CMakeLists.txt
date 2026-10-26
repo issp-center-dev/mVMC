@@ -1417,6 +1417,27 @@ if(MPI_FOUND)
     endforeach()
 endif()
 
+add_executable(gc_lanczos_finite_spin_driver_unit
+    gc_lanczos_finite_spin_driver_unit.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
+mvmc_gc_lanczos_target(gc_lanczos_finite_spin_driver_unit)
+add_test(NAME GCLanczos_FiniteSpinDriver_Unit
+    COMMAND gc_lanczos_finite_spin_driver_unit)
+set_tests_properties(GCLanczos_FiniteSpinDriver_Unit PROPERTIES TIMEOUT 300)
+if(MPI_FOUND)
+    foreach(np 2 3 4)
+        add_test(NAME GCLanczos_FiniteSpinDriver_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS}
+                    $<TARGET_FILE:gc_lanczos_finite_spin_driver_unit>
+                    ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCLanczos_FiniteSpinDriver_Unit_np${np}_mpi
+            PROPERTIES PROCESSORS ${np} TIMEOUT 300)
+    endforeach()
+endif()
+
 # Testing-only enumeration probe for the GC Lanczos oracle.
 add_executable(gc_krylov_probe gc_krylov_probe.c
     ${MVMC_GC_LANCZOS_CORE_SOURCES})

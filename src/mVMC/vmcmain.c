@@ -626,7 +626,9 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
   view.translation_count = NMPTrans;
   view.translation_weights = ParaQPTrans;
   GCRequireSpinSupport(world_communicator);
-  if (GCForbiddenSpinSector(Ncur)) {
+  /* S = 0 only; a finite-S start sector is chosen (or an explicit one
+   * rejected before any draw) by the driver's selector. */
+  if (GCActiveSpinProjection() && GCForbiddenSpinSector(Ncur)) {
     if (rank == 0)
       fprintf(stderr, "Error: NGCInitNelec=%d is forbidden by S=0 spin "
               "projection of an exactly antisymmetric pair function "
@@ -657,6 +659,7 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
   input.interval = sweep;
   /* NGCInitNelec after the reader's range check and even rounding. */
   input.initial_electron_count = Ncur;
+  input.initial_electron_count_explicit = NGCInitNelec >= 0;
   memset(&diagnostics, 0, sizeof(diagnostics));
   sector_capacity = 2 * (size_t)Nsite + 1;
   if (sector_capacity <= SIZE_MAX / sizeof(*sectors))
@@ -713,6 +716,23 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
                 result.energy_standard_error);
       }
     } else {
+      /* Name an explicit finite-S N violation only when the checked
+       * scalars confirm it; other INVALID_ARGUMENTs are reported as is. */
+      if (status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+          GCFiniteSpinActive() && NGCInitNelec >= 0 &&
+          !GCSpinSectorPossible(Nsite, NSPStot, GCSpinTriplet, Ncur)) {
+        const int range = 2 * NSPStot > Ncur || Ncur > 2 * Nsite - 2 * NSPStot;
+        const int parity =
+            GCSpinTriplet == 1 && (Ncur / 2 - NSPStot) % 2 != 0;
+        fprintf(stderr,
+                "Error: NGCInitNelec=%d (explicit) cannot start the GC "
+                "Lanczos total-spin S=%d projection on %d sites: %s%s%s.\n",
+                Ncur, NSPStot, Nsite,
+                range ? "2S <= N <= 2L-2S is required" : "",
+                range && parity ? "; " : "",
+                parity ? "N/2-S must be even for an exactly antisymmetric "
+                         "pair function" : "");
+      }
       fprintf(stderr, "Error: stabilized power-Lanczos failed: %s.\n",
               mvmc_krylov_status_string(status));
       if (diagnostics.failure_recorded) {

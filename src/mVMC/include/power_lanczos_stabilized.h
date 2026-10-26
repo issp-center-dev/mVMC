@@ -80,13 +80,21 @@ MVMCKrylovStatus mvmc_power_lanczos_stabilized_run(
     MVMCPowerLanczosStabilizedResult *result);
 
 /*
- * Grand-canonical first-step entry (power step 1).  The coefficient chain
- * starts from a uniform configuration with initial_electron_count
- * electrons; the final chain tries initial-N and whole-domain uniform
- * configurations alternately (at most 1024 attempts) and redraws only
- * exact zero, numeric zero or unavailable local energy.  All proposals are
- * the symmetric GC kernels (15/16 local, 1/16 uniform) drawn by the chain
- * root and broadcast with the acceptance uniform.
+ * Grand-canonical first-step entry (power step 1).  Without a finite-S
+ * projection the coefficient chain starts from a uniform configuration with
+ * initial_electron_count electrons.  With active S > 0 the start sectors
+ * come from mvmc_gc_krylov_initial_sectors (an explicit N is binding and a
+ * forbidden one is INVALID_ARGUMENT before any draw; auto tries the allowed
+ * N nearest first) and each N gets at most 100 structured draws, redrawn
+ * only when the base Psi is an exact or numeric zero.  Each chain searches
+ * independently with its bootstrap RNG only; the chains meet before the
+ * pilot.  The final chain tries initial-N (the selected N, structured, for
+ * S > 0) and whole-domain uniform configurations alternately (at most 1024
+ * attempts) and redraws only exact zero, numeric zero or unavailable local
+ * energy of Phi.  All proposals are the symmetric GC kernels drawn by the
+ * chain root and broadcast with the acceptance uniform.
+ * initial_electron_count and initial_electron_count_explicit (0/1) must
+ * agree on every world rank.
  */
 typedef struct {
   const MVMCPowerLanczosGCView *gc_view;
@@ -97,6 +105,7 @@ typedef struct {
   size_t sample_count;
   size_t interval;
   int initial_electron_count;
+  int initial_electron_count_explicit;
 } MVMCPowerLanczosGCInput;
 
 typedef enum {
@@ -117,7 +126,10 @@ typedef enum {
 /*
  * World-root diagnostics of a GC run (valid on world rank 0 only).  The
  * per-chain arrays hold the first MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS
- * chains; totals cover every chain.  final_sector_samples, when provided by
+ * chains; totals cover every chain.  The initial_* fields describe the
+ * finite-S coefficient start (selected N, -1 if none or S = 0/inactive;
+ * attempts and exact/numeric-zero redraws summed over the tried N; whether
+ * every allowed N was exhausted).  final_sector_samples, when provided by
  * the caller with final_sector_capacity >= 2L+1, receives the number of
  * final samples per electron count summed over the chains; it must be
  * provided on every rank or on none.
@@ -139,6 +151,15 @@ typedef struct {
   uint64_t total_bootstrap_numeric_zero;
   uint64_t total_bootstrap_local_energy;
   int any_bootstrap_exhausted;
+  int initial_selected_n[MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS];
+  uint64_t initial_attempts[MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS];
+  uint64_t initial_exact_zero[MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS];
+  uint64_t initial_numeric_zero[MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS];
+  int initial_exhausted[MVMC_POWER_LANCZOS_GC_REPORTED_CHAINS];
+  uint64_t total_initial_attempts;
+  uint64_t total_initial_exact_zero;
+  uint64_t total_initial_numeric_zero;
+  int any_initial_exhausted;
   /* First failing chain (lowest index), if any. */
   int failure_recorded;
   uint64_t failure_chain;
@@ -171,6 +192,19 @@ typedef struct {
   uint64_t steps[MVMC_POWER_LANCZOS_GC_STAGE_COUNT];
   uint64_t fixed_sector_calls;
   uint64_t bootstrap_retries;
+  /* RNG draws consumed when each stage starts on this rank: the finite-S
+   * start draws from the bootstrap RNG only. */
+  uint64_t bootstrap_rng_draws_after_start;
+  uint64_t coefficient_rng_draws_at_pilot;
+  uint64_t final_rng_draws_at_bootstrap;
+  uint64_t initial_retries;
+  /* Final bootstrap candidates on the chain root: initial-N side, whole
+   * domain side, initial-N candidates outside the selected finite-S sector
+   * (N or fewer than 2S singles), and the accepted start (first word). */
+  uint64_t bootstrap_initial_draws;
+  uint64_t bootstrap_uniform_draws;
+  uint64_t bootstrap_initial_off_sector;
+  uint64_t final_start_word;
 } MVMCPowerLanczosGCTestingCounters;
 
 typedef enum {
@@ -183,12 +217,33 @@ typedef enum {
   MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC,
   /* Rank 1 disagrees before the refinement collective (run fails). */
   MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_DECISION,
-  MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_STATUS
+  MVMC_POWER_LANCZOS_GC_FAULT_REFINEMENT_STATUS,
+  /* The first 1023 final bootstrap candidates are numeric zeros. */
+  MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_LAST,
+  /* The first final bootstrap candidate has no local energy (retried). */
+  MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_LOCAL_ENERGY,
+  /* The first final bootstrap candidate is nonfinite (run fails). */
+  MVMC_POWER_LANCZOS_GC_FAULT_BOOTSTRAP_NONFINITE
 } MVMCPowerLanczosGCFault;
+
+/* Finite-S coefficient start faults.  EXACT_ZERO/NUMERIC_ZERO classify the
+ * first count attempts of chain chain_index (UINT64_MAX: every chain) as
+ * that zero (redrawn); NONFINITE ends the start at attempt index count;
+ * STATUS makes chain rank 1 disagree at the first attempt. */
+typedef enum {
+  MVMC_POWER_LANCZOS_GC_INITIAL_FAULT_NONE = 0,
+  MVMC_POWER_LANCZOS_GC_INITIAL_FAULT_EXACT_ZERO,
+  MVMC_POWER_LANCZOS_GC_INITIAL_FAULT_NUMERIC_ZERO,
+  MVMC_POWER_LANCZOS_GC_INITIAL_FAULT_NONFINITE,
+  MVMC_POWER_LANCZOS_GC_INITIAL_FAULT_STATUS
+} MVMCPowerLanczosGCInitialFault;
 
 void mvmc_power_lanczos_gc_testing_counters(
     MVMCPowerLanczosGCTestingCounters *counters);
 void mvmc_power_lanczos_gc_testing_set_fault(MVMCPowerLanczosGCFault fault);
+void mvmc_power_lanczos_gc_testing_set_initial_fault(
+    MVMCPowerLanczosGCInitialFault fault, uint64_t count,
+    uint64_t chain_index);
 #endif
 
 #endif /* MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE */
