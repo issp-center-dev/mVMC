@@ -239,7 +239,7 @@ typedef struct {
   uint64_t chain_index;
   MVMCPowerLanczosGCStage stage;
   int initial_electron_count;
-  int spin_triplet_s0;
+  MVMCGCSpinSupport spin_support;
   uint64_t bootstrap_attempts;
   uint64_t bootstrap_exact_zero;
   uint64_t bootstrap_numeric_zero;
@@ -457,6 +457,12 @@ static MVMCKrylovStatus gc_broadcast(const MVMCPowerLanczosGCRun *gc,
 #endif
 }
 
+/* Active S = 0 projection of an exactly antisymmetric pair function. */
+static int gc_s0_triplet(const MVMCPowerLanczosGCRun *gc) {
+  return gc->spin_support.active && gc->spin_support.total_spin == 0 &&
+         gc->spin_support.pair_symmetry == MVMC_GC_PAIR_TRIPLET;
+}
+
 /* Chain root: 1/16 whole-domain uniform, 15/16 local; log ratio is 0. */
 static MVMCKrylovStatus gc_propose(MVMCPowerLanczosGCRun *gc,
                                    MVMCKrylovPositiveSamplerRng *rng,
@@ -472,7 +478,7 @@ static MVMCKrylovStatus gc_propose(MVMCPowerLanczosGCRun *gc,
       if (kind == 0) {
         status = mvmc_gc_krylov_draw_uniform(gc->model, draw_bounded, rng,
                                             proposal, word_count);
-      } else if (gc->spin_triplet_s0 && kind <= 8) {
+      } else if (gc_s0_triplet(gc) && kind <= 8) {
         status = mvmc_gc_krylov_draw_two_pairs(gc->model, current,
                          draw_bounded, rng, proposal, word_count);
       } else {
@@ -485,7 +491,7 @@ static MVMCKrylovStatus gc_propose(MVMCPowerLanczosGCRun *gc,
     }
 #if defined(MVMC_ENABLE_FAULT_INJECTION)
     if (gc->b0_enabled) {
-      gc->b0_kind = kind == 0 ? 0 : (gc->spin_triplet_s0 && kind <= 8 ? 1 : 2);
+      gc->b0_kind = kind == 0 ? 0 : (gc_s0_triplet(gc) && kind <= 8 ? 1 : 2);
       gc->b0_different = status == MVMC_KRYLOV_STATUS_OK &&
           memcmp(current, proposal, word_count * sizeof(*current)) != 0;
     }
@@ -1280,7 +1286,7 @@ static MVMCKrylovStatus stabilized_core(
       generation_hash =
           mvmc_power_lanczos_gc_bridge_generation_hash(gc_bridge);
       gc->model = model;
-      gc->spin_triplet_s0 = gc_view->spin_triplet_s0;
+      gc->spin_support = gc_view->spin_support;
       gc->chain_communicator = input->chain_communicator;
       gc->chain_rank = sampling.chain_rank;
       gc->chain_index = sampling.chain_index;

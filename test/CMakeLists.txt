@@ -1371,6 +1371,19 @@ if(MPI_FOUND)
     endforeach()
 endif()
 
+add_executable(gc_krylov_spin_support_unit gc_krylov_spin_support_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)
+target_compile_definitions(gc_krylov_spin_support_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(gc_krylov_spin_support_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(gc_krylov_spin_support_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(gc_krylov_spin_support_unit m)
+add_test(NAME GCLanczos_SpinSupport_Unit COMMAND gc_krylov_spin_support_unit)
+
 add_executable(gc_krylov_proposal_unit gc_krylov_proposal_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)

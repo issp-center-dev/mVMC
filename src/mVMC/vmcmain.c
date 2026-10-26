@@ -633,7 +633,16 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
               "(N must be a multiple of 4).\n", Ncur);
     return 1;
   }
-  view.spin_triplet_s0 = GCActiveSpinProjection() && GCSpinTriplet == 1;
+  /* Same parameter generation as SlaterElm.  S = 0 reads GCSpinTriplet
+   * only; S > 0 also reads GCSpinSinglet (agreed by GCRequireSpinSupport). */
+  if (mvmc_gc_spin_support_classify(GCAntiMode() && NSPGaussLeg > 1,
+                                    NSPGaussLeg, NSPStot, GCSpinTriplet,
+                                    GCSpinSinglet, &view.spin_support) !=
+      MVMC_KRYLOV_STATUS_OK) {
+    if (rank == 0)
+      fprintf(stderr, "Error: invalid GC Lanczos spin support.\n");
+    return 1;
+  }
   memset(&input, 0, sizeof(input));
   input.gc_view = &view;
   input.world_communicator = world_communicator;

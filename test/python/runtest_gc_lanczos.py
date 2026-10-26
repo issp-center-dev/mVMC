@@ -252,14 +252,41 @@ def fmt(value):
     return "%.17e" % value
 
 
-def write_probe_input(case, path):
+PAIR_GENERAL, PAIR_SINGLET, PAIR_TRIPLET, PAIR_ZERO = 0, 1, 2, 3
+
+
+def spin_support(case):
+    """Canonical (active, G, S, symmetry) descriptor of the probe V3 input.
+
+    S = 0 folds ZERO to TRIPLET and SINGLET to GENERAL, so only the exact
+    triplet test is read there; inactive is (0, 1, 0, GENERAL)."""
+    gauss = case.get("gauss", 1)
+    spin = case.get("S", 0)
+    if case["pairing"] != "antiparallel" or gauss <= 1:
+        return 0, 1, 0, PAIR_GENERAL
+    F = case["F"]
+    n = case["L"]
+    triplet = all(complex(F[i][j]) == -complex(F[j][i])
+                  for i in range(n) for j in range(n))
+    if spin == 0:
+        return 1, gauss, 0, PAIR_TRIPLET if triplet else PAIR_GENERAL
+    singlet = all(complex(F[i][j]) == complex(F[j][i])
+                  for i in range(n) for j in range(n))
+    symmetry = (PAIR_ZERO if triplet and singlet else
+                PAIR_TRIPLET if triplet else
+                PAIR_SINGLET if singlet else PAIR_GENERAL)
+    return 1, gauss, spin, symmetry
+
+
+def write_probe_input(case, path, magic="GC_LANCZOS_PROBE_V3"):
     nsite = case["L"]
     slaters, weights = gl.production_qp(case)
     raw = [w for _, w in case.get("raw_translation_weights",
                                    case["translations"])]
-    lines = ["GC_LANCZOS_PROBE_V2",
-             "%d %d %d %d %d" % (nsite, 1 if case["domain"] == "balanced" else 2,
-                                 len(slaters), len(raw), int(gl.pure_triplet_s0(case)))]
+    lines = [magic,
+             "%d %d %d %d %d %d %d %d" % (
+                 (nsite, 1 if case["domain"] == "balanced" else 2,
+                  len(slaters), len(raw)) + spin_support(case))]
     lines += ["%s %s" % (fmt(complex(w).real), fmt(complex(w).imag))
               for w in raw]
     lines += ["%s %s" % (fmt(w.real), fmt(w.imag)) for w in weights]
@@ -319,7 +346,10 @@ def run_probe(probe, case, workdir, nproc):
 def parse_probe(path):
     result = {"Q": {}, "M": {}, "GEVP": None, "STATUS": None, "BRIDGE": None,
               "MEASUREMENT": None}
-    for line in pathlib.Path(path).read_text().splitlines():
+    lines = pathlib.Path(path).read_text().splitlines()
+    require(bool(lines) and lines[0].startswith("# GC_LANCZOS_PROBE_V3 "),
+            "%s: probe output is not GC_LANCZOS_PROBE_V3" % path)
+    for line in lines:
         if not line or line.startswith("#"):
             continue
         fields = line.split("\t")
@@ -499,9 +529,44 @@ def compare_case(case, probe_result):
                        else " full=" + classification)
 
 
+def probe_format_negatives(probe, workdir):
+    """A V2 stream is an explicit error, never read as V3."""
+    work = pathlib.Path(workdir) / "probe_format"
+    work.mkdir(parents=True, exist_ok=True)
+    case = oracle_cases()[0]
+    source, target = work / "v2.in", work / "v2.tsv"
+    write_probe_input(case, source, magic="GC_LANCZOS_PROBE_V2")
+    if target.exists():
+        target.unlink()
+    done = subprocess.run([probe, str(source), str(target)],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, timeout=60)
+    require(done.returncode == 2 and not target.exists() and
+            "obsolete GC_LANCZOS_PROBE_V2" in done.stdout,
+            "probe accepted or misreported a V2 input: exit %d\n%s" %
+            (done.returncode, done.stdout))
+    lines = source.read_text().splitlines()
+    lines[1] = " ".join(lines[1].split()[:5])  # the V2 header field count
+    lines[0] = "GC_LANCZOS_PROBE_V3"
+    source.write_text("\n".join(lines) + "\n")
+    done = subprocess.run([probe, str(source), str(target)],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, timeout=60)
+    require(done.returncode == 2 and not target.exists(),
+            "probe read a V2 header under the V3 magic: exit %d" %
+            done.returncode)
+
+
 def oracle_mode(args):
     gl.self_test()
     failures = 0
+    if not args.case:
+        try:
+            probe_format_negatives(args.probe, args.workdir)
+            print("PASS probe V3 format (V2 rejected)")
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
     for case in oracle_cases():
         if args.case and args.case != case["name"]:
             continue

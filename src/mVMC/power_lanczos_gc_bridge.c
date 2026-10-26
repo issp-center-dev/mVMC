@@ -31,9 +31,8 @@ static MVMCKrylovStatus validate_gc_view_shape(
       (view->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED &&
        view->domain != MVMC_KRYLOV_DOMAIN_GC_EVEN) ||
       view->translation_count <= 0 || view->translation_weights == NULL ||
-      (view->spin_triplet_s0 != 0 && view->spin_triplet_s0 != 1) ||
-      (view->spin_triplet_s0 &&
-       view->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED) ||
+      mvmc_gc_spin_support_validate(&view->spin_support, data->site_count,
+                                    view->domain) != MVMC_KRYLOV_STATUS_OK ||
       data->transfer_count < 0 || data->coulomb_intra_count < 0 ||
       data->coulomb_inter_count < 0 || data->hund_count < 0 ||
       data->exchange_count < 0 || data->pair_hopping_count < 0 ||
@@ -105,7 +104,9 @@ static uint64_t gc_view_metadata_hash(const MVMCPowerLanczosGCView *view) {
   const MVMCPowerLanczosClassicView *data = &view->data;
   const int values[] = {
       data->site_count, (int)view->domain, view->translation_count,
-      view->spin_triplet_s0,
+      MVMC_GC_SPIN_SUPPORT_SCHEMA, view->spin_support.active,
+      view->spin_support.gauss_count, view->spin_support.total_spin,
+      (int)view->spin_support.pair_symmetry,
       data->transfer_count, data->coulomb_intra_count,
       data->coulomb_inter_count, data->hund_count, data->qp_total,
       data->nproj, data->ngutzwiller_idx, data->njastrow_idx,
@@ -168,7 +169,7 @@ static MVMCGCKrylovAmplitudeLayout amplitude_layout(
   layout.qp_end = data->qp_end;
   layout.translation_count = view->translation_count;
   layout.translation_weights = view->translation_weights;
-  layout.spin_triplet_s0 = view->spin_triplet_s0;
+  layout.spin_support = view->spin_support;
   layout.scaled_pivot_tolerance = data->scaled_pivot_tolerance;
   layout.projection.site_count = (size_t)data->site_count;
   layout.projection.nproj = data->nproj;
@@ -221,6 +222,10 @@ MVMCKrylovStatus mvmc_power_lanczos_gc_bridge_create(
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
   status = audit_world_metadata(view, world_comm);
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
+  /* Audited equal on every rank: a pure S > 0 singlet has no component. */
+  if (mvmc_gc_spin_support_all_zero(&view->spin_support)) {
+    return MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE;
+  }
   created = (MVMCPowerLanczosGCBridge *)calloc(1, sizeof(*created));
   status = synchronize_status(created == NULL
                                   ? MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE

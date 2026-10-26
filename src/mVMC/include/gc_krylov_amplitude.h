@@ -16,6 +16,7 @@ the Free Software Foundation, either version 3 of the License, or
 #include "bounded_krylov_engine.h"
 #include "classic_krylov_projection.h"
 #include "classic_pfaffian_collective.h"
+#include "gc_krylov_spin_support.h"
 #include "krylov_fock_reference.h"
 
 #include <complex.h>
@@ -29,8 +30,10 @@ the Free Software Foundation, either version 3 of the License, or
  * GCComponentValue (-1)^(N/2) Pf(-Slater[x,x]); N = 0 is the empty Pfaffian
  * 1.  Components are summed in global QP order, multiplied by the Re(Proj)
  * correlation factor, and the Phase 3b boundary rule (N = 0 or 2L with an
- * exactly zero sum of the raw translation weights) gives EXACT_ZERO after the
- * components were checked.  Nonfinite components are never hidden.
+ * exactly zero sum of the raw translation weights) or a structural zero of
+ * the spin support descriptor gives EXACT_ZERO after the components were
+ * checked.  Nonfinite components are never hidden.  The support applies to
+ * this base Psi only; H Psi and Phi are never masked outside it.
  *
  * Slater (qp_total * (2L)^2, row-major as SlaterElm), QP weights, translation
  * weights and the projection binding are replicated on every rank of the
@@ -43,9 +46,9 @@ typedef struct {
   int qp_total, qp_start, qp_end;
   int translation_count;
   const double complex *translation_weights;
-  /* Proven by exact comparison of the unrotated parameter values for this
-   * generation: active S=0 projection and F^T=-F. Balanced domain only. */
-  int spin_triplet_s0;
+  /* Canonical support of this generation (gc_krylov_spin_support.h),
+   * copied privately; inactive is {0, 1, 0, GENERAL}. */
+  MVMCGCSpinSupport spin_support;
   double scaled_pivot_tolerance;
   MVMCClassicKrylovProjectionLayout projection;
   MVMCClassicPfaffianCommunicator communicator;
@@ -88,7 +91,13 @@ typedef enum {
   /* Workspace creation reports an allocation failure on the target rank. */
   MVMC_GC_KRYLOV_AMPLITUDE_FAULT_ALLOCATION,
   /* Every evaluation reports a nonfinite component on the target rank. */
-  MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONFINITE
+  MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONFINITE,
+  /* Mutation controls: the support mask is dropped from the ordinary or
+   * the refined base callback only (target rank; use every rank). */
+  MVMC_GC_KRYLOV_AMPLITUDE_FAULT_ORDINARY_UNMASKED,
+  MVMC_GC_KRYLOV_AMPLITUDE_FAULT_REFINED_UNMASKED,
+  /* The support helper fails on the target rank (both callbacks). */
+  MVMC_GC_KRYLOV_AMPLITUDE_FAULT_SUPPORT
 } MVMCGCKrylovAmplitudeFault;
 
 /* Testing only; world_rank selects the MPI_COMM_WORLD rank (0 serial). */

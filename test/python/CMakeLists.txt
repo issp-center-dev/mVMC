@@ -2878,6 +2878,11 @@ function(add_gc_lanczos_test name)
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
         TIMEOUT 600)
 endfunction()
+# The C fixture header is regenerated from the frozen JSON and compared.
+add_test(NAME GCLanczos_Task5_Fixture
+    COMMAND ${PYTHON_EXECUTABLE} -I
+            ${CMAKE_CURRENT_SOURCE_DIR}/generate_gc_lanczos_task5_fixture.py
+            --check ${CMAKE_SOURCE_DIR}/test/gc_lanczos_task5_fixture.h)
 add_gc_lanczos_test(GCLanczos_Oracle oracle
     --probe $<TARGET_FILE:gc_krylov_probe>
     --workdir work/GCLanczos_Oracle)
