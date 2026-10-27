@@ -700,7 +700,8 @@ converged limit the raw pair state tends to
 This common factor does not change relative particle-number weights.
 <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> still omits spin projection and does not activate
 finite-S behavior. Finite-S projection can be combined with momentum
-projection and PBC/APBC. Finite-S plus Lanczos is rejected.</p>
+projection and PBC/APBC. The first-step stabilized Lanczos estimator
+also supports finite S; see <code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode</span></code> below.</p>
 <p>A configuration needs at least <span class="math notranslate nohighlight">\(2S\)</span> singly occupied sites;
 therefore only <span class="math notranslate nohighlight">\(2S\le N\le2N_{\rm site}-2S\)</span> can contribute.
 Configurations that violate this condition are exact zeros, including
@@ -989,16 +990,37 @@ pairing). The Hamiltonian may contain only spin-conserving, Hermitian
 <code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code>, <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code>/<code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code>, <code class="docutils literal notranslate"><span class="pre">Twist</span></code>, and the features
 excluded for <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> are rejected. The energy is the
 expectation value of this <span class="math notranslate nohighlight">\(H\)</span>, including any <span class="math notranslate nohighlight">\(-\mu N\)</span> written
-in <code class="docutils literal notranslate"><span class="pre">Trans</span></code>; no particle-number observable is added and <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> is
-not written. Canonical runs accept <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code> and <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> entries
+in <code class="docutils literal notranslate"><span class="pre">Trans</span></code>. Final-state number moments and the histogram are written
+separately to <code class="docutils literal notranslate"><span class="pre">zvo_gc_pl_number_001.dat</span></code>; <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> is not written.
+Canonical runs accept <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code> and <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> entries
 in this mode without evaluating them, whereas a grand-canonical run
 rejects <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>, <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>, <code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code>, <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> files that contain at least one element, so that requested
 output is never silently missing. Files with zero elements are accepted.</p>
+<p><strong>Finite S with the first Lanczos step.</strong> Anti-parallel pairing with
+<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code>, and integer
+<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">NSPStot</span> <span class="pre">&lt;=</span> <span class="pre">Nsite/2</span></code> is supported, including scalar Gutzwiller/Jastrow
+factors, momentum projection, and PBC/APBC. The structural selection
+rules under <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> apply to the base state <span class="math notranslate nohighlight">\(\Psi\)</span>,
+not to <span class="math notranslate nohighlight">\(H\Psi\)</span> or the final state <span class="math notranslate nohighlight">\(\Phi\)</span>. In particular,
+a base-state node may have nonzero final weight. The Hamiltonian need
+only conserve <span class="math notranslate nohighlight">\(S^z\)</span>; the program does not require or check
+<span class="math notranslate nohighlight">\([H,S^2]=0\)</span>. A vanishing commutator guarantees that applying H
+preserves an exactly spin-projected state. Finite quadrature defines a
+finite-G approximation even then; increasing arithmetic precision does
+not remove its quadrature error. Check convergence in <code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code>.
+The finite-S proposal mixture is 1/16 uniform balanced configuration,
+8/16 two-pair flips, 2/16 single-spin site swaps, and 5/16 local moves.
+Unavailable moves are self-loops; each component is symmetric. These
+choices apply to both coefficient and final sampling. Initial N is
+selected within the base-state support, while final proposals can leave
+it. An explicit <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> must satisfy the base selection rules.
+A complete S=2, N=4/6 input is in
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/FiniteSpin/FirstLanczos</span></code>.</p>
 <p>The sample-count rule above is applied twice: to <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> of each
 chain and to the total <code class="docutils literal notranslate"><span class="pre">NVMCSample</span> <span class="pre">*</span> <span class="pre">number_of_chains</span></code> of each stage.
 For example, <code class="docutils literal notranslate"><span class="pre">NVMCSample=9</span></code> is rejected even with two chains; multiples
-of 16 satisfy both. Configurations are proposed by symmetric moves that
+of 16 satisfy both. Outside finite-S mode, configurations are proposed by symmetric moves that
 change the particle number (local moves with probability 15/16 and a
 uniform draw over all allowed configurations with probability 1/16), and
 the transition rule does not depend on whether an amplitude is zero.
@@ -1013,8 +1035,8 @@ This keeps forward and reverse proposal probabilities equal. The symmetry
 proof is frozen with the parameter generation; near-antisymmetric inputs
 are not rounded to exact zeros. <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> must be a multiple of four
 for this symmetry (see <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>).</p>
-<p>The two-pair moves in GC Lanczos are enabled only for this exact symmetry.
-Near-antisymmetric pair functions retain the preceding 15/16 local and
+<p>For S=0, the two-pair moves in GC Lanczos are enabled only for this exact
+symmetry. Near-antisymmetric S=0 pair functions retain the 15/16 local and
 1/16 uniform mixture to preserve existing random sequences. In such cases,
 the small weight of intermediate particle-number sectors can suppress local
 transitions, and the uniform proposals can have low acceptance. Slow
@@ -1027,19 +1049,45 @@ Access to all allowed configurations does not guarantee rapid mixing.</p>
 <p>Only the first configuration of the final chain is redrawn, at most 1024
 times, when <span class="math notranslate nohighlight">\(\Phi\)</span> is exactly or numerically zero or its local
 energy cannot be formed; the attempts are reported on standard output as
-<code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">bootstrap:</span> <span class="pre">...</span></code>. After that, a proposed configuration whose
-<span class="math notranslate nohighlight">\(\Phi\)</span> cannot be distinguished from zero within its floating-point
-error bound stops the run without a result row and writes
+<code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">bootstrap:</span> <span class="pre">...</span></code>. After that, an unresolved floating-point
+acceptance decision or local energy uses the optional GMP/MPFR backend
+when available. Configure with <code class="docutils literal notranslate"><span class="pre">-DMVMC_GC_REFINEMENT=ON</span></code> to require its
+development libraries, <code class="docutils literal notranslate"><span class="pre">AUTO</span></code> (default) to enable it when found, or
+<code class="docutils literal notranslate"><span class="pre">OFF</span></code> to disable it. Refinement imports the already formed binary64
+matrices, weights and coefficients exactly, and uses the same proposal
+and uniform random value. It neither changes the finite-G state nor
+substitutes a new random draw. Exact-zero candidates are rejected.</p>
+<p><strong>The supplied finite-S first-Lanczos sample requires an enabled
+refinement backend to run.</strong> Use <code class="docutils literal notranslate"><span class="pre">-DMVMC_GC_REFINEMENT=ON</span></code> and check
+for <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">exact-input</span> <span class="pre">refinement</span> <span class="pre">enabled</span> <span class="pre">(MPFR/GMP)</span></code> in the CMake output.
+<code class="docutils literal notranslate"><span class="pre">AUTO</span></code> without GMP/MPFR leaves the backend disabled. With that build
+or <code class="docutils literal notranslate"><span class="pre">OFF</span></code>, the S=2, G=16 sample above accepts the input but stops in
+final warm-up with <code class="docutils literal notranslate"><span class="pre">numeric_zero</span></code>; this was observed with the supplied
+seed and all eight alternative seeds checked.</p>
+<p>Finite-S final sampling can frequently propose configurations where
+<span class="math notranslate nohighlight">\(\Phi\)</span> vanishes. For example, if H conserves N, both HΨ and
+<span class="math notranslate nohighlight">\(\Phi\)</span> vanish outside the particle-number support of Ψ. Ordinary
+binary64 evaluation need not certify those zeros, so backend-free runs
+cannot be relied on to complete. The supplied sample invoked refinement
+9088 times, including 4882 exact-zero outcomes, in a validation run;
+refinement can be a substantial part of the computational cost.
+Another example is momentum projection with <span class="math notranslate nohighlight">\(K\ne0\)</span>: vacuum and
+fully occupied amplitudes can be numerical zeros when <code class="docutils literal notranslate"><span class="pre">TransSym</span></code>
+weights do not sum to exactly zero, stopping a backend-free run when
+proposed (see <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>).</p>
+<p>Without the backend, an unresolved final decision stops the run;
+finite-S input is not rejected at input validation solely for its absence.
+With it, unresolved precision, nonfinite input or resource exhaustion
+still stops the run without publishing a result. Refinement is bounded
+(16384 entries per Pfaffian matrix, 8192 cache entries and expression terms,
+65536 rational bits, 2000000 node calls, MPFR precision up to 4096 bits);
+large inputs are not guaranteed to fit these limits. Failures report
+<code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">refinement</span> <span class="pre">failed:</span> <span class="pre">...</span></code> when applicable and
 <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">failure:</span> <span class="pre">stage=...</span> <span class="pre">chain=...</span> <span class="pre">N=...</span> <span class="pre">status=...</span>
-<span class="pre">amplitude_state=...</span></code> to standard error; exactly zero candidates are
-rejected as usual. An input with nodes, for example a pair table that is
-nearly singular or singular only up to rounding, can therefore stop even
-when ordinary grand-canonical sampling of the same input completes. This
-includes momentum projection with <span class="math notranslate nohighlight">\(K\ne0\)</span>: the vacuum and fully
-occupied amplitudes vanish exactly only when the <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> weights sum
-to exactly zero (see <code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>); otherwise they are numerical
-zeros and the run stops when such a configuration is proposed, which is
-likely for small systems.
+<span class="pre">amplitude_state=...</span></code> to standard error. A node-rich input can therefore
+stop even when ordinary GC sampling completes, especially with the
+backend disabled. Inspect the reported status instead of treating a
+stopped run as a zero-energy measurement.
 Standard output also prints
 <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">energy</span> <span class="pre">check:</span> <span class="pre">E_coeff=...</span> <span class="pre">E_final=...</span></code>, which compares the
 energy of the coefficient chain with the final energy.

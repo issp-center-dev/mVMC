@@ -668,7 +668,8 @@ workspaceの <span class="math notranslate nohighlight">\(2GR+5G\)</span> はC�
 <span class="math notranslate nohighlight">\(\mathcal{P}_S|\phi\rangle/(2S+1)\)</span> になります。この係数は
 全粒子数sectorに共通のため相対重みを変えません。<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg=1</span></code> は
 従来どおり非射影で、有限Sの処理を有効にしません。運動量射影および
-PBC/APBCと併用できます。有限SとLanczosの併用は入力エラーにします。</p>
+PBC/APBCと併用できます。1st stabilized Lanczosも有限Sに対応します。
+後述の <code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode</span></code> を参照してください。</p>
 <p>配置には少なくとも <span class="math notranslate nohighlight">\(2S\)</span> 個の一重占有siteが必要で、
 <span class="math notranslate nohighlight">\(2S\le N\le2N_{\rm site}-2S\)</span> の範囲だけが寄与できます。
 条件を満たさない配置は有限求積でも厳密零にします。このmaskは有限G状態の
@@ -914,15 +915,32 @@ estimatorを含むそれ以外のLanczos設定は入力読込み時に拒否し�
 <code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code>、
 <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code>/<code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code>、<code class="docutils literal notranslate"><span class="pre">Twist</span></code> と、<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> で対象外の機能は
 拒否します。energyはこの <span class="math notranslate nohighlight">\(H\)</span> の期待値で、<code class="docutils literal notranslate"><span class="pre">Trans</span></code> に書いた
-<span class="math notranslate nohighlight">\(-\mu N\)</span> を含みます。粒子数observableは追加せず、<code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> も
-出力しません。canonical計算ではこのmodeで <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code> と <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> の
+<span class="math notranslate nohighlight">\(-\mu N\)</span> を含みます。最終状態の粒子数momentとhistogramは別fileの
+<code class="docutils literal notranslate"><span class="pre">zvo_gc_pl_number_001.dat</span></code> に出力し、<code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> は出力しません。
+canonical計算ではこのmodeで <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code> と <code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code> の
 指定を受理したうえで評価しませんが、grand-canonical計算では指定した出力が
 黙って欠けることを防ぐため、要素を1件以上含む <code class="docutils literal notranslate"><span class="pre">OneBodyG</span></code>、<code class="docutils literal notranslate"><span class="pre">TwoBodyG</span></code>、
 <code class="docutils literal notranslate"><span class="pre">TwoBodyGEx</span></code>、<code class="docutils literal notranslate"><span class="pre">NBodyG</span></code>、<code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> を拒否します。要素0件のfileは
 受理します。</p>
+<p><strong>有限Sと1st Lanczosの併用</strong></p>
+<p>反平行pair、<code class="docutils literal notranslate"><span class="pre">2Sz=0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg&gt;=2</span></code>、整数
+<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">NSPStot</span> <span class="pre">&lt;=</span> <span class="pre">Nsite/2</span></code> に対応し、スピンscalarなGutzwiller/Jastrow因子、
+運動量射影、PBC/APBCを併用できます。<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> の構造的選択則は
+基底状態 <span class="math notranslate nohighlight">\(\Psi\)</span> に適用し、<span class="math notranslate nohighlight">\(H\Psi\)</span> や最終状態 <span class="math notranslate nohighlight">\(\Phi\)</span> には
+掛け直しません。基底状態の節にも最終状態の重みが生じ得ます。Hamiltonianに
+要求するのは <span class="math notranslate nohighlight">\(S^z\)</span> 保存であり、<span class="math notranslate nohighlight">\([H,S^2]=0\)</span> は要求・自動検査しません。
+この交換子が零なら、厳密にスピン射影した状態へHを作用させても同じSを保ちます。
+その場合も有限求積は有限Gの近似であり、演算精度を上げても求積誤差は
+消えません。<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg</span></code> を増やして収束を確認してください。
+有限Sの提案確率はbalanced全配置が1/16、2対同時反転が8/16、片スピンのsite間
+swapが2/16、局所moveが5/16です。不可能なmoveは自己遷移とし、各成分は対称です。
+係数chainと最終chainの両方に適用します。初期Nは基底の支持から選びますが、
+最終chainの提案はその外へも移動できます。明示 <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> は基底の
+選択則を満たす必要があります。S=2・N=4/6の完全な入力例は
+<code class="docutils literal notranslate"><span class="pre">samples/GrandCanonical/FiniteSpin/FirstLanczos</span></code> にあります。</p>
 <p>上記のsample数の条件は、各chainの <code class="docutils literal notranslate"><span class="pre">NVMCSample</span></code> と各stageの総sample数
 <code class="docutils literal notranslate"><span class="pre">NVMCSample</span> <span class="pre">*</span> <span class="pre">chain数</span></code> の両方に適用します。例えば <code class="docutils literal notranslate"><span class="pre">NVMCSample=9</span></code> は
-chainが2本でも拒否し、16の倍数は両方を満たします。配置は粒子数を変える
+chainが2本でも拒否し、16の倍数は両方を満たします。有限S以外では配置は粒子数を変える
 対称な提案（確率15/16の局所移動と、確率1/16の全許可配置からの一様な選択）で
 作ります。実際の対関数が厳密に反対称で <span class="math notranslate nohighlight">\(S=0\)</span> 射影が有効な場合は、
 成分計算の異常を検査した後で <span class="math notranslate nohighlight">\(N=2\pmod4\)</span> を厳密な零に分類します。
@@ -933,8 +951,8 @@ chainが2本でも拒否し、16の倍数は両方を満たします。配置は
 対称性の証明はパラメータ世代とともに固定し、反対称に近いだけの入力を零へ
 丸めません。この対称性では <code class="docutils literal notranslate"><span class="pre">NGCInitNelec</span></code> は4の倍数を指定します
 （<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> を参照）。提案規則は振幅が零かどうかに依存しません。</p>
-<p>GC Lanczosで2対の同時追加・削除を有効にするのは、この厳密な対称性がある場合
-だけです。反対称に近い対関数では既存の乱数列を維持するため、局所移動15/16と
+<p>S=0のGC Lanczosで2対の同時追加・削除を有効にするのは、この厳密な対称性がある
+場合だけです。反対称に近いS=0対関数では既存の乱数列を維持するため、局所移動15/16と
 一様提案1/16の混合を保ちます。この場合、中間の粒子数sectorの重みが小さいために
 局所移動が通りにくく、一様提案の受理率も低くなり得るので、粒子数の混合が遅い
 問題は残ります。スピン射影が有効な通常GCは、このような入力にも2対の同時移動を
@@ -944,16 +962,36 @@ chainが2本でも拒否し、16の倍数は両方を満たします。配置は
 <p>最終chainの最初の配置だけは、
 <span class="math notranslate nohighlight">\(\Phi\)</span> がexactまたは数値的に零、あるいは局所energyを作れない場合に
 最大1024回まで引き直し、その試行を標準出力の <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">bootstrap:</span> <span class="pre">...</span></code>
-に表示します。それ以降に提案された配置の <span class="math notranslate nohighlight">\(\Phi\)</span> が浮動小数点誤差の
-範囲で零と区別できない場合は、結果行を出力せずにrunを終了し、標準エラーへ
+に表示します。それ以降の受理判定や局所energyが浮動小数点精度で解決できない
+場合は、利用可能ならGMP/MPFRによる精密backendを使います。
+<code class="docutils literal notranslate"><span class="pre">-DMVMC_GC_REFINEMENT=ON</span></code> は開発libraryを必須にし、<code class="docutils literal notranslate"><span class="pre">AUTO</span></code> （既定）は
+検出時に有効化、<code class="docutils literal notranslate"><span class="pre">OFF</span></code> は無効化します。精密化は既に生成したbinary64の行列・
+重み・係数を厳密に取り込み、同じ提案と一様乱数を使います。有限G状態を変更したり、
+乱数を引き直したりはしません。exactに零の候補は棄却します。</p>
+<p><strong>公開の有限S＋1st Lanczos sampleの実行には、有効な精密backendが必要です。</strong>
+<code class="docutils literal notranslate"><span class="pre">-DMVMC_GC_REFINEMENT=ON</span></code> でconfigureし、CMakeの出力に
+<code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">exact-input</span> <span class="pre">refinement</span> <span class="pre">enabled</span> <span class="pre">(MPFR/GMP)</span></code> があることを確認してください。
+GMP/MPFRがない <code class="docutils literal notranslate"><span class="pre">AUTO</span></code> はbackendを無効のままにします。そのbuildや <code class="docutils literal notranslate"><span class="pre">OFF</span></code> では、
+上記S=2・G=16 sampleは入力自体を受理しますが、final warm-upで <code class="docutils literal notranslate"><span class="pre">numeric_zero</span></code>
+により停止します。既定seedと変更した8 seedのすべてで確認した挙動です。</p>
+<p>有限Sの最終samplingでは、<span class="math notranslate nohighlight">\(\Phi\)</span> が零になる配置を頻繁に提案し得ます。
+例えばHがNを保存する場合、Ψの粒子数の支持外ではHΨと <span class="math notranslate nohighlight">\(\Phi\)</span> も零です。
+通常のbinary64評価ではその零を確定できるとは限らず、backendなしでの完走を
+期待できません。公開sampleの検証runでは精密化を9088回呼び、うち4882回が
+厳密な零でした。精密化が計算費用の大きな部分を占める場合があります。
+別の例として <span class="math notranslate nohighlight">\(K\ne0\)</span> の運動量射影では、<code class="docutils literal notranslate"><span class="pre">TransSym</span></code> の重みの和が
+厳密な零でないと真空・完全充填の振幅が数値的な零となり、その提案時に
+backendなしのrunが停止し得ます（<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code> を参照）。</p>
+<p>backend無効時は未解決の最終判定で停止しますが、backendがないことだけを理由に
+有限Sの入力を入力検証時に拒否はしません。有効時も精度不足、非有限入力、
+資源上限到達では結果を出力せず停止します。上限はPfaffian行列ごとの要素16384、cache項目数と
+式の項数8192、有理数65536 bit、node呼出し2000000回、MPFR精度4096 bitです。
+大きい入力がこの範囲に収まる保証はありません。該当時は
+<code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">refinement</span> <span class="pre">failed:</span> <span class="pre">...</span></code> に加え、標準エラーへ
 <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">failure:</span> <span class="pre">stage=...</span> <span class="pre">chain=...</span> <span class="pre">N=...</span> <span class="pre">status=...</span>
-<span class="pre">amplitude_state=...</span></code> を出力します。exactに零の候補は従来どおり棄却します。
-このため、特異に近いpair表や丸め誤差の範囲でだけ特異なpair表のように節を持つ入力では、同じ入力の
-通常のgrand-canonical samplingが完走する場合でも終了することがあります。
-<span class="math notranslate nohighlight">\(K\ne0\)</span> の運動量射影もこれに当たります。真空と完全充填の振幅がexactに
-零になるのは <code class="docutils literal notranslate"><span class="pre">TransSym</span></code> の重みの和がexactに零の場合だけで（<code class="docutils literal notranslate"><span class="pre">NGrandCanonical</span></code>
-を参照）、それ以外は数値的な零になり、その配置が提案された時点でrunが終了します。
-小さい系ではその可能性が高くなります。
+<span class="pre">amplitude_state=...</span></code> を出力します。節の多い入力は通常GCが完走しても停止し得ます。
+backend無効時は特に注意し、停止したrunをenergy零の測定とせず診断statusを
+確認してください。
 標準出力には係数chainのenergyと最終energyを比べる
 <code class="docutils literal notranslate"><span class="pre">GC</span> <span class="pre">Lanczos</span> <span class="pre">energy</span> <span class="pre">check:</span> <span class="pre">E_coeff=...</span> <span class="pre">E_final=...</span></code> も出力します。
 <span class="math notranslate nohighlight">\(E_{\rm coeff}\)</span> は係数と同じsampleから選んだ値であり、合否の基準には

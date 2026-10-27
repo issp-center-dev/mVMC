@@ -716,7 +716,8 @@ Keywords and parameters
    This common factor does not change relative particle-number weights.
    ``NSPGaussLeg=1`` still omits spin projection and does not activate
    finite-S behavior. Finite-S projection can be combined with momentum
-   projection and PBC/APBC. Finite-S plus Lanczos is rejected.
+   projection and PBC/APBC. The first-step stabilized Lanczos estimator
+   also supports finite S; see ``NLanczosEstimatorMode`` below.
 
    A configuration needs at least :math:`2S` singly occupied sites;
    therefore only :math:`2S\le N\le2N_{\rm site}-2S` can contribute.
@@ -1032,17 +1033,39 @@ Keywords and parameters
    ``AnomalousTerm``, ``LsTrans``/``LsInterAll``, ``Twist``, and the features
    excluded for ``NGrandCanonical`` are rejected. The energy is the
    expectation value of this :math:`H`, including any :math:`-\mu N` written
-   in ``Trans``; no particle-number observable is added and ``zvo_gc.dat`` is
-   not written. Canonical runs accept ``OneBodyG`` and ``TwoBodyG`` entries
+   in ``Trans``. Final-state number moments and the histogram are written
+   separately to ``zvo_gc_pl_number_001.dat``; ``zvo_gc.dat`` is not written.
+   Canonical runs accept ``OneBodyG`` and ``TwoBodyG`` entries
    in this mode without evaluating them, whereas a grand-canonical run
    rejects ``OneBodyG``, ``TwoBodyG``, ``TwoBodyGEx``, ``NBodyG``, and
    ``AnomalousG`` files that contain at least one element, so that requested
    output is never silently missing. Files with zero elements are accepted.
 
+   **Finite S with the first Lanczos step.** Anti-parallel pairing with
+   ``2Sz=0``, ``NSPGaussLeg>=2``, and integer
+   ``0 < NSPStot <= Nsite/2`` is supported, including scalar Gutzwiller/Jastrow
+   factors, momentum projection, and PBC/APBC. The structural selection
+   rules under ``NGrandCanonical`` apply to the base state :math:`\Psi`,
+   not to :math:`H\Psi` or the final state :math:`\Phi`. In particular,
+   a base-state node may have nonzero final weight. The Hamiltonian need
+   only conserve :math:`S^z`; the program does not require or check
+   :math:`[H,S^2]=0`. A vanishing commutator guarantees that applying H
+   preserves an exactly spin-projected state. Finite quadrature defines a
+   finite-G approximation even then; increasing arithmetic precision does
+   not remove its quadrature error. Check convergence in ``NSPGaussLeg``.
+   The finite-S proposal mixture is 1/16 uniform balanced configuration,
+   8/16 two-pair flips, 2/16 single-spin site swaps, and 5/16 local moves.
+   Unavailable moves are self-loops; each component is symmetric. These
+   choices apply to both coefficient and final sampling. Initial N is
+   selected within the base-state support, while final proposals can leave
+   it. An explicit ``NGCInitNelec`` must satisfy the base selection rules.
+   A complete S=2, N=4/6 input is in
+   ``samples/GrandCanonical/FiniteSpin/FirstLanczos``.
+
    The sample-count rule above is applied twice: to ``NVMCSample`` of each
    chain and to the total ``NVMCSample * number_of_chains`` of each stage.
    For example, ``NVMCSample=9`` is rejected even with two chains; multiples
-   of 16 satisfy both. Configurations are proposed by symmetric moves that
+   of 16 satisfy both. Outside finite-S mode, configurations are proposed by symmetric moves that
    change the particle number (local moves with probability 15/16 and a
    uniform draw over all allowed configurations with probability 1/16), and
    the transition rule does not depend on whether an amplitude is zero.
@@ -1058,8 +1081,8 @@ Keywords and parameters
    are not rounded to exact zeros. ``NGCInitNelec`` must be a multiple of four
    for this symmetry (see ``NGrandCanonical``).
 
-   The two-pair moves in GC Lanczos are enabled only for this exact symmetry.
-   Near-antisymmetric pair functions retain the preceding 15/16 local and
+   For S=0, the two-pair moves in GC Lanczos are enabled only for this exact
+   symmetry. Near-antisymmetric S=0 pair functions retain the 15/16 local and
    1/16 uniform mixture to preserve existing random sequences. In such cases,
    the small weight of intermediate particle-number sectors can suppress local
    transitions, and the uniform proposals can have low acceptance. Slow
@@ -1073,19 +1096,48 @@ Keywords and parameters
    Only the first configuration of the final chain is redrawn, at most 1024
    times, when :math:`\Phi` is exactly or numerically zero or its local
    energy cannot be formed; the attempts are reported on standard output as
-   ``GC Lanczos bootstrap: ...``. After that, a proposed configuration whose
-   :math:`\Phi` cannot be distinguished from zero within its floating-point
-   error bound stops the run without a result row and writes
+   ``GC Lanczos bootstrap: ...``. After that, an unresolved floating-point
+   acceptance decision or local energy uses the optional GMP/MPFR backend
+   when available. Configure with ``-DMVMC_GC_REFINEMENT=ON`` to require its
+   development libraries, ``AUTO`` (default) to enable it when found, or
+   ``OFF`` to disable it. Refinement imports the already formed binary64
+   matrices, weights and coefficients exactly, and uses the same proposal
+   and uniform random value. It neither changes the finite-G state nor
+   substitutes a new random draw. Exact-zero candidates are rejected.
+
+   **The supplied finite-S first-Lanczos sample requires an enabled
+   refinement backend to run.** Use ``-DMVMC_GC_REFINEMENT=ON`` and check
+   for ``GC exact-input refinement enabled (MPFR/GMP)`` in the CMake output.
+   ``AUTO`` without GMP/MPFR leaves the backend disabled. With that build
+   or ``OFF``, the S=2, G=16 sample above accepts the input but stops in
+   final warm-up with ``numeric_zero``; this was observed with the supplied
+   seed and all eight alternative seeds checked.
+
+   Finite-S final sampling can frequently propose configurations where
+   :math:`\Phi` vanishes. For example, if H conserves N, both HΨ and
+   :math:`\Phi` vanish outside the particle-number support of Ψ. Ordinary
+   binary64 evaluation need not certify those zeros, so backend-free runs
+   cannot be relied on to complete. The supplied sample invoked refinement
+   9088 times, including 4882 exact-zero outcomes, in a validation run;
+   refinement can be a substantial part of the computational cost.
+   Another example is momentum projection with :math:`K\ne0`: vacuum and
+   fully occupied amplitudes can be numerical zeros when ``TransSym``
+   weights do not sum to exactly zero, stopping a backend-free run when
+   proposed (see ``NGrandCanonical``).
+
+   Without the backend, an unresolved final decision stops the run;
+   finite-S input is not rejected at input validation solely for its absence.
+   With it, unresolved precision, nonfinite input or resource exhaustion
+   still stops the run without publishing a result. Refinement is bounded
+   (16384 entries per Pfaffian matrix, 8192 cache entries and expression terms,
+   65536 rational bits, 2000000 node calls, MPFR precision up to 4096 bits);
+   large inputs are not guaranteed to fit these limits. Failures report
+   ``GC Lanczos refinement failed: ...`` when applicable and
    ``GC Lanczos failure: stage=... chain=... N=... status=...
-   amplitude_state=...`` to standard error; exactly zero candidates are
-   rejected as usual. An input with nodes, for example a pair table that is
-   nearly singular or singular only up to rounding, can therefore stop even
-   when ordinary grand-canonical sampling of the same input completes. This
-   includes momentum projection with :math:`K\ne0`: the vacuum and fully
-   occupied amplitudes vanish exactly only when the ``TransSym`` weights sum
-   to exactly zero (see ``NGrandCanonical``); otherwise they are numerical
-   zeros and the run stops when such a configuration is proposed, which is
-   likely for small systems.
+   amplitude_state=...`` to standard error. A node-rich input can therefore
+   stop even when ordinary GC sampling completes, especially with the
+   backend disabled. Inspect the reported status instead of treating a
+   stopped run as a zero-energy measurement.
    Standard output also prints
    ``GC Lanczos energy check: E_coeff=... E_final=...``, which compares the
    energy of the coefficient chain with the final energy.
