@@ -5,10 +5,12 @@ The Fock-space oracle never uses the QP Slater matrices from production.
 All sampled snapshots are checked before any statistical acceptance test.
 """
 import argparse
+import gzip
 import json
 import math
 import pathlib
 import re
+import shutil
 import tempfile
 
 import numpy as np
@@ -21,6 +23,23 @@ from runtest_gc_finite_spin import student_t_quantile
 PILOT_SEEDS = (11, 23)
 CONFIRM_SEEDS = (101, 211, 307, 401, 503, 601, 701, 809)
 STAT_CASES = ("general", "triplet", "maximal", "multi", "pbc_k1", "apbc_k1")
+
+
+def read_trace(path):
+    if path.exists():
+        return path.read_text()
+    with gzip.open(str(path) + ".gz", "rt") as stream:
+        return stream.read()
+
+
+def compress_passed_traces(workdir, previous_traces=()):
+    """Retain exact evidence compactly, only after the entire mode passes."""
+    for path in sorted(pathlib.Path(workdir).glob("*/gc-b0-lanczos.chain*")):
+        if path.suffix == ".gz" or path in previous_traces:
+            continue
+        with path.open("rb") as source, gzip.open(str(path) + ".gz", "xb") as target:
+            shutil.copyfileobj(source, target)
+        path.unlink()
 
 
 def fixture(name):
@@ -89,7 +108,7 @@ def replay(case, work, result, summary, samples, chains, ref):
     records, energies, numbers = [], [], []
     node_samples = 0
     for chain in range(chains):
-        lines = (work / ("gc-b0-lanczos.chain%d" % chain)).read_text().splitlines()
+        lines = read_trace(work / ("gc-b0-lanczos.chain%d" % chain)).splitlines()
         base.require(lines[-1] == "END 0", "incomplete trace")
         final = [line.split() for line in lines if line.startswith("F1 ")]
         base.require(len(final) == samples, "wrong final snapshot inventory")
@@ -195,6 +214,22 @@ def replay_mode(args):
         row = run(args, case, 17, 8192, 512, name)
         if name == "non_su2":
             base.require(row["node_samples"] > 0, "no samples on base nodes")
+
+
+def sample_mode(args):
+    case = fixture("multi")
+    case["gauss"] = 16
+    work = pathlib.Path(args.workdir) / "sample"
+    shutil.copytree(args.sample, work)
+    done = base.run_vmc(args.vmc, work, env={
+        "MVMC_GC_LANCZOS_TEST_SUMMARY": "1", "MVMC_GC_B0_LANCZOS_TRACE": "1"}, timeout=600)
+    result = base.require_success("sample", done, work, 8192, 1)
+    summary = base.parse_summary("sample", done.stdout, 1, case["L"])
+    evidence = replay(case, work, result, summary, 8192, 1, reference(case))
+    base.require(all(result["number"]["sectors"][n] > 0 for n in (4, 6)),
+                 "sample did not visit both N sectors")
+    (work / "replay.json").write_text(json.dumps(evidence, indent=2) + "\n")
+    print("PASS public S=2 sample: all 8192 snapshots and N=4,6", flush=True)
 
 
 def statistical_comparisons(name, group):
@@ -447,9 +482,10 @@ def contract_mode(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', choices=('replay', 'pilot', 'confirm', 'mpi', 'oracle', 'convergence', 'initial', 'fault', 'refined', 'contract'), required=True)
+    parser.add_argument('--mode', choices=('replay', 'pilot', 'confirm', 'mpi', 'oracle', 'convergence', 'initial', 'fault', 'refined', 'contract', 'sample'), required=True)
     parser.add_argument('--vmc')
     parser.add_argument('--probe')
+    parser.add_argument('--sample')
     parser.add_argument('--case')
     parser.add_argument('--no-mpi', action='store_true')
     parser.add_argument('--unique-run', action='store_true')
@@ -458,10 +494,12 @@ def main():
     pathlib.Path(args.workdir).mkdir(parents=True, exist_ok=True)
     if args.unique_run:
         args.workdir = tempfile.mkdtemp(prefix='run-', dir=args.workdir)
+    previous_traces = set(pathlib.Path(args.workdir).glob("*/gc-b0-lanczos.chain*"))
     if args.mode in ('pilot', 'confirm'):
         statistics_mode(args)
     else:
         globals()[args.mode + '_mode'](args)
+    compress_passed_traces(args.workdir, previous_traces)
     print('Finite-S Lanczos ' + args.mode + ': PASS')
 
 

@@ -690,7 +690,8 @@ ModParaファイル (modpara.def)
    :math:`\mathcal{P}_S|\phi\rangle/(2S+1)` になります。この係数は
    全粒子数sectorに共通のため相対重みを変えません。``NSPGaussLeg=1`` は
    従来どおり非射影で、有限Sの処理を有効にしません。運動量射影および
-   PBC/APBCと併用できます。有限SとLanczosの併用は入力エラーにします。
+   PBC/APBCと併用できます。1st stabilized Lanczosも有限Sに対応します。
+   後述の ``NLanczosEstimatorMode`` を参照してください。
 
    配置には少なくとも :math:`2S` 個の一重占有siteが必要で、
    :math:`2S\le N\le2N_{\rm site}-2S` の範囲だけが寄与できます。
@@ -964,16 +965,35 @@ ModParaファイル (modpara.def)
    ``Exchange``、``InterAll``、``NBodyInterAll``、``AnomalousTerm``、
    ``LsTrans``/``LsInterAll``、``Twist`` と、``NGrandCanonical`` で対象外の機能は
    拒否します。energyはこの :math:`H` の期待値で、``Trans`` に書いた
-   :math:`-\mu N` を含みます。粒子数observableは追加せず、``zvo_gc.dat`` も
-   出力しません。canonical計算ではこのmodeで ``OneBodyG`` と ``TwoBodyG`` の
+   :math:`-\mu N` を含みます。最終状態の粒子数momentとhistogramは別fileの
+   ``zvo_gc_pl_number_001.dat`` に出力し、``zvo_gc.dat`` は出力しません。
+   canonical計算ではこのmodeで ``OneBodyG`` と ``TwoBodyG`` の
    指定を受理したうえで評価しませんが、grand-canonical計算では指定した出力が
    黙って欠けることを防ぐため、要素を1件以上含む ``OneBodyG``、``TwoBodyG``、
    ``TwoBodyGEx``、``NBodyG``、``AnomalousG`` を拒否します。要素0件のfileは
    受理します。
 
+   **有限Sと1st Lanczosの併用**
+
+   反平行pair、``2Sz=0``、``NSPGaussLeg>=2``、整数
+   ``0 < NSPStot <= Nsite/2`` に対応し、スピンscalarなGutzwiller/Jastrow因子、
+   運動量射影、PBC/APBCを併用できます。``NGrandCanonical`` の構造的選択則は
+   基底状態 :math:`\Psi` に適用し、:math:`H\Psi` や最終状態 :math:`\Phi` には
+   掛け直しません。基底状態の節にも最終状態の重みが生じ得ます。Hamiltonianに
+   要求するのは :math:`S^z` 保存であり、:math:`[H,S^2]=0` は要求・自動検査しません。
+   この交換子が零なら、厳密にスピン射影した状態へHを作用させても同じSを保ちます。
+   その場合も有限求積は有限Gの近似であり、演算精度を上げても求積誤差は
+   消えません。``NSPGaussLeg`` を増やして収束を確認してください。
+   有限Sの提案確率はbalanced全配置が1/16、2対同時反転が8/16、片スピンのsite間
+   swapが2/16、局所moveが5/16です。不可能なmoveは自己遷移とし、各成分は対称です。
+   係数chainと最終chainの両方に適用します。初期Nは基底の支持から選びますが、
+   最終chainの提案はその外へも移動できます。明示 ``NGCInitNelec`` は基底の
+   選択則を満たす必要があります。S=2・N=4/6の完全な入力例は
+   ``samples/GrandCanonical/FiniteSpin/FirstLanczos`` にあります。
+
    上記のsample数の条件は、各chainの ``NVMCSample`` と各stageの総sample数
    ``NVMCSample * chain数`` の両方に適用します。例えば ``NVMCSample=9`` は
-   chainが2本でも拒否し、16の倍数は両方を満たします。配置は粒子数を変える
+   chainが2本でも拒否し、16の倍数は両方を満たします。有限S以外では配置は粒子数を変える
    対称な提案（確率15/16の局所移動と、確率1/16の全許可配置からの一様な選択）で
    作ります。実際の対関数が厳密に反対称で :math:`S=0` 射影が有効な場合は、
    成分計算の異常を検査した後で :math:`N=2\pmod4` を厳密な零に分類します。
@@ -985,8 +1005,8 @@ ModParaファイル (modpara.def)
    丸めません。この対称性では ``NGCInitNelec`` は4の倍数を指定します
    （``NGrandCanonical`` を参照）。提案規則は振幅が零かどうかに依存しません。
 
-   GC Lanczosで2対の同時追加・削除を有効にするのは、この厳密な対称性がある場合
-   だけです。反対称に近い対関数では既存の乱数列を維持するため、局所移動15/16と
+   S=0のGC Lanczosで2対の同時追加・削除を有効にするのは、この厳密な対称性がある
+   場合だけです。反対称に近いS=0対関数では既存の乱数列を維持するため、局所移動15/16と
    一様提案1/16の混合を保ちます。この場合、中間の粒子数sectorの重みが小さいために
    局所移動が通りにくく、一様提案の受理率も低くなり得るので、粒子数の混合が遅い
    問題は残ります。スピン射影が有効な通常GCは、このような入力にも2対の同時移動を
@@ -997,16 +1017,39 @@ ModParaファイル (modpara.def)
    最終chainの最初の配置だけは、
    :math:`\Phi` がexactまたは数値的に零、あるいは局所energyを作れない場合に
    最大1024回まで引き直し、その試行を標準出力の ``GC Lanczos bootstrap: ...``
-   に表示します。それ以降に提案された配置の :math:`\Phi` が浮動小数点誤差の
-   範囲で零と区別できない場合は、結果行を出力せずにrunを終了し、標準エラーへ
+   に表示します。それ以降の受理判定や局所energyが浮動小数点精度で解決できない
+   場合は、利用可能ならGMP/MPFRによる精密backendを使います。
+   ``-DMVMC_GC_REFINEMENT=ON`` は開発libraryを必須にし、``AUTO`` （既定）は
+   検出時に有効化、``OFF`` は無効化します。精密化は既に生成したbinary64の行列・
+   重み・係数を厳密に取り込み、同じ提案と一様乱数を使います。有限G状態を変更したり、
+   乱数を引き直したりはしません。exactに零の候補は棄却します。
+
+   **公開の有限S＋1st Lanczos sampleの実行には、有効な精密backendが必要です。**
+   ``-DMVMC_GC_REFINEMENT=ON`` でconfigureし、CMakeの出力に
+   ``GC exact-input refinement enabled (MPFR/GMP)`` があることを確認してください。
+   GMP/MPFRがない ``AUTO`` はbackendを無効のままにします。そのbuildや ``OFF`` では、
+   上記S=2・G=16 sampleは入力自体を受理しますが、final warm-upで ``numeric_zero``
+   により停止します。既定seedと変更した8 seedのすべてで確認した挙動です。
+
+   有限Sの最終samplingでは、:math:`\Phi` が零になる配置を頻繁に提案し得ます。
+   例えばHがNを保存する場合、Ψの粒子数の支持外ではHΨと :math:`\Phi` も零です。
+   通常のbinary64評価ではその零を確定できるとは限らず、backendなしでの完走を
+   期待できません。公開sampleの検証runでは精密化を9088回呼び、うち4882回が
+   厳密な零でした。精密化が計算費用の大きな部分を占める場合があります。
+   別の例として :math:`K\ne0` の運動量射影では、``TransSym`` の重みの和が
+   厳密な零でないと真空・完全充填の振幅が数値的な零となり、その提案時に
+   backendなしのrunが停止し得ます（``NGrandCanonical`` を参照）。
+
+   backend無効時は未解決の最終判定で停止しますが、backendがないことだけを理由に
+   有限Sの入力を入力検証時に拒否はしません。有効時も精度不足、非有限入力、
+   資源上限到達では結果を出力せず停止します。上限はPfaffian行列ごとの要素16384、cache項目数と
+   式の項数8192、有理数65536 bit、node呼出し2000000回、MPFR精度4096 bitです。
+   大きい入力がこの範囲に収まる保証はありません。該当時は
+   ``GC Lanczos refinement failed: ...`` に加え、標準エラーへ
    ``GC Lanczos failure: stage=... chain=... N=... status=...
-   amplitude_state=...`` を出力します。exactに零の候補は従来どおり棄却します。
-   このため、特異に近いpair表や丸め誤差の範囲でだけ特異なpair表のように節を持つ入力では、同じ入力の
-   通常のgrand-canonical samplingが完走する場合でも終了することがあります。
-   :math:`K\ne0` の運動量射影もこれに当たります。真空と完全充填の振幅がexactに
-   零になるのは ``TransSym`` の重みの和がexactに零の場合だけで（``NGrandCanonical``
-   を参照）、それ以外は数値的な零になり、その配置が提案された時点でrunが終了します。
-   小さい系ではその可能性が高くなります。
+   amplitude_state=...`` を出力します。節の多い入力は通常GCが完走しても停止し得ます。
+   backend無効時は特に注意し、停止したrunをenergy零の測定とせず診断statusを
+   確認してください。
    標準出力には係数chainのenergyと最終energyを比べる
    ``GC Lanczos energy check: E_coeff=... E_final=...`` も出力します。
    :math:`E_{\rm coeff}` は係数と同じsampleから選んだ値であり、合否の基準には

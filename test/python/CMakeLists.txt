@@ -2950,25 +2950,31 @@ if(TARGET mvmc_gc_refinement)
         --vmc $<TARGET_FILE:vmc.out>)
     add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Initial initial
         --vmc $<TARGET_FILE:vmc.out>)
+    add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Sample sample
+        --vmc $<TARGET_FILE:vmc.out>
+        --sample ${CMAKE_SOURCE_DIR}/samples/GrandCanonical/FiniteSpin/FirstLanczos)
+    add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Fault fault --no-mpi
+        --vmc $<TARGET_FILE:vmc.out>)
+    add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Refined refined --no-mpi
+        --vmc $<TARGET_FILE:vmc.out>)
     if(MPI_FOUND)
-        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Refined refined
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Refined_mpi refined
             --vmc $<TARGET_FILE:vmc.out>)
-        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_MPI mpi
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Layouts_mpi mpi
             --vmc $<TARGET_FILE:vmc.out>)
-        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Fault fault
+        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Fault_mpi fault
             --vmc $<TARGET_FILE:vmc.out>)
-        set_tests_properties(GCLanczos_FiniteSpin_MPI GCLanczos_FiniteSpin_Fault
-            GCLanczos_FiniteSpin_Refined
-            PROPERTIES PROCESSORS 4)
-    else()
-        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Fault fault --no-mpi
-            --vmc $<TARGET_FILE:vmc.out>)
-        add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Refined refined --no-mpi
-            --vmc $<TARGET_FILE:vmc.out>)
+        set_tests_properties(GCLanczos_FiniteSpin_Layouts_mpi GCLanczos_FiniteSpin_Fault_mpi
+            GCLanczos_FiniteSpin_Refined_mpi
+            PROPERTIES PROCESSORS 4 LABELS requires_mpi)
     endif()
     foreach(case general triplet maximal multi pbc_k1 apbc_k1)
         add_gc_finite_lanczos_test(GCLanczos_FiniteSpin_Statistics_${case}
             confirm --case ${case} --vmc $<TARGET_FILE:vmc.out>)
+        # Keep the registered seeds/sample counts/alpha. These single-threaded
+        # checks get a separate CI step and do not compete with other CTests.
+        set_tests_properties(GCLanczos_FiniteSpin_Statistics_${case} PROPERTIES
+            LABELS "long;gc_finite_spin_statistics" RUN_SERIAL TRUE TIMEOUT 1800)
     endforeach()
 endif()
 add_gc_lanczos_test(GCLanczos_Failure failure --vmc $<TARGET_FILE:vmc.out>
