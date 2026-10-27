@@ -1347,6 +1347,16 @@ if(TARGET mvmc_gc_refinement)
         ${MVMC_GC_LANCZOS_CORE_SOURCES})
     mvmc_gc_lanczos_target(krylov_refinement_unit)
     add_test(NAME GCLanczos_Refinement_Unit COMMAND krylov_refinement_unit)
+    # Task 5 final-step harness (frozen R1/E1/R1_G2/S2_G2 fixtures).
+    add_executable(gc_lanczos_final_steps_unit gc_lanczos_final_steps_unit.c
+        ${MVMC_GC_LANCZOS_CORE_SOURCES}
+        ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
+        ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
+    mvmc_gc_lanczos_target(gc_lanczos_final_steps_unit)
+    add_test(NAME GCLanczos_Refinement_FinalSteps
+        COMMAND gc_lanczos_final_steps_unit)
+    set_tests_properties(GCLanczos_Refinement_FinalSteps PROPERTIES
+        TIMEOUT 300)
     if(MPI_FOUND)
         foreach(np 2 3)
             add_test(NAME GCLanczos_Refinement_Unit_np${np}_mpi
@@ -1355,6 +1365,15 @@ if(TARGET mvmc_gc_refinement)
                         ${MPIEXEC_POSTFLAGS})
             set_tests_properties(GCLanczos_Refinement_Unit_np${np}_mpi
                 PROPERTIES PROCESSORS ${np} TIMEOUT 120)
+        endforeach()
+        foreach(np 2 3 4)
+            add_test(NAME GCLanczos_Refinement_FinalSteps_np${np}_mpi
+                COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                        ${MPIEXEC_PREFLAGS}
+                        $<TARGET_FILE:gc_lanczos_final_steps_unit>
+                        ${MPIEXEC_POSTFLAGS})
+            set_tests_properties(GCLanczos_Refinement_FinalSteps_np${np}_mpi
+                PROPERTIES PROCESSORS ${np} TIMEOUT 300)
         endforeach()
     endif()
 endif()
@@ -1370,6 +1389,19 @@ if(MPI_FOUND)
             PROCESSORS ${np} TIMEOUT 120)
     endforeach()
 endif()
+
+add_executable(gc_krylov_spin_support_unit gc_krylov_spin_support_unit.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/krylov_fock_reference.c)
+target_compile_definitions(gc_krylov_spin_support_unit PRIVATE
+    MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE)
+target_include_directories(gc_krylov_spin_support_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(gc_krylov_spin_support_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+target_link_libraries(gc_krylov_spin_support_unit m)
+add_test(NAME GCLanczos_SpinSupport_Unit COMMAND gc_krylov_spin_support_unit)
 
 add_executable(gc_krylov_proposal_unit gc_krylov_proposal_unit.c
     ${CMAKE_SOURCE_DIR}/src/mVMC/gc_krylov_proposal.c
@@ -1401,6 +1433,27 @@ if(MPI_FOUND)
                     ${MPIEXEC_POSTFLAGS})
         set_tests_properties(GCLanczos_Driver_Unit_np${np}_mpi PROPERTIES
             PROCESSORS ${np} TIMEOUT 300)
+    endforeach()
+endif()
+
+add_executable(gc_lanczos_finite_spin_driver_unit
+    gc_lanczos_finite_spin_driver_unit.c
+    ${MVMC_GC_LANCZOS_CORE_SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_sampling.c
+    ${CMAKE_SOURCE_DIR}/src/mVMC/power_lanczos_stabilized.c)
+mvmc_gc_lanczos_target(gc_lanczos_finite_spin_driver_unit)
+add_test(NAME GCLanczos_FiniteSpinDriver_Unit
+    COMMAND gc_lanczos_finite_spin_driver_unit)
+set_tests_properties(GCLanczos_FiniteSpinDriver_Unit PROPERTIES TIMEOUT 300)
+if(MPI_FOUND)
+    foreach(np 2 3 4)
+        add_test(NAME GCLanczos_FiniteSpinDriver_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                    ${MPIEXEC_PREFLAGS}
+                    $<TARGET_FILE:gc_lanczos_finite_spin_driver_unit>
+                    ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(GCLanczos_FiniteSpinDriver_Unit_np${np}_mpi
+            PROPERTIES PROCESSORS ${np} TIMEOUT 300)
     endforeach()
 endif()
 

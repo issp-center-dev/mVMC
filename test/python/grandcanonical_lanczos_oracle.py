@@ -104,9 +104,32 @@ def translated_wave(base, mappings, r, nsite):
 
 def pure_triplet_s0(fixture):
     return (fixture["pairing"] == "antiparallel" and
-            fixture.get("gauss", 1) > 1 and
+            fixture.get("gauss", 1) > 1 and fixture.get("S", 0) == 0 and
             all(complex(fixture["F"][i][j]) == -complex(fixture["F"][j][i])
                 for i in range(fixture["L"]) for j in range(fixture["L"])))
+
+
+def pair_symmetry(fixture):
+    """Exact class of the unrotated F: S=0 reads only the triplet test
+    (ZERO -> triplet, SINGLET -> general); S>0 uses the four classes."""
+    n, F = fixture["L"], fixture["F"]
+    triplet = all(complex(F[i][j]) == -complex(F[j][i])
+                  for i in range(n) for j in range(n))
+    if fixture.get("S", 0) == 0:
+        return "triplet" if triplet else "general"
+    singlet = all(complex(F[i][j]) == complex(F[j][i])
+                  for i in range(n) for j in range(n))
+    if triplet and singlet:
+        return "zero"
+    return "triplet" if triplet else "singlet" if singlet else "general"
+
+
+def support_zero(fixture, mask):
+    """Structural zero of the base Psi (never applied to H Psi or Phi)."""
+    if fixture["pairing"] != "antiparallel" or fixture.get("gauss", 1) <= 1:
+        return False
+    return so.finite_spin_zero(mask, fixture["L"], fixture.get("S", 0),
+                               pair_symmetry(fixture))
 
 
 def reference_wave(fixture):
@@ -121,7 +144,8 @@ def reference_wave(fixture):
         base = dict((m, values.get(m, 0.0j))
                     for m in range(1 << (2 * nsite)) if popcount(m) % 2 == 0)
     gauss = fixture.get("gauss", 1)
-    nodes = so.independent_nodes(gauss) if gauss > 1 else None
+    spin = fixture.get("S", 0)
+    nodes = so.independent_spin_nodes(gauss, spin) if gauss > 1 else None
     total = dict((m, 0.0j) for m in base)
     for r, weight in fixture["translations"]:
         wave = translated_wave(base, mappings, r, nsite)
@@ -140,9 +164,8 @@ def reference_wave(fixture):
                                    fixture["translations"])])
     basis = domain_basis(nsite, fixture["domain"])
     psi = np.zeros(len(basis), dtype=complex)
-    triplet = pure_triplet_s0(fixture)
     for k, mask in enumerate(basis):
-        if triplet and popcount(mask) % 4 == 2:
+        if support_zero(fixture, mask):
             continue
         if boundary_zero and popcount(mask) in (0, 2 * nsite):
             psi[k] = 0.0
@@ -158,7 +181,7 @@ def production_qp(fixture):
     mappings = chain_mappings(nsite, fixture["boundary"], steps)
     base = fixture_pair_matrix(fixture)
     gauss = fixture.get("gauss", 1)
-    nodes = so.independent_nodes(gauss)
+    nodes = so.independent_spin_nodes(gauss, fixture.get("S", 0))
     slaters, weights = [], []
     for r, weight in fixture["translations"]:
         translated = ap.translated_matrix(base, mappings, r, nsite)

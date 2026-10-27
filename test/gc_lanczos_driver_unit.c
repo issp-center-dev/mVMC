@@ -154,6 +154,7 @@ static void make_fixture(Fixture *f, const Chain *chain, int zero_h) {
   f->view.domain = MVMC_KRYLOV_DOMAIN_GC_BALANCED;
   f->view.translation_count = 2;
   f->view.translation_weights = f->translation;
+  f->view.spin_support = mvmc_gc_spin_support_inactive();
 }
 
 typedef struct {

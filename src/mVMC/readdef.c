@@ -1336,12 +1336,6 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
                     "0 <= NSPStot <= Nsite/2.\n");
             info = 1;
           }
-          if (bufInt[IdxSPStot] > 0 && bufInt[IdxLanczosMode] > 0) {
-            fprintf(stderr,
-                    "Error: GC finite-S spin projection does not yet "
-                    "support Lanczos.\n");
-            info = 1;
-          }
           /* SpinJastrow exp(sum v m_i m_j) is not a spin scalar and would
            * break the projected spin state, even from zero coefficients. */
           if (bufInt[IdxNSpinJast] > 0) {

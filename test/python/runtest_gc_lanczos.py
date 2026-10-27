@@ -236,6 +236,25 @@ def oracle_cases():
                     rows=f2_rows("pbc"))
     rank0["expect_rank"] = 0
     cases.append(rank0)
+    # Finite S (Task 5): the base support mask only, raw P_S/(2S+1)
+    # normalization from the independent a_g(S) nodes, H on every
+    # balanced configuration.
+    finite = [("S1_triplet_L2_G8", 2, [[0, 1], [-1, 0]], 8, 1, None, False),
+              ("S1_F2_L2_G4_correlation", 2, F2, 4, 1, None, True),
+              ("S1_F4_L4_G4", 4, f4_matrix(), 4, 1, None, False),
+              ("S2_F4_L4_G2_max", 4, f4_matrix(), 2, 2, None, False),
+              ("S1_triplet_L4_G4", 4, ((raw - raw.T) / 4).tolist(), 4, 1,
+               None, False),
+              ("S1_F4_SMP_L4_G2_k1", 4, f4_matrix(), 2, 1, momentum(4, 1),
+               False)]
+    for name, nsite, matrix, gauss, spin, translations, correlation in finite:
+        rows = (model_rows(2, [(0, 1)], "pbc", V=0.125, J=0.0625)
+                if nsite == 2 else None)
+        item = fixture(name, nsite, "antiparallel", matrix, "pbc",
+                       translations, gauss=gauss, rows=rows,
+                       correlation=correlation)
+        item["S"] = spin
+        cases.append(item)
     for sign in (1, -1):
         F4 = f4_matrix()
         scaled = fixture("F4_scale_%s300" % ("+" if sign > 0 else "-"), 4,
@@ -252,14 +271,41 @@ def fmt(value):
     return "%.17e" % value
 
 
-def write_probe_input(case, path):
+PAIR_GENERAL, PAIR_SINGLET, PAIR_TRIPLET, PAIR_ZERO = 0, 1, 2, 3
+
+
+def spin_support(case):
+    """Canonical (active, G, S, symmetry) descriptor of the probe V3 input.
+
+    S = 0 folds ZERO to TRIPLET and SINGLET to GENERAL, so only the exact
+    triplet test is read there; inactive is (0, 1, 0, GENERAL)."""
+    gauss = case.get("gauss", 1)
+    spin = case.get("S", 0)
+    if case["pairing"] != "antiparallel" or gauss <= 1:
+        return 0, 1, 0, PAIR_GENERAL
+    F = case["F"]
+    n = case["L"]
+    triplet = all(complex(F[i][j]) == -complex(F[j][i])
+                  for i in range(n) for j in range(n))
+    if spin == 0:
+        return 1, gauss, 0, PAIR_TRIPLET if triplet else PAIR_GENERAL
+    singlet = all(complex(F[i][j]) == complex(F[j][i])
+                  for i in range(n) for j in range(n))
+    symmetry = (PAIR_ZERO if triplet and singlet else
+                PAIR_TRIPLET if triplet else
+                PAIR_SINGLET if singlet else PAIR_GENERAL)
+    return 1, gauss, spin, symmetry
+
+
+def write_probe_input(case, path, magic="GC_LANCZOS_PROBE_V3"):
     nsite = case["L"]
     slaters, weights = gl.production_qp(case)
     raw = [w for _, w in case.get("raw_translation_weights",
                                    case["translations"])]
-    lines = ["GC_LANCZOS_PROBE_V2",
-             "%d %d %d %d %d" % (nsite, 1 if case["domain"] == "balanced" else 2,
-                                 len(slaters), len(raw), int(gl.pure_triplet_s0(case)))]
+    lines = [magic,
+             "%d %d %d %d %d %d %d %d" % (
+                 (nsite, 1 if case["domain"] == "balanced" else 2,
+                  len(slaters), len(raw)) + spin_support(case))]
     lines += ["%s %s" % (fmt(complex(w).real), fmt(complex(w).imag))
               for w in raw]
     lines += ["%s %s" % (fmt(w.real), fmt(w.imag)) for w in weights]
@@ -319,7 +365,10 @@ def run_probe(probe, case, workdir, nproc):
 def parse_probe(path):
     result = {"Q": {}, "M": {}, "GEVP": None, "STATUS": None, "BRIDGE": None,
               "MEASUREMENT": None}
-    for line in pathlib.Path(path).read_text().splitlines():
+    lines = pathlib.Path(path).read_text().splitlines()
+    require(bool(lines) and lines[0].startswith("# GC_LANCZOS_PROBE_V3 "),
+            "%s: probe output is not GC_LANCZOS_PROBE_V3" % path)
+    for line in lines:
         if not line or line.startswith("#"):
             continue
         fields = line.split("\t")
@@ -409,6 +458,10 @@ def compare_case(case, probe_result):
         if gl.pure_triplet_s0(case) and gl.popcount(mask) % 4 == 2:
             require(all(value[0] == "EXACT_ZERO" for value in values),
                     "%s: forbidden N must give exact q0/q1/q2 zeros" % name)
+        if gl.support_zero(case, mask):
+            require(values[0][0] == "EXACT_ZERO",
+                    "%s: masked q0 of mask %d must be an exact zero" %
+                    (name, mask))
         if not case.get("compare_values", True):
             continue
         for order in range(3):
@@ -499,9 +552,44 @@ def compare_case(case, probe_result):
                        else " full=" + classification)
 
 
+def probe_format_negatives(probe, workdir):
+    """A V2 stream is an explicit error, never read as V3."""
+    work = pathlib.Path(workdir) / "probe_format"
+    work.mkdir(parents=True, exist_ok=True)
+    case = oracle_cases()[0]
+    source, target = work / "v2.in", work / "v2.tsv"
+    write_probe_input(case, source, magic="GC_LANCZOS_PROBE_V2")
+    if target.exists():
+        target.unlink()
+    done = subprocess.run([probe, str(source), str(target)],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, timeout=60)
+    require(done.returncode == 2 and not target.exists() and
+            "obsolete GC_LANCZOS_PROBE_V2" in done.stdout,
+            "probe accepted or misreported a V2 input: exit %d\n%s" %
+            (done.returncode, done.stdout))
+    lines = source.read_text().splitlines()
+    lines[1] = " ".join(lines[1].split()[:5])  # the V2 header field count
+    lines[0] = "GC_LANCZOS_PROBE_V3"
+    source.write_text("\n".join(lines) + "\n")
+    done = subprocess.run([probe, str(source), str(target)],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, timeout=60)
+    require(done.returncode == 2 and not target.exists(),
+            "probe read a V2 header under the V3 magic: exit %d" %
+            done.returncode)
+
+
 def oracle_mode(args):
     gl.self_test()
     failures = 0
+    if not args.case:
+        try:
+            probe_format_negatives(args.probe, args.workdir)
+            print("PASS probe V3 format (V2 rejected)")
+        except CheckFailure as error:
+            failures += 1
+            print("FAIL %s" % error)
     for case in oracle_cases():
         if args.case and args.case != case["name"]:
             continue
@@ -619,6 +707,70 @@ def local(domain, nsite, x, choose):
     return x
 
 
+def ordered_pair_of(count, choose):
+    a = choose(count)
+    b = choose(count - 1)
+    return a, b if b < a else b + 1
+
+
+def two_pairs(nsite, x, choose):
+    if nsite < 2:
+        return x
+    u0, u1 = ordered_pair_of(nsite, choose)
+    d0, d1 = ordered_pair_of(nsite, choose)
+    bits = [u0, u1, d0 + nsite, d1 + nsite]
+    values = set((x >> b) & 1 for b in bits)
+    if len(values) == 1:
+        for b in bits:
+            x ^= 1 << b
+    return x
+
+
+def spin_swap(nsite, x, choose):
+    up = [i for i in range(nsite)
+          if (x >> i) & 1 and not (x >> (i + nsite)) & 1]
+    down = [i for i in range(nsite)
+            if (x >> (i + nsite)) & 1 and not (x >> i) & 1]
+    if not up or not down:
+        return x
+    i, j = up[choose(len(up))], down[choose(len(down))]
+    return x ^ (1 << i) ^ (1 << (i + nsite)) ^ (1 << j) ^ (1 << (j + nsite))
+
+
+_UNIFORM_CACHE = {}
+
+
+def mixture_expected(nsite, extra, x):
+    """Fixed mixture over k = bounded(16): extra = 1000 active + 10 S +
+    symmetry.  The kernels are enumerated separately and weighted by the
+    number of k selecting them (the uniform rows are cached)."""
+    active, spin, symmetry = extra // 1000, (extra % 1000) // 10, extra % 10
+    finite = active and spin > 0
+    s0_triplet = active and spin == 0 and symmetry == PAIR_TRIPLET
+    counts = defaultdict(int)
+    for k in range(16):
+        if k == 0:
+            counts["global"] += 1
+        elif (finite or s0_triplet) and k <= 8:
+            counts["two"] += 1
+        elif finite and k <= 10:
+            counts["swap"] += 1
+        else:
+            counts["local"] += 1
+    if nsite not in _UNIFORM_CACHE:
+        _UNIFORM_CACHE[nsite] = enumerate_draws(
+            lambda c: balanced_uniform(nsite, c))
+    kernels = {"global": _UNIFORM_CACHE[nsite],
+               "two": enumerate_draws(lambda c: two_pairs(nsite, x, c)),
+               "swap": enumerate_draws(lambda c: spin_swap(nsite, x, c)),
+               "local": enumerate_draws(lambda c: local(1, nsite, x, c))}
+    result = defaultdict(Fraction)
+    for name, count in counts.items():
+        for y, value in kernels[name].items():
+            result[y] += Fraction(count, 16) * value
+    return result
+
+
 def proposal_mode(args):
     dump = pathlib.Path(args.workdir) / "proposal-dump.txt"
     dump.parent.mkdir(parents=True, exist_ok=True)
@@ -644,6 +796,10 @@ def proposal_mode(args):
         elif kind == "INITIAL":
             expected = enumerate_draws(
                 lambda c: initial(domain, nsite, extra, c))
+        elif kind == "SWAP":
+            expected = enumerate_draws(lambda c: spin_swap(nsite, x, c))
+        elif kind == "MIXTURE":
+            expected = mixture_expected(nsite, extra, x)
         else:
             expected = enumerate_draws(lambda c: local(domain, nsite, x, c))
         expected = dict((k, v) for k, v in expected.items() if v != 0)
@@ -656,12 +812,17 @@ def proposal_mode(args):
             print("FAIL row sum %s domain=%d L=%d x=%d" %
                   (kind, domain, nsite, x))
         rows += 1
-    # Exact symmetry of the local kernels from the dump itself.
+    # Exact symmetry of the local, swap and mixture kernels from the dump.
+    kinds = set(key[0] for key in actual)
+    for required in ("SWAP", "MIXTURE"):
+        if required not in kinds:
+            failures += 1
+            print("FAIL no %s rows in the dump" % required)
     for (kind, domain, nsite, extra, x), row in actual.items():
-        if kind != "LOCAL":
+        if kind not in ("LOCAL", "SWAP", "MIXTURE"):
             continue
         for y, value in row.items():
-            reverse = actual.get(("LOCAL", domain, nsite, 0, y), {}).get(x)
+            reverse = actual.get((kind, domain, nsite, extra, y), {}).get(x)
             if reverse != value:
                 failures += 1
                 print("FAIL symmetry domain=%d L=%d %d<->%d" %
@@ -748,8 +909,9 @@ def e2e_modpara(case, seed, samples, warmup, nsplit, init_nelec):
         ("NDataIdxStart", 1), ("NDataQtySmp", 1), None,
         ("Nsite", case["L"]), ("Ne", case["L"] // 2),
         ("2Sz", -1 if general else 0),
-        ("NSPGaussLeg", case["gauss"]), ("NSPStot", 0),
-        ("NMPTrans", len(case["translations"])),
+        ("NSPGaussLeg", case["gauss"]), ("NSPStot", case.get("S", 0)),
+        ("NMPTrans", (-1 if case["boundary"] == "apbc" else 1) *
+                      len(case["translations"])),
         ("NSROptItrStep", 1), ("NSROptItrSmp", 1),
         ("DSROptRedCut", "0.000000000001"), ("DSROptStaDel", "0.01"),
         ("DSROptStepDt", "0.002"),
@@ -817,6 +979,8 @@ def write_e2e_input(case, workdir, seed=17, samples=STAT_SAMPLES,
     if case["pairing"] == "antiparallel":
         pairs = [(i, j) for i in range(nsite) for j in range(nsite)]
         rows = ["%d %d %d\n" % (i, j, k) for k, (i, j) in enumerate(pairs)]
+        if case["boundary"] == "apbc":
+            rows = [row.rstrip() + " 1\n" for row in rows]
         values = [complex(case["F"][i][j]) for i, j in pairs]
         name = ("OrbitalAntiParallel", "orbitalidx.def")
     else:
@@ -1188,6 +1352,127 @@ def spin_sector_mode(args):
     require_failure("triplet initial N2", done, work,
                     ["NGCInitNelec=2", "exactly antisymmetric", "multiple of 4"])
     print("GC Lanczos triplet spin sectors: PASS")
+    return 0
+
+
+INIT_LINE = "GC Lanczos initialization: "
+
+
+def initialization_lines(stdout):
+    """(chain, N) -> fields of the finite-S start lines; arrival order of
+    different chain roots is not part of the contract."""
+    lines = {}
+    for line in stdout.splitlines():
+        if not line.startswith(INIT_LINE):
+            continue
+        fields = dict(item.split("=", 1) for item in
+                      line[len(INIT_LINE):].split(" ") if "=" in item)
+        key = (int(fields["chain"]), int(fields["N"]))
+        require(key not in lines, "duplicate initialization line %r" % line)
+        lines[key] = fields
+    return lines
+
+
+def require_finite_spin_entry_outcome(label, done, work, chains, refinement):
+    """Backend ON must finish; OFF may stop only at a diagnosed final retry."""
+    require(refinement in ("on", "off"), label + ": backend expectation missing")
+    if refinement == "on" or done.returncode == 0:
+        return require_success(label, done, work, STAT_SAMPLES, chains)
+    require(done.returncode == 1, "%s: unexpected exit %d" % (label, done.returncode))
+    require_failure(label, done, work,
+                    ["Error: stabilized power-Lanczos failed: amplitude failure."])
+    failures = [line for line in done.stderr.splitlines()
+                if line.startswith("GC Lanczos failure: ")]
+    require(len(failures) == 1, label + ": expected exactly one failure record")
+    match = re.fullmatch(
+        r"GC Lanczos failure: stage=(final-warm-up|final-sample) "
+        r"chain=(\d+) N=(\d+) status=amplitude failure "
+        r"amplitude_state=(numeric_zero|finite) log_abs=(\S+) "
+        r"log_error_bound=(\S+) retry_reason=(numeric_zero|local_energy)",
+        failures[0])
+    require(match is not None, label + ": unexpected final failure: " + failures[0])
+    stage, chain, n, state, log_abs, log_error, reason = match.groups()
+    require(int(chain) < chains and int(n) in (0, 2, 4, 6, 8) and
+            (state, reason) in (("numeric_zero", "numeric_zero"),
+                                ("finite", "local_energy")),
+            label + ": inconsistent failure record")
+    require(not math.isnan(float(log_abs)) and not math.isnan(float(log_error)),
+            label + ": invalid failure bounds")
+    require(not list(pathlib.Path(work).glob("output/*_gc_pl_number_*.dat")) and
+            not SUMMARY.findall(done.stdout),
+            label + ": failed run published valid results")
+
+
+def finite_spin_entry_mode(args):
+    """Public finite-S Lanczos entry: auto N picks the nearest allowed
+    sector, an explicit forbidden N is rejected before any draw, and an
+    explicit allowed N is kept. Backend OFF retains strict failure checks."""
+    rng = np.random.default_rng(7)
+    raw = rng.normal(size=(4, 4)) + 1j*rng.normal(size=(4, 4))
+    F = ((raw-raw.T)/4).tolist()
+    case = fixture("triplet_S1", 4, "antiparallel", F, gauss=4)
+    chains = chain_count(args.np, 1)
+    # Auto (NGCInitNelec unspecified: N = L = 4 is forbidden by N/2-S odd),
+    # with the B0 trace: four move kinds (3 = swap) for finite S only.
+    work = pathlib.Path(args.workdir)/"auto"
+    write_e2e_input(case, work, nsplit=1, init_nelec=None,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np,
+                   env={"MVMC_GC_B0_LANCZOS_TRACE": "1"})
+    trace = (work / "gc-b0-lanczos.chain0").read_text().splitlines()
+    kinds = {}
+    for line in trace:
+        fields = line.split()
+        if fields and fields[0] == "C":
+            kinds.setdefault(int(fields[2]), []).append(
+                [int(v) for v in fields[3:]])
+    require(sorted(kinds) == [0, 1, 2, 3] and
+            sum(row[0] for row in kinds[3]) > 0 and
+            all(len(rows) == 8 for rows in kinds.values()),
+            "auto: finite-S B0 trace must report kinds 0-3 with swaps: %r" %
+            dict((k, len(v)) for k, v in kinds.items()))
+    lines = initialization_lines(done.stdout)
+    require(sorted(lines) == [(c, 2) for c in range(chains)] and
+            all(f["selected"] == "1" and f["status"] == "ok"
+                for f in lines.values()),
+            "auto: expected N2 selected on every chain, got %r\n%s" %
+            (lines, (done.stdout + done.stderr)[-3000:]))
+    require_finite_spin_entry_outcome("auto", done, work, chains, args.refinement)
+    auto_code = done.returncode
+    # Explicit N4: rejected with the parity reason, no draw.
+    work = pathlib.Path(args.workdir)/"explicit_N4"
+    write_e2e_input(case, work, nsplit=1, init_nelec=4,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np)
+    require_failure("explicit N4", done, work,
+                    ["NGCInitNelec=4 (explicit)", "S=1",
+                     "N/2-S must be even", "invalid argument"])
+    require(not initialization_lines(done.stdout) and
+            "2S <= N <= 2L-2S" not in done.stderr and
+            "attempts=0" in done.stdout,
+            "explicit N4: a start was drawn or a wrong reason was given")
+    # Explicit N8: outside 2S <= N <= 2L-2S (and N/2-S odd).
+    work = pathlib.Path(args.workdir)/"explicit_N8"
+    write_e2e_input(case, work, nsplit=1, init_nelec=8,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np)
+    require_failure("explicit N8", done, work,
+                    ["NGCInitNelec=8 (explicit)", "2S <= N <= 2L-2S",
+                     "N/2-S must be even"])
+    require(not initialization_lines(done.stdout),
+            "explicit N8: a start was drawn")
+    # Explicit N2 is kept.
+    work = pathlib.Path(args.workdir)/"explicit_N2"
+    write_e2e_input(case, work, nsplit=1, init_nelec=2,
+                    overrides={"NSPStot": 1})
+    done = run_vmc(args.vmc, work, args.np)
+    lines = initialization_lines(done.stdout)
+    require(sorted(lines) == [(c, 2) for c in range(chains)] and
+            all(f["selected"] == "1" for f in lines.values()),
+            "explicit N2: expected N2 kept, got %r" % lines)
+    require_finite_spin_entry_outcome("explicit N2", done, work, chains, args.refinement)
+    print("GC Lanczos finite-S entry: PASS (auto exit %d, explicit N2 exit %d)"
+          % (auto_code, done.returncode))
     return 0
 
 
@@ -1717,7 +2002,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("oracle", "proposal", "input",
                                          "production", "mpi", "failure",
-                                         "sample", "spin-sector", "number"))
+                                         "sample", "spin-sector", "number",
+                                         "finite-spin-entry"))
+    parser.add_argument("--refinement", choices=("on", "off"))
     parser.add_argument("--unit")
     parser.add_argument("--probe")
     parser.add_argument("--vmc")
@@ -1726,6 +2013,8 @@ def main():
     parser.add_argument("--workdir", default="work/GCLanczos")
     parser.add_argument("--sample")
     args = parser.parse_args()
+    if args.mode == "finite-spin-entry" and args.refinement is None:
+        parser.error("finite-spin-entry requires --refinement on/off")
     if args.mode == "oracle":
         if not args.probe:
             parser.error("oracle mode requires --probe")
@@ -1742,7 +2031,8 @@ def main():
         return sample_mode(args)
     modes = {"input": input_mode, "production": production_mode,
              "mpi": mpi_mode, "failure": failure_mode,
-             "spin-sector": spin_sector_mode, "number": number_mode}
+             "spin-sector": spin_sector_mode, "number": number_mode,
+             "finite-spin-entry": finite_spin_entry_mode}
     try:
         return modes[args.mode](args)
     except CheckFailure as error:

@@ -345,6 +345,8 @@ static int GCLanczosTestingSetup(MPI_Comm world, int *summary) {
         values[1] = 4;
       } else if (strcmp(faultEnv, "final_numeric") == 0) {
         values[1] = 5;
+      } else if (strcmp(faultEnv, "refine_final") == 0) {
+        values[1] = 6;
       } else {
         values[1] = -1;
       }
@@ -379,6 +381,10 @@ static int GCLanczosTestingSetup(MPI_Comm world, int *summary) {
     case 5:
       mvmc_power_lanczos_gc_testing_set_fault(
           MVMC_POWER_LANCZOS_GC_FAULT_FINAL_NUMERIC);
+      break;
+    case 6:
+      mvmc_power_lanczos_gc_testing_set_fault(
+          MVMC_POWER_LANCZOS_GC_FAULT_REFINE_FINAL);
       break;
     default:
       break;
@@ -460,6 +466,15 @@ static const char *GCLanczosAmplitudeStateName(int state) {
       return "nonfinite";
     default:
       return "unavailable";
+  }
+}
+
+static const char *GCLanczosRetryReasonName(int reason) {
+  switch (reason) {
+    case MVMC_KRYLOV_BOOTSTRAP_EXACT_ZERO: return "exact_zero";
+    case MVMC_KRYLOV_BOOTSTRAP_NUMERIC_ZERO: return "numeric_zero";
+    case MVMC_KRYLOV_BOOTSTRAP_LOCAL_ENERGY: return "local_energy";
+    default: return "no_retry";
   }
 }
 
@@ -626,14 +641,25 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
   view.translation_count = NMPTrans;
   view.translation_weights = ParaQPTrans;
   GCRequireSpinSupport(world_communicator);
-  if (GCForbiddenSpinSector(Ncur)) {
+  /* S = 0 only; a finite-S start sector is chosen (or an explicit one
+   * rejected before any draw) by the driver's selector. */
+  if (GCActiveSpinProjection() && GCForbiddenSpinSector(Ncur)) {
     if (rank == 0)
       fprintf(stderr, "Error: NGCInitNelec=%d is forbidden by S=0 spin "
               "projection of an exactly antisymmetric pair function "
               "(N must be a multiple of 4).\n", Ncur);
     return 1;
   }
-  view.spin_triplet_s0 = GCActiveSpinProjection() && GCSpinTriplet == 1;
+  /* Same parameter generation as SlaterElm.  S = 0 reads GCSpinTriplet
+   * only; S > 0 also reads GCSpinSinglet (agreed by GCRequireSpinSupport). */
+  if (mvmc_gc_spin_support_classify(GCAntiMode() && NSPGaussLeg > 1,
+                                    NSPGaussLeg, NSPStot, GCSpinTriplet,
+                                    GCSpinSinglet, &view.spin_support) !=
+      MVMC_KRYLOV_STATUS_OK) {
+    if (rank == 0)
+      fprintf(stderr, "Error: invalid GC Lanczos spin support.\n");
+    return 1;
+  }
   memset(&input, 0, sizeof(input));
   input.gc_view = &view;
   input.world_communicator = world_communicator;
@@ -648,6 +674,7 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
   input.interval = sweep;
   /* NGCInitNelec after the reader's range check and even rounding. */
   input.initial_electron_count = Ncur;
+  input.initial_electron_count_explicit = NGCInitNelec >= 0;
   memset(&diagnostics, 0, sizeof(diagnostics));
   sector_capacity = 2 * (size_t)Nsite + 1;
   if (sector_capacity <= SIZE_MAX / sizeof(*sectors))
@@ -704,12 +731,30 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
                 result.energy_standard_error);
       }
     } else {
+      /* Name an explicit finite-S N violation only when the checked
+       * scalars confirm it; other INVALID_ARGUMENTs are reported as is. */
+      if (status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+          GCFiniteSpinActive() && NGCInitNelec >= 0 &&
+          !GCSpinSectorPossible(Nsite, NSPStot, GCSpinTriplet, Ncur)) {
+        const int range = 2 * NSPStot > Ncur || Ncur > 2 * Nsite - 2 * NSPStot;
+        const int parity =
+            GCSpinTriplet == 1 && (Ncur / 2 - NSPStot) % 2 != 0;
+        fprintf(stderr,
+                "Error: NGCInitNelec=%d (explicit) cannot start the GC "
+                "Lanczos total-spin S=%d projection on %d sites: %s%s%s.\n",
+                Ncur, NSPStot, Nsite,
+                range ? "2S <= N <= 2L-2S is required" : "",
+                range && parity ? "; " : "",
+                parity ? "N/2-S must be even for an exactly antisymmetric "
+                         "pair function" : "");
+      }
       fprintf(stderr, "Error: stabilized power-Lanczos failed: %s.\n",
               mvmc_krylov_status_string(status));
       if (diagnostics.failure_recorded) {
         fprintf(stderr,
                 "GC Lanczos failure: stage=%s chain=%llu N=%d status=%s "
-                "amplitude_state=%s log_abs=%.17g log_error_bound=%.17g\n",
+                "amplitude_state=%s log_abs=%.17g log_error_bound=%.17g "
+                "retry_reason=%s\n",
                 mvmc_power_lanczos_gc_stage_name(diagnostics.failure_stage),
                 (unsigned long long)diagnostics.failure_chain,
                 diagnostics.failure_electron_count,
@@ -717,7 +762,8 @@ static int RunPowerLanczosGC(int outputIndex, MPI_Comm world_communicator,
                 GCLanczosAmplitudeStateName(
                     diagnostics.failure_amplitude_state),
                 diagnostics.failure_log_abs,
-                diagnostics.failure_log_error_bound);
+                diagnostics.failure_log_error_bound,
+                GCLanczosRetryReasonName(diagnostics.failure_retry_reason));
       }
     }
   }

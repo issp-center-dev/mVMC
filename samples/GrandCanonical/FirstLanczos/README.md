@@ -1,6 +1,6 @@
 ---
-date: 2026-10-19
-datetime: 2026-10-19 11:28 JST
+date: 2026-10-27
+datetime: 2026-10-27 11:36 JST
 model: OpenAI GPT-6 Codex (number-output documentation); Claude Opus 5.5 (original sample)
 summary: |
   Expert-mode input for the first-step stabilized power-Lanczos estimator
@@ -8,6 +8,7 @@ summary: |
   pairing on a two-site Hubbard ring. The same files are run by the
   GCLanczos_Sample test. Final-state particle-number moments and block errors
   are written separately from the eleven energy columns.
+  Updated the refinement-backend behavior and linked the finite-S example.
 ---
 
 # First-step Lanczos with grand-canonical sampling
@@ -96,14 +97,18 @@ parameters. Green-function or anomalous measurements, other interaction
 terms, `reweight`, LocSpin, BackFlow, RBM, OptTrans and Twist are rejected
 when the input is read.
 
-The run stops without writing a result row when a configuration proposed
-after the start of the final chain has `Phi` that cannot be distinguished
-from zero within its floating-point error (`GC Lanczos failure: ...
-amplitude_state=numeric_zero` on standard error). Inputs with nodes, for
-example a pair table that is nearly singular or singular only up to
-rounding, can therefore stop even
-when ordinary grand-canonical sampling of the same input completes. So can
-momentum projection with nonzero total momentum, unless the `TransSym`
-weights sum to exactly zero: otherwise the vacuum and fully occupied
-amplitudes are only numerically zero. The first configuration of the final
-chain is redrawn at most 1024 times.
+An unresolved final-chain acceptance decision or local energy uses the
+optional GMP/MPFR backend with the same proposal and uniform random value.
+Build with `-DMVMC_GC_REFINEMENT=ON` to require it; `AUTO` enables it when
+the development libraries are found, and `OFF` disables it. Without it,
+unresolved decisions stop the run without a result row. With it, unresolved
+precision, nonfinite values and resource exhaustion still stop the run;
+inspect `GC Lanczos refinement failed: ...` and `GC Lanczos failure: ...`.
+The first configuration of the final chain is redrawn at most 1024 times.
+
+For finite total spin, see [the S=2 example](../FiniteSpin/FirstLanczos/README.md).
+Finite quadrature is an approximation to a spin projector; refinement does
+not change quadrature order. If H commutes with S², it preserves an exactly
+projected S. The program requires Sz conservation, not this stronger
+symmetry. See `NLanczosEstimatorMode` in the expert manual for resource
+limits and supported combinations.

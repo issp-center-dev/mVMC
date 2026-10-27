@@ -1,10 +1,11 @@
 ---
-date: 2026-10-20
-datetime: 2026-10-20 14:58 JST
+date: 2026-10-27
+datetime: 2026-10-27 11:36 JST
 model: OpenAI GPT-6 Codex
 summary: |
   Expert-mode ordinary GC examples for total spin S=1 and S=2, without Lanczos.
   Includes fixed-parameter measurement and dense-SR optimization inputs.
+  FirstLanczos provides the separately validated finite-S Lanczos input.
 ---
 
 # Finite total spin in grand-canonical VMC
@@ -55,8 +56,11 @@ wave-function support; contributions of H Psi on nodes are not included.
 
 For MPI, set `NSplitSize` to the QP group size and run, for example,
 `mpiexec -np 2 vmc.out -e namelist.def initial.def` with `NSplitSize=2`.
-G=1 omits spin projection. General pairing, SpinJastrow, BackFlow and
-finite-S plus Lanczos are outside this sample's supported scope.
+G=1 omits spin projection. General pairing, SpinJastrow and BackFlow are
+outside finite-S support. For finite-S plus first-step stabilized Lanczos,
+use [FirstLanczos](FirstLanczos/README.md), which has the appropriate
+Hamiltonian and measurement files. The ordinary samples above contain pair
+sources and Green-function requests that the Lanczos mode rejects.
 
 ## 日本語
 
@@ -73,6 +77,9 @@ dense SR最適化を実行してください。最適化の収束を保証する
 任意に小さい摂動だけでは十分な標本化を保証できません。固定純triplet状態の測定は可能です。
 求積点数、粒子数分布、独立seed、初期配置、自己相関をそれぞれ確認します。
 `NGCInitNelec=-1` は許される初期粒子数を選びます。
+有限Sと1st stabilized Lanczosの併用例は [FirstLanczos](FirstLanczos/README.md)
+です。上の通常GC入力はLanczosで禁止するpair生成項とGreen関数測定を含むため、
+Lanczos flagだけを切り替えず、専用入力を使ってください。
 
 HamiltonianはSzを保存する複素pair生成・消滅項を含み、S²保存は要求しません。
 射影は試行状態に適用されます。出力のエネルギー二乗は波動関数の非零支持内の

@@ -14,6 +14,7 @@ the Free Software Foundation, either version 3 of the License, or
 #if defined(MVMC_ENABLE_ABSOLUTE_KRYLOV_REFERENCE) ||                         \
     defined(MVMC_ENABLE_POWER_LANCZOS_BOUNDED_ENGINE)
 
+#include "gc_krylov_spin_support.h"
 #include "krylov_fock_proposal.h"
 #include "krylov_fock_reference.h"
 
@@ -61,6 +62,70 @@ MVMCKrylovStatus mvmc_gc_krylov_draw_local(
 MVMCKrylovStatus mvmc_gc_krylov_draw_two_pairs(
     const MVMCKrylovFockModel *model, const uint64_t *current,
     MVMCKrylovFockProposalBoundedDraw draw, void *context,
+    uint64_t *out, size_t word_count);
+
+/* Balanced-domain spin swap: choose one up-only and one down-only site
+ * uniformly and exchange their spins (self-loop when either set is empty).
+ * The number of singles is unchanged and the reverse probability equals
+ * the forward one; a candidate outside the support is not redrawn. */
+MVMCKrylovStatus mvmc_gc_krylov_draw_spin_swap(
+    const MVMCKrylovFockModel *model, const uint64_t *current,
+    MVMCKrylovFockProposalBoundedDraw draw, void *context,
+    uint64_t *out, size_t word_count);
+
+/* Kinds of the fixed GC proposal mixture (also the Testing B0 kinds). */
+typedef enum {
+  MVMC_GC_MOVE_GLOBAL = 0,
+  MVMC_GC_MOVE_TWO_PAIR = 1,
+  MVMC_GC_MOVE_LOCAL = 2,
+  MVMC_GC_MOVE_SWAP = 3
+} MVMCGCMoveKind;
+
+/*
+ * One symmetric GC proposal of every stage: a bounded(16) value k selects
+ *   k = 0      global whole-domain uniform,
+ *   k = 1..8   all-site two-pair (N +/- 4) for active S > 0 and for an
+ *              active S = 0 TRIPLET; legacy local otherwise,
+ *   k = 9..10  spin swap for active S > 0; legacy local otherwise,
+ *   k = 11..15 legacy local,
+ * then the kernel's own draws.  log(reverse/forward) is 0 for every kind.
+ * support NULL means inactive.  kind (may be NULL) receives the move.
+ */
+MVMCKrylovStatus mvmc_gc_krylov_draw_mixture(
+    const MVMCKrylovFockModel *model, const MVMCGCSpinSupport *support,
+    const uint64_t *current, MVMCKrylovFockProposalBoundedDraw draw,
+    void *context, uint64_t *out, size_t word_count, MVMCGCMoveKind *kind);
+
+/*
+ * Finite-S (active, S > 0, GC_BALANCED) start sectors.  N = 2m is allowed
+ * when max(0, 2m - L) <= m - S and, for a TRIPLET pair function, m - S is
+ * even.  explicit_n = 1 keeps requested_n alone (a forbidden N is
+ * INVALID_ARGUMENT); explicit_n = 0 lists every allowed N by
+ * (|N - requested_n|, N).  An S > 0 SINGLET/ZERO support is an
+ * AMPLITUDE_FAILURE.  requested_n must be even in [0, 2L] (never rounded);
+ * capacity must be at least L + 1.  No allocation, RNG or MPI; on failure
+ * sectors and count are unchanged.  The integer test does not prove that a
+ * general pair function is nonzero there.
+ */
+MVMCKrylovStatus mvmc_gc_krylov_initial_sectors(
+    const MVMCKrylovFockModel *model, const MVMCGCSpinSupport *support,
+    int requested_n, int explicit_n,
+    int *sectors, size_t capacity, size_t *count);
+
+/*
+ * Structured finite-S start configuration with initial_n (an allowed
+ * sector) electrons, for the chain root only (no allocation, no MPI).  D is
+ * uniform in [max(0, 2m - L), m - S]; then D doubly occupied sites, m - D
+ * up-only and m - D down-only sites are chosen as uniform subsets of the
+ * still unused sites in ascending order.  A choice with a single option
+ * (one D value, zero or all remaining sites) draws nothing, so every draw
+ * has bound >= 2.  This is not uniform over all supported configurations
+ * and is used for initialization only.  out must not alias a current
+ * configuration; on failure it is not a usable candidate.
+ */
+MVMCKrylovStatus mvmc_gc_krylov_draw_spin_initial(
+    const MVMCKrylovFockModel *model, const MVMCGCSpinSupport *support,
+    int initial_n, MVMCKrylovFockProposalBoundedDraw draw, void *context,
     uint64_t *out, size_t word_count);
 
 #endif /* reference or bounded engine */

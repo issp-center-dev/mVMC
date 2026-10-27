@@ -4,13 +4,20 @@
  * (independent recursive Pfaffian), Re(Proj) correlation factor, Phase 3b
  * boundary zero, node configurations, eleIdx permutation parity, caller
  * buffer invariance, input validation, MPI QP partitions with empty ranks,
- * rank-1 faults and the production-shaped GC bridge.
+ * rank-1 faults and the production-shaped GC bridge.  Task 5: the spin
+ * support descriptor (S0 canonical hash, S>0 frozen R1/E1/R1_G2/S2_G2 base
+ * states, H Psi/Phi never masked, singlet/near-triplet, NaN under a mask,
+ * private snapshot, ordinary/refined mask mutations on S2_G2, metadata
+ * audit and hash coverage, support-helper failure agreement).
  */
 #include "bounded_krylov_engine.h"
 #include "gc_krylov_amplitude.h"
+#include "gc_lanczos_task5_case.h"
+#include "krylov_final_state.h"
 #include "power_lanczos_gc_bridge.h"
 
 #include <complex.h>
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -171,6 +178,7 @@ static void fixture_layout(AmplitudeFixture *fixture,
   fixture->layout.translation_weights = translation;
   fixture->layout.scaled_pivot_tolerance = 0.0;
   fixture->layout.projection.site_count = L2;
+  fixture->layout.spin_support = mvmc_gc_spin_support_inactive();
   fixture->layout.communicator = comm;
   if (with_projection) {
     fixture->gutzwiller_idx[0] = 0;
@@ -439,7 +447,11 @@ static void test_spin_parity_rule(void) {
   CHECK(mvmc_gc_krylov_amplitude_workspace_create(
             &fixture.layout, slater, weights, &raw) == MVMC_KRYLOV_STATUS_OK,
         "raw spin workspace");
-  fixture.layout.spin_triplet_s0 = 1;
+  CHECK(mvmc_gc_spin_support_classify(1, 2, 0, 1, 1,
+                                      &fixture.layout.spin_support) ==
+                MVMC_KRYLOV_STATUS_OK &&
+            fixture.layout.spin_support.pair_symmetry == MVMC_GC_PAIR_TRIPLET,
+        "S=0 triplet descriptor (singlet not read)");
   CHECK(mvmc_gc_krylov_amplitude_workspace_create(
             &fixture.layout, slater, weights, &masked) == MVMC_KRYLOV_STATUS_OK,
         "triplet spin workspace");
@@ -455,7 +467,7 @@ static void test_spin_parity_rule(void) {
     CHECK(evaluate(masked, 0xf, &result) == MVMC_KRYLOV_STATUS_OK &&
               matches(&result, -1), "triplet full survives");
     /* Mutating the caller's proof cannot change an existing generation. */
-    fixture.layout.spin_triplet_s0 = 0;
+    fixture.layout.spin_support = mvmc_gc_spin_support_inactive();
     CHECK(evaluate(masked, 0x9, &result) == MVMC_KRYLOV_STATUS_OK &&
               result.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
           "immutable support snapshot");
@@ -471,7 +483,10 @@ static void test_spin_parity_rule(void) {
   mvmc_gc_krylov_amplitude_workspace_destroy(masked);
   masked = NULL;
   if (world_size() > 1) {
-    fixture.layout.spin_triplet_s0 = world_rank() == 0;
+    fixture.layout.spin_support.active = 1;
+    fixture.layout.spin_support.gauss_count = 2;
+    fixture.layout.spin_support.pair_symmetry =
+        world_rank() == 0 ? MVMC_GC_PAIR_TRIPLET : MVMC_GC_PAIR_GENERAL;
     CHECK(mvmc_gc_krylov_amplitude_workspace_create(
               &fixture.layout, slater, weights, &masked) ==
               MVMC_KRYLOV_STATUS_INVALID_ARGUMENT && masked == NULL,
@@ -759,6 +774,7 @@ static void test_gc_bridge(void) {
   view.domain = MVMC_KRYLOV_DOMAIN_GC_BALANCED;
   view.translation_count = 1;
   view.translation_weights = translation;
+  view.spin_support = mvmc_gc_spin_support_inactive();
   CHECK(mvmc_power_lanczos_gc_bridge_create(&view, world_comm(), world_comm(),
                                             &bridge) ==
                 MVMC_KRYLOV_STATUS_OK &&
@@ -817,6 +833,581 @@ static void test_gc_bridge(void) {
         "GC view requires a GC domain");
 }
 
+/* ---- Task 5: spin support descriptor ------------------------------------ */
+
+static void fault_everywhere(MVMCGCKrylovAmplitudeFault fault) {
+  mvmc_gc_krylov_amplitude_testing_set_fault(
+      fault, fault == MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE ? -1 : world_rank());
+}
+
+static MVMCGCKrylovAmplitudeWorkspace *task5_workspace(
+    const Task5Built *built, MVMCKrylovStatus *status) {
+  MVMCGCKrylovAmplitudeLayout layout;
+  MVMCGCKrylovAmplitudeWorkspace *workspace = NULL;
+  task5_layout(built, world_comm(), world_rank(), world_size(), &layout);
+  *status = mvmc_gc_krylov_amplitude_workspace_create(
+      &layout, built->slater, built->weight, &workspace);
+  return workspace;
+}
+
+static int task5_engine(const Task5Built *built,
+                        MVMCGCKrylovAmplitudeWorkspace *workspace,
+                        MVMCKrylovBoundedPlan **plan,
+                        MVMCKrylovBoundedWorkspace **engine) {
+  MVMCKrylovBoundedLimits limits;
+  memset(&limits, 0, sizeof(limits));
+  limits.amplitude_policy_hash =
+      mvmc_gc_krylov_amplitude_generation_hash(workspace);
+  limits.cache_bytes = (size_t)1 << 20;
+  limits.max_row_transitions = built->model.term_count;
+  limits.max_workspace_bytes = (size_t)64 * 1024 * 1024;
+  limits.max_node_expansions = 100000;
+  limits.max_terminal_amplitude_calls = 100000;
+  limits.max_total_row_transitions = 1000000;
+  limits.max_order = 2;
+  *plan = NULL;
+  *engine = NULL;
+  return mvmc_bounded_krylov_plan_create(&built->model, &limits, plan) ==
+             MVMC_KRYLOV_STATUS_OK &&
+         mvmc_bounded_krylov_workspace_create(*plan, engine) ==
+             MVMC_KRYLOV_STATUS_OK;
+}
+
+/* Psi from the callback, Psi/H Psi/H^2 Psi from the bounded engine and
+ * Phi/H Phi from the raw policy, each against the frozen 64-eps rule. */
+static void task5_check_values(const char *label, const Task5Built *built,
+                               const Task5Scaled *table, size_t count,
+                               const double complex coefficient[2]) {
+  MVMCKrylovStatus status;
+  MVMCGCKrylovAmplitudeWorkspace *workspace = task5_workspace(built, &status);
+  MVMCKrylovBoundedPlan *plan = NULL;
+  MVMCKrylovBoundedWorkspace *engine = NULL;
+  MVMCKrylovFinalStatePolicy policy;
+  size_t k;
+  int compared = 0;
+  CHECK(status == MVMC_KRYLOV_STATUS_OK && workspace != NULL, label);
+  if (workspace == NULL) return;
+  CHECK(task5_engine(built, workspace, &plan, &engine), "Task 5 engine");
+  CHECK(mvmc_krylov_final_state_policy_create(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC, 31, coefficient, 2,
+            &policy) == MVMC_KRYLOV_STATUS_OK,
+        "raw synthetic policy");
+  for (k = 0; engine != NULL && k < count; ++k) {
+    uint64_t words = table[k].configuration;
+    MVMCKrylovScaledAmplitudeResult base;
+    MVMCKrylovBoundedResult values;
+    MVMCKrylovFinalStateEvaluation final_state;
+    const Task5Scaled *phi, *hphi;
+    int v;
+    if (table[k].value != 0) continue;
+    CHECK(evaluate(workspace, words, &base) == MVMC_KRYLOV_STATUS_OK &&
+              task5_scaled_matches(&base.value, table + k, 64.0),
+          "base Psi state and value (64 eps)");
+    status = mvmc_bounded_krylov_evaluate(engine, &words, 1,
+                                          mvmc_gc_krylov_scaled_amplitude,
+                                          workspace, &values);
+    CHECK(status == MVMC_KRYLOV_STATUS_OK, "bounded Krylov values");
+    if (status != MVMC_KRYLOV_STATUS_OK) continue;
+    for (v = 0; v < 3; ++v) {
+      const Task5Scaled *ref = task5_reference(table, count, (unsigned)words, v);
+      if (ref == NULL || !task5_scaled_matches(values.value + v, ref, 64.0)) {
+        fprintf(stderr, "%s: mask %u q%d state %d log %.17g\n", label,
+                (unsigned)words, v, (int)values.value[v].state,
+                values.value[v].log_abs);
+      }
+      CHECK(ref != NULL && task5_scaled_matches(values.value + v, ref, 64.0),
+            "Psi/H Psi/H^2 Psi from the masked base only");
+    }
+    phi = task5_reference(table, count, (unsigned)words, 3);
+    hphi = task5_reference(table, count, (unsigned)words, 4);
+    status = mvmc_krylov_final_state_evaluate(&policy, &values, &final_state);
+    CHECK(status == MVMC_KRYLOV_STATUS_OK && phi != NULL && hphi != NULL &&
+              task5_scaled_matches(&final_state.amplitude, phi, 64.0) &&
+              task5_scaled_matches(&final_state.hamiltonian_amplitude, hphi,
+                                   64.0),
+          "Phi and H Phi are not masked outside the base");
+    ++compared;
+  }
+  CHECK(compared > 0, "reference configurations compared");
+  mvmc_bounded_krylov_workspace_destroy(engine);
+  mvmc_bounded_krylov_plan_destroy(plan);
+  mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+}
+
+static void test_task5_frozen_values(void) {
+  Task5Built built;
+  double complex c[2];
+  CHECK(task5_build(&task5_r1, &built), "R1 build");
+  c[0] = built.coefficient[0];
+  c[1] = built.coefficient[1];
+  task5_check_values("R1 S1 G8 triplet", &built, task5_r1.scaled,
+                     task5_r1.scaled_count, c);
+  c[1] = task5_complex(task5_r1c_c1);
+  task5_check_values("R1C complex c1", &built, task5_r1c_scaled,
+                     sizeof(task5_r1c_scaled) / sizeof(task5_r1c_scaled[0]), c);
+  task5_free(&built);
+  CHECK(task5_build(&task5_e1, &built), "E1 build");
+  task5_check_values("E1 S1 G8 general exp(D/8)", &built, task5_e1.scaled,
+                     task5_e1.scaled_count, built.coefficient);
+  task5_free(&built);
+  CHECK(task5_build(&task5_s2_g2, &built), "S2_G2 build");
+  task5_check_values("S2_G2 S2 G2 general", &built, task5_s2_g2.scaled,
+                     task5_s2_g2.scaled_count, built.coefficient);
+  task5_free(&built);
+  /* R1_G2 (2 QPs, empty QP rank at np3): states and the 6/9 symmetry. */
+  CHECK(task5_build(&task5_r1_g2, &built), "R1_G2 build");
+  {
+    MVMCKrylovStatus status;
+    MVMCGCKrylovAmplitudeWorkspace *workspace = task5_workspace(&built, &status);
+    MVMCKrylovScaledAmplitudeResult six, nine, five, vacuum;
+    CHECK(status == MVMC_KRYLOV_STATUS_OK && workspace != NULL, "R1_G2 workspace");
+    if (workspace != NULL) {
+      CHECK(evaluate(workspace, 6, &six) == MVMC_KRYLOV_STATUS_OK &&
+                evaluate(workspace, 9, &nine) == MVMC_KRYLOV_STATUS_OK &&
+                evaluate(workspace, 5, &five) == MVMC_KRYLOV_STATUS_OK &&
+                evaluate(workspace, 0, &vacuum) == MVMC_KRYLOV_STATUS_OK,
+            "R1_G2 evaluations");
+      CHECK(six.value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO &&
+                nine.value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO &&
+                cabs(six.value.phase + nine.value.phase) <= 64 * 0x1p-52 &&
+                fabs(six.value.log_abs - nine.value.log_abs) <=
+                    64 * 0x1p-52 * (1.0 + fabs(six.value.log_abs)) &&
+                five.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO &&
+                vacuum.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
+            "R1_G2: N2 singles survive (no S=0 rule), doublon/vacuum masked");
+      mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+    }
+  }
+  task5_free(&built);
+}
+
+static void test_task5_mask_mutations(void) {
+  Task5Built built;
+  MVMCKrylovStatus status;
+  MVMCGCKrylovAmplitudeWorkspace *workspace;
+  MVMCKrylovBoundedPlan *plan = NULL;
+  MVMCKrylovBoundedWorkspace *engine = NULL;
+  MVMCKrylovFinalStatePolicy policy;
+  MVMCKrylovScaledAmplitudeResult result;
+  const uint64_t current = 60, proposal = 53;
+  int mutation;
+  CHECK(task5_build(&task5_s2_g2, &built), "S2_G2 build");
+  workspace = task5_workspace(&built, &status);
+  CHECK(workspace != NULL, "S2_G2 workspace");
+  if (workspace == NULL) {
+    task5_free(&built);
+    return;
+  }
+  CHECK(task5_engine(&built, workspace, &plan, &engine), "S2_G2 engine");
+  CHECK(mvmc_krylov_final_state_policy_create(
+            1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC, 37, built.coefficient,
+            2, &policy) == MVMC_KRYLOV_STATUS_OK,
+        "S2_G2 raw policy");
+  /* Same N4: 60 has four singles, 53 two (S=2 needs four). */
+  CHECK(evaluate(workspace, proposal, &result) == MVMC_KRYLOV_STATUS_OK &&
+            result.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
+        "S2_G2 Psi(53) is an exact structural zero");
+  fault_everywhere(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_ORDINARY_UNMASKED);
+  CHECK(evaluate(workspace, proposal, &result) == MVMC_KRYLOV_STATUS_OK &&
+            result.value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO,
+        "ordinary mask removal is visible in the base state");
+  fault_everywhere(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_REFINED_UNMASKED);
+  CHECK(evaluate(workspace, proposal, &result) == MVMC_KRYLOV_STATUS_OK &&
+            result.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
+        "refined-only mutation leaves the ordinary base masked");
+  fault_everywhere(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE);
+  for (mutation = 0; engine != NULL && mutation < 2; ++mutation) {
+    MVMCKrylovFinalStateSnapshot snapshot;
+    MVMCKrylovFinalStateStepResult step;
+    uint64_t words = current;
+    CHECK(mvmc_krylov_final_state_sampler_initialize(
+              engine, &policy, &words, 1, mvmc_gc_krylov_scaled_amplitude,
+              workspace, &snapshot) == MVMC_KRYLOV_STATUS_OK,
+          "S2_G2 current 60");
+    if (mutation)
+      fault_everywhere(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_ORDINARY_UNMASKED);
+    status = mvmc_krylov_final_state_sampler_step(
+        engine, &policy, &words, 1, &snapshot, &proposal, 1, 0.0, 0.5,
+        mvmc_gc_krylov_scaled_amplitude, workspace, &step);
+    fault_everywhere(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE);
+    if (!mutation) {
+      CHECK(status == MVMC_KRYLOV_STATUS_OK && !step.accepted &&
+                step.acceptance.exact_zero_proposal && words == current,
+            "ordinary step: masked 53 is an exact-zero proposal");
+    } else {
+      CHECK(status == MVMC_KRYLOV_STATUS_OK && step.accepted &&
+                words == proposal,
+            "ordinary mask mutation turns the rejection into acceptance");
+    }
+  }
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+  {
+    MVMCKrylovRefinementResult refined;
+    const MVMCGCKrylovAmplitudeFault faults[3] = {
+        MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE,
+        MVMC_GC_KRYLOV_AMPLITUDE_FAULT_ORDINARY_UNMASKED,
+        MVMC_GC_KRYLOV_AMPLITUDE_FAULT_REFINED_UNMASKED};
+    int f;
+    for (f = 0; f < 3; ++f) {
+      fault_everywhere(faults[f]);
+      memset(&refined, 0, sizeof(refined));
+      status = mvmc_gc_krylov_refine_final(workspace, &built.model, &policy,
+                                           &current, &proposal, 1, 0.5,
+                                           &refined);
+      fault_everywhere(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE);
+      if (f < 2) {
+        CHECK(status == MVMC_KRYLOV_STATUS_OK && refined.valid &&
+                  !refined.accepted && refined.exact_zero_proposal,
+              "refined S2_G2 60->53 u=1/2 rejects the masked zero");
+      } else {
+        CHECK(status == MVMC_KRYLOV_STATUS_OK && refined.valid &&
+                  refined.accepted,
+              "refined mask mutation turns the rejection into acceptance");
+      }
+    }
+  }
+#endif
+  mvmc_bounded_krylov_workspace_destroy(engine);
+  mvmc_bounded_krylov_plan_destroy(plan);
+  mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+  task5_free(&built);
+}
+
+static void test_task5_private_snapshot(void) {
+  Task5Built built;
+  MVMCGCKrylovAmplitudeLayout layout;
+  MVMCGCKrylovAmplitudeWorkspace *workspace = NULL;
+  MVMCKrylovScaledAmplitudeResult before60, before53, after60, after53;
+  uint64_t hash;
+  size_t k;
+  CHECK(task5_build(&task5_s2_g2, &built), "S2_G2 build");
+  task5_layout(&built, world_comm(), world_rank(), world_size(), &layout);
+  CHECK(mvmc_gc_krylov_amplitude_workspace_create(&layout, built.slater,
+                                                  built.weight, &workspace) ==
+            MVMC_KRYLOV_STATUS_OK,
+        "S2_G2 workspace");
+  if (workspace != NULL) {
+    CHECK(evaluate(workspace, 60, &before60) == MVMC_KRYLOV_STATUS_OK &&
+              evaluate(workspace, 53, &before53) == MVMC_KRYLOV_STATUS_OK,
+          "evaluation before caller changes");
+    hash = mvmc_gc_krylov_amplitude_generation_hash(workspace);
+    /* Caller mutates every input it owns after creation. */
+    layout.spin_support = mvmc_gc_spin_support_inactive();
+    built.support.total_spin = 0;
+    for (k = 0; k < (size_t)task5_s2_g2.qp_total * built.orbital_count *
+                        built.orbital_count;
+         ++k) {
+      built.slater[k] *= 2.0;
+    }
+    built.weight[0] = -built.weight[0];
+    built.translation[0] = 0.0;
+    CHECK(evaluate(workspace, 60, &after60) == MVMC_KRYLOV_STATUS_OK &&
+              evaluate(workspace, 53, &after53) == MVMC_KRYLOV_STATUS_OK &&
+              memcmp(&after60.value, &before60.value, sizeof(after60.value)) ==
+                  0 &&
+              after53.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO &&
+              before53.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO &&
+              mvmc_gc_krylov_amplitude_generation_hash(workspace) == hash,
+          "private descriptor/Slater/weight snapshot: values and hash unchanged");
+    mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+  }
+  task5_free(&built);
+}
+
+/* S0 canonical form, near/pure triplet, and an S>0 singlet. */
+static void test_task5_classification(void) {
+  double complex slater[2 * ORB2 * ORB2];
+  const double complex translation[1] = {1};
+  const double complex weights[2] = {0.5, 0.5};
+  AmplitudeFixture fixture;
+  MVMCGCKrylovAmplitudeWorkspace *a = NULL, *b = NULL;
+  MVMCKrylovScaledAmplitudeResult result;
+  double complex F[L2 * L2] = {0.0, 1.0, -1.0, 0.0};
+  int idx_rows[L2][L2] = {{0, 1}, {2, 3}};
+  int sgn_rows[L2][L2] = {{1, 1}, {1, 1}};
+  int *index[L2] = {idx_rows[0], idx_rows[1]};
+  int *sign[L2] = {sgn_rows[0], sgn_rows[1]};
+  int triplet, singlet, q;
+  for (q = 0; q < 2; ++q) {
+    const double beta = q == 0 ? 0.7 : acos(-1.0) - 0.7;
+    const double c = cos(beta / 2), s = sin(beta / 2);
+    double complex *m = slater + q * ORB2 * ORB2;
+    memset(m, 0, ORB2 * ORB2 * sizeof(*m));
+    m[1] = -2 * c * s; m[4] = -m[1];
+    m[11] = 2 * c * s; m[14] = -m[11];
+    m[3] = c * c - s * s; m[12] = -m[3];
+    m[6] = -m[3]; m[9] = -m[6];
+  }
+  fixture_layout(&fixture, MVMC_KRYLOV_DOMAIN_GC_BALANCED, 2, translation, 1,
+                 0, world_comm(), 1);
+  /* Real-F classification of an exact triplet (singlet 0) and of the zero
+   * F (both 1) versus the production global path (singlet never read). */
+  triplet = GCSpinPureTriplet(L2, 4, index, sign, F);
+  singlet = GCSpinPureSinglet(L2, 4, index, sign, F);
+  CHECK(triplet == 1 && singlet == 0, "exact triplet F classified");
+  CHECK(mvmc_gc_spin_support_classify(1, 2, 0, triplet, singlet,
+                                      &fixture.layout.spin_support) ==
+            MVMC_KRYLOV_STATUS_OK &&
+            mvmc_gc_krylov_amplitude_workspace_create(
+                &fixture.layout, slater, weights, &a) == MVMC_KRYLOV_STATUS_OK,
+        "real-F S0 descriptor");
+  {
+    double complex zero[L2 * L2] = {0.0, 0.0, 0.0, 0.0};
+    const int zt = GCSpinPureTriplet(L2, 4, index, sign, zero);
+    const int zs = GCSpinPureSinglet(L2, 4, index, sign, zero);
+    CHECK(zt == 1 && zs == 1, "zero F is both triplet and singlet");
+    CHECK(mvmc_gc_spin_support_classify(1, 2, 0, zt, zs,
+                                        &fixture.layout.spin_support) ==
+                  MVMC_KRYLOV_STATUS_OK &&
+              fixture.layout.spin_support.pair_symmetry ==
+                  MVMC_GC_PAIR_TRIPLET &&
+              mvmc_gc_krylov_amplitude_workspace_create(
+                  &fixture.layout, slater, weights, &b) ==
+                  MVMC_KRYLOV_STATUS_OK,
+          "S0 ZERO folds to TRIPLET");
+  }
+  if (a != NULL && b != NULL) {
+    CHECK(mvmc_gc_krylov_amplitude_generation_hash(a) ==
+              mvmc_gc_krylov_amplitude_generation_hash(b),
+          "real-F and production-global S0 descriptors hash identically");
+    CHECK(evaluate(a, 0x9, &result) == MVMC_KRYLOV_STATUS_OK &&
+              result.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
+          "S0 triplet parity zero (N%4==2)");
+  }
+  mvmc_gc_krylov_amplitude_workspace_destroy(a);
+  mvmc_gc_krylov_amplitude_workspace_destroy(b);
+  a = b = NULL;
+  /* A near-triplet F is GENERAL: no parity mask from a tolerance. */
+  F[1] = 1.0 + 0x1p-52;
+  triplet = GCSpinPureTriplet(L2, 4, index, sign, F);
+  CHECK(triplet == 0, "near-triplet F is not a triplet");
+  CHECK(mvmc_gc_spin_support_classify(1, 2, 0, triplet, 0,
+                                      &fixture.layout.spin_support) ==
+                MVMC_KRYLOV_STATUS_OK &&
+            fixture.layout.spin_support.pair_symmetry ==
+                MVMC_GC_PAIR_GENERAL &&
+            mvmc_gc_krylov_amplitude_workspace_create(
+                &fixture.layout, slater, weights, &a) == MVMC_KRYLOV_STATUS_OK,
+        "near-triplet descriptor");
+  if (a != NULL) {
+    CHECK(evaluate(a, 0x9, &result) == MVMC_KRYLOV_STATUS_OK &&
+              result.value.state != MVMC_SCALED_COMPLEX_EXACT_ZERO,
+          "GENERAL S0 keeps the N%4==2 configuration");
+    mvmc_gc_krylov_amplitude_workspace_destroy(a);
+    a = NULL;
+  }
+  /* S>0 pure singlet: the helper zeros everything; the bridge refuses. */
+  {
+    Task5Built built;
+    MVMCKrylovStatus status;
+    MVMCPowerLanczosGCView view;
+    MVMCPowerLanczosGCBridge *bridge = NULL;
+    int chain_rank = world_rank(), chain_size = world_size();
+    int sym;
+    CHECK(task5_build(&task5_r1, &built), "R1 build");
+    built.support.pair_symmetry = MVMC_GC_PAIR_SINGLET;
+    a = task5_workspace(&built, &status);
+    CHECK(status == MVMC_KRYLOV_STATUS_OK && a != NULL &&
+              evaluate(a, 6, &result) == MVMC_KRYLOV_STATUS_OK &&
+              result.value.state == MVMC_SCALED_COMPLEX_EXACT_ZERO,
+          "S>0 singlet descriptor zeros Psi(6)");
+    mvmc_gc_krylov_amplitude_workspace_destroy(a);
+    for (sym = MVMC_GC_PAIR_SINGLET; sym <= MVMC_GC_PAIR_ZERO;
+         sym += MVMC_GC_PAIR_ZERO - MVMC_GC_PAIR_SINGLET) {
+      built.support.pair_symmetry = (MVMCGCPairSymmetry)sym;
+      task5_view(&built, world_rank(), chain_rank, chain_size, &view);
+      CHECK(mvmc_power_lanczos_gc_bridge_create(&view, world_comm(),
+                                                world_comm(), &bridge) ==
+                    MVMC_KRYLOV_STATUS_AMPLITUDE_FAILURE &&
+                bridge == NULL,
+            "S>0 singlet/zero bridge is an amplitude failure");
+    }
+    built.support.pair_symmetry = MVMC_GC_PAIR_TRIPLET;
+    task5_view(&built, world_rank(), chain_rank, chain_size, &view);
+    CHECK(mvmc_power_lanczos_gc_bridge_create(&view, world_comm(),
+                                              world_comm(), &bridge) ==
+                  MVMC_KRYLOV_STATUS_OK &&
+              bridge != NULL,
+          "R1 triplet bridge");
+    mvmc_power_lanczos_gc_bridge_destroy(bridge);
+    task5_free(&built);
+  }
+}
+
+/* A nonfinite component under a structural zero is never hidden. */
+static void test_task5_nonfinite_under_mask(void) {
+  Task5Built built;
+  MVMCKrylovStatus status;
+  MVMCGCKrylovAmplitudeWorkspace *workspace;
+  MVMCKrylovScaledAmplitudeResult result;
+  CHECK(task5_build(&task5_s2_g2, &built), "S2_G2 build");
+  /* 53 occupies orbitals {0,2,4,5}; entry (0,2) is used only there. */
+  built.slater[0 * built.orbital_count + 2] = NAN;
+  built.slater[2 * built.orbital_count + 0] = NAN;
+  workspace = task5_workspace(&built, &status);
+  CHECK(status == MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+        "NaN Slater accepted at creation");
+  if (workspace != NULL) {
+    CHECK(evaluate(workspace, 53, &result) == MVMC_KRYLOV_STATUS_NONFINITE,
+          "masked configuration still reports the NaN component");
+    CHECK(evaluate(workspace, 60, &result) == MVMC_KRYLOV_STATUS_OK &&
+              result.value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO,
+          "an unaffected configuration is evaluated");
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+    {
+      MVMCKrylovFinalStatePolicy policy;
+      MVMCKrylovRefinementResult refined;
+      const uint64_t current = 60, proposal = 53;
+      CHECK(mvmc_krylov_final_state_policy_create(
+                1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC, 41,
+                built.coefficient, 2, &policy) == MVMC_KRYLOV_STATUS_OK &&
+                mvmc_gc_krylov_refine_final(workspace, &built.model, &policy,
+                                            &current, &proposal, 1, 0.5,
+                                            &refined) ==
+                    MVMC_KRYLOV_STATUS_NONFINITE,
+            "refined builder validates NaN even for a support zero");
+    }
+#endif
+    mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+  }
+  task5_free(&built);
+}
+
+/* Rank-agreed metadata, invalid values and hash coverage of every field. */
+static void test_task5_metadata(void) {
+  Task5Built built;
+  MVMCKrylovStatus status;
+  MVMCGCKrylovAmplitudeWorkspace *workspace;
+  MVMCGCSpinSupport variants[6];
+  uint64_t hashes[6];
+  int field, k, j;
+  CHECK(task5_build(&task5_r1_g2, &built), "R1_G2 build");
+  /* Every invalid value on every rank. */
+  {
+    const MVMCGCSpinSupport bad[] = {
+        {2, 2, 1, MVMC_GC_PAIR_TRIPLET}, {1, 0, 1, MVMC_GC_PAIR_TRIPLET},
+        {1, -1, 1, MVMC_GC_PAIR_TRIPLET}, {1, 1, 1, MVMC_GC_PAIR_TRIPLET},
+        {1, 2, -1, MVMC_GC_PAIR_TRIPLET}, {1, 2, 2, MVMC_GC_PAIR_TRIPLET},
+        {1, 2, INT_MAX, MVMC_GC_PAIR_TRIPLET},
+        {1, 2, 0, MVMC_GC_PAIR_ZERO}, {1, 2, 0, MVMC_GC_PAIR_SINGLET},
+        {1, 2, 1, (MVMCGCPairSymmetry)7}, {0, 2, 0, MVMC_GC_PAIR_GENERAL},
+        {0, 1, 1, MVMC_GC_PAIR_GENERAL}};
+    for (k = 0; k < (int)(sizeof(bad) / sizeof(bad[0])); ++k) {
+      built.support = bad[k];
+      workspace = task5_workspace(&built, &status);
+      CHECK(status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT && workspace == NULL,
+            "invalid descriptor rejected on every rank");
+      mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+    }
+  }
+  {
+    MVMCGCKrylovAmplitudeLayout layout;
+    built.support = mvmc_gc_spin_support_inactive();
+    task5_layout(&built, world_comm(), world_rank(), world_size(), &layout);
+    layout.site_count = INT_MAX / 2 + 1;
+    layout.projection.site_count = (size_t)layout.site_count;
+    workspace = NULL;
+    CHECK(mvmc_gc_krylov_amplitude_workspace_create(
+              &layout, built.slater, built.weight, &workspace) ==
+                  MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+              workspace == NULL,
+          "L overflow rejected before any allocation");
+  }
+  /* Hash covers active, G, S and the symmetry separately. */
+  variants[0] = built.support = (MVMCGCSpinSupport){1, 2, 1, MVMC_GC_PAIR_GENERAL};
+  variants[1] = (MVMCGCSpinSupport){1, 3, 1, MVMC_GC_PAIR_GENERAL};
+  variants[2] = (MVMCGCSpinSupport){1, 2, 0, MVMC_GC_PAIR_GENERAL};
+  variants[3] = (MVMCGCSpinSupport){1, 2, 1, MVMC_GC_PAIR_TRIPLET};
+  variants[4] = (MVMCGCSpinSupport){1, 2, 1, MVMC_GC_PAIR_SINGLET};
+  variants[5] = mvmc_gc_spin_support_inactive();
+  for (k = 0; k < 6; ++k) {
+    built.support = variants[k];
+    workspace = task5_workspace(&built, &status);
+    CHECK(status == MVMC_KRYLOV_STATUS_OK && workspace != NULL,
+          "valid descriptor variant");
+    hashes[k] = mvmc_gc_krylov_amplitude_generation_hash(workspace);
+    mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+  }
+  for (k = 0; k < 6; ++k) {
+    for (j = k + 1; j < 6; ++j) {
+      CHECK(hashes[k] != hashes[j], "every descriptor field enters the hash");
+    }
+  }
+  /* One rank differs in one field: same error on every rank, no hang. */
+  if (world_size() > 1) {
+    for (field = 0; field < 4; ++field) {
+      MVMCPowerLanczosGCView view;
+      MVMCPowerLanczosGCBridge *bridge = NULL;
+      built.support = (MVMCGCSpinSupport){1, 2, 1, MVMC_GC_PAIR_TRIPLET};
+      if (world_rank() == 1) {
+        if (field == 0) built.support = mvmc_gc_spin_support_inactive();
+        if (field == 1) built.support.gauss_count = 3;
+        if (field == 2) built.support.total_spin = 0;
+        if (field == 3) built.support.pair_symmetry = MVMC_GC_PAIR_GENERAL;
+      }
+      workspace = task5_workspace(&built, &status);
+      CHECK(status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT && workspace == NULL,
+            "one-rank descriptor mismatch rejected by the chain audit");
+      mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+      task5_view(&built, world_rank(), world_rank(), world_size(), &view);
+      CHECK(mvmc_power_lanczos_gc_bridge_create(&view, world_comm(),
+                                                world_comm(), &bridge) ==
+                    MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+                bridge == NULL,
+            "one-rank descriptor mismatch rejected by the world audit");
+      /* Separate chains still share the world audit. */
+      task5_view(&built, world_rank(), 0, 1, &view);
+      CHECK(mvmc_power_lanczos_gc_bridge_create(&view, world_comm(),
+                                                self_comm(), &bridge) ==
+                    MVMC_KRYLOV_STATUS_INVALID_ARGUMENT &&
+                bridge == NULL,
+            "mismatch across single-rank chains rejected by the world audit");
+    }
+    built.support = (MVMCGCSpinSupport){1, 2, 1, MVMC_GC_PAIR_TRIPLET};
+    if (world_rank() == 1) built.support.gauss_count = 0;
+    workspace = task5_workspace(&built, &status);
+    CHECK(status == MVMC_KRYLOV_STATUS_INVALID_ARGUMENT && workspace == NULL,
+          "one-rank invalid value agreed as INVALID_ARGUMENT");
+  }
+  CHECK(MVMC_POWER_LANCZOS_GC_BRIDGE_VERSION == UINT64_C(3),
+        "bridge version 3");
+  /* Support helper failure: invariant failure on every rank, both paths. */
+  built.support = (MVMCGCSpinSupport){1, 2, 1, MVMC_GC_PAIR_TRIPLET};
+  workspace = task5_workspace(&built, &status);
+  CHECK(status == MVMC_KRYLOV_STATUS_OK && workspace != NULL, "R1_G2 workspace");
+  if (workspace != NULL) {
+    MVMCKrylovScaledAmplitudeResult result;
+    const int target = world_size() > 1 ? world_size() - 1 : 0;
+    mvmc_gc_krylov_amplitude_testing_set_fault(
+        MVMC_GC_KRYLOV_AMPLITUDE_FAULT_SUPPORT, target);
+    CHECK(evaluate(workspace, 6, &result) ==
+              MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE,
+          "support helper failure agreed on every rank (ordinary)");
+#if defined(MVMC_HAVE_MPFR_REFINEMENT)
+    {
+      MVMCKrylovFinalStatePolicy policy;
+      MVMCKrylovRefinementResult refined;
+      const uint64_t current = 6, proposal = 5;
+      CHECK(mvmc_krylov_final_state_policy_create(
+                1, MVMC_KRYLOV_FINAL_COEFFICIENT_SYNTHETIC, 43,
+                built.coefficient, 2, &policy) == MVMC_KRYLOV_STATUS_OK &&
+                mvmc_gc_krylov_refine_final(workspace, &built.model, &policy,
+                                            &current, &proposal, 1, 0.125,
+                                            &refined) ==
+                    MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE,
+            "support helper failure agreed on every rank (refined)");
+    }
+#endif
+    mvmc_gc_krylov_amplitude_testing_set_fault(
+        MVMC_GC_KRYLOV_AMPLITUDE_FAULT_NONE, -1);
+    CHECK(evaluate(workspace, 6, &result) == MVMC_KRYLOV_STATUS_OK &&
+              result.value.state == MVMC_SCALED_COMPLEX_FINITE_NONZERO,
+          "evaluation after clearing the support fault");
+    mvmc_gc_krylov_amplitude_workspace_destroy(workspace);
+  }
+  task5_free(&built);
+}
+
 int main(int argc, char **argv) {
   int total = 0;
 #ifdef _mpi_use
@@ -834,6 +1425,12 @@ int main(int argc, char **argv) {
   test_partition();
   test_rank_faults();
   test_gc_bridge();
+  test_task5_frozen_values();
+  test_task5_mask_mutations();
+  test_task5_private_snapshot();
+  test_task5_classification();
+  test_task5_nonfinite_under_mask();
+  test_task5_metadata();
 #ifdef _mpi_use
   MPI_Allreduce(&failure_count, &total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 #else

@@ -87,10 +87,28 @@ jobs:
         shell: bash
         run: |
           if [ ${{ matrix.ompsize }} == 1 ]; then
-            ctest --parallel 4 --output-on-failure -E '_mpi$'
+            ctest --parallel 4 --output-on-failure -E '_mpi$' -LE gc_finite_spin_statistics
           else
-            ctest --output-on-failure -E '_mpi$'
+            ctest --output-on-failure -E '_mpi$' -LE gc_finite_spin_statistics
           fi
+
+      - name: Finite-spin statistics (fixed design, no concurrent tests)
+        # These tests force OMP=1; run once per OS, not again in the OMP=4 job.
+        if: ${{ matrix.mpi == false && matrix.ompsize == 1 }}
+        working-directory: ${{ github.workspace }}/../build
+        shell: bash
+        run: |
+          ctest --parallel 1 --output-on-failure --no-tests=error \
+            -L gc_finite_spin_statistics \
+            --output-junit "$GITHUB_WORKSPACE/finite-spin-statistics.xml"
+
+      - name: Save finite-spin statistics timings
+        if: ${{ always() && matrix.mpi == false && matrix.ompsize == 1 }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: finite-spin-statistics-${{ matrix.os }}-omp${{ matrix.ompsize }}
+          path: ${{ github.workspace }}/finite-spin-statistics.xml
+          if-no-files-found: warn
 
       - name: ctest with MPI
         if: ${{ matrix.mpi == true }}

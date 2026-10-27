@@ -35,7 +35,7 @@ struct MVMCGCKrylovAmplitudeWorkspace {
   size_t slater_matrix_count;
   double scaled_pivot_tolerance;
   int boundary_exact_zero;
-  int spin_triplet_s0;
+  MVMCGCSpinSupport spin_support;
   uint64_t generation_hash;
   double complex *slater;
   double complex *global_weights;
@@ -120,9 +120,9 @@ static MVMCKrylovStatus validate_layout(
       layout->qp_end > layout->qp_total ||
       layout->translation_count <= 0 ||
       layout->translation_weights == NULL ||
-      (layout->spin_triplet_s0 != 0 && layout->spin_triplet_s0 != 1) ||
-      (layout->spin_triplet_s0 &&
-       layout->domain != MVMC_KRYLOV_DOMAIN_GC_BALANCED) ||
+      mvmc_gc_spin_support_validate(&layout->spin_support,
+                                    layout->site_count, layout->domain) !=
+          MVMC_KRYLOV_STATUS_OK ||
       !isfinite(layout->scaled_pivot_tolerance) ||
       layout->projection.site_count != (size_t)layout->site_count ||
       layout->projection.nproj < 0 ||
@@ -199,7 +199,7 @@ static MVMCPfaffianStatus audit_binding(
     MVMCGCKrylovAmplitudeWorkspace *workspace,
     const MVMCGCKrylovAmplitudeLayout *layout,
     const double complex *slater, const double complex *qp_weights) {
-  uint64_t metadata[8];
+  uint64_t metadata[12];
   uint64_t tolerance_bits = 0;
   const unsigned char *projection_binding;
   size_t projection_binding_bytes = 0;
@@ -215,14 +215,19 @@ static MVMCPfaffianStatus audit_binding(
 
   memcpy(&tolerance_bits, &workspace->scaled_pivot_tolerance,
          sizeof(tolerance_bits));
-  metadata[0] = UINT64_C(0x4743414d504c4932); /* GC amplitude v2 */
+  metadata[0] = UINT64_C(0x4743414d504c4933); /* GC amplitude v3 */
   metadata[1] = (uint64_t)workspace->site_count;
   metadata[2] = (uint64_t)(unsigned)workspace->domain;
   metadata[3] = (uint64_t)workspace->qp_total;
   metadata[4] = (uint64_t)(unsigned)layout->translation_count;
   metadata[5] = (uint64_t)(unsigned)workspace->boundary_exact_zero;
   metadata[6] = tolerance_bits;
-  metadata[7] = (uint64_t)(unsigned)workspace->spin_triplet_s0;
+  /* Support descriptor schema v1 as explicit integers (no padding). */
+  metadata[7] = (uint64_t)MVMC_GC_SPIN_SUPPORT_SCHEMA;
+  metadata[8] = (uint64_t)(unsigned)workspace->spin_support.active;
+  metadata[9] = (uint64_t)(unsigned)workspace->spin_support.gauss_count;
+  metadata[10] = (uint64_t)(unsigned)workspace->spin_support.total_spin;
+  metadata[11] = (uint64_t)(unsigned)workspace->spin_support.pair_symmetry;
   status = mvmc_classic_pfaffian_collective_all_equal_u64(
       workspace->collective_workspace, metadata,
       sizeof(metadata) / sizeof(metadata[0]), &all_equal);
@@ -347,7 +352,7 @@ MVMCKrylovStatus mvmc_gc_krylov_amplitude_workspace_create(
   created->local_qp_count = (size_t)(layout->qp_end - layout->qp_start);
   created->scaled_pivot_tolerance = layout->scaled_pivot_tolerance;
   created->boundary_exact_zero = boundary;
-  created->spin_triplet_s0 = layout->spin_triplet_s0;
+  created->spin_support = layout->spin_support;
   created->projection_parameter_count = (size_t)layout->projection.nproj;
   status = checked_multiply(created->orbital_count, created->orbital_count,
                             &created->slater_matrix_count) &&
@@ -479,6 +484,19 @@ static int decode_configuration(MVMCGCKrylovAmplitudeWorkspace *workspace,
   return 1;
 }
 
+/* Spin support of the configuration last decoded into ele_num. */
+static MVMCKrylovStatus support_of(
+    const MVMCGCKrylovAmplitudeWorkspace *workspace,
+    MVMCGCSpinSupportResult *support) {
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  if (testing_fault_active(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_SUPPORT))
+    return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+#endif
+  return mvmc_gc_spin_support_evaluate(
+      &workspace->spin_support, (int)workspace->site_count, workspace->domain,
+      workspace->ele_num, workspace->orbital_count, support);
+}
+
 /* X[r,c] = -Slater[x_r, x_c] (column-major), as GCComponentBuildX. */
 static void build_component_matrix(
     const MVMCGCKrylovAmplitudeWorkspace *workspace, int global_qp,
@@ -519,12 +537,26 @@ static MVMCKrylovStatus refined_base(
     const uint64_t *words, size_t word_count, void *context,
     MVMCRefinedBase *result) {
   MVMCGCKrylovAmplitudeWorkspace *w = context;
+  MVMCGCSpinSupportResult support;
   int n = 0;
   int64_t *counts = NULL;
   double log_projection = 0.0;
+  int support_zero;
   MVMCKrylovStatus status;
   if (!decode_configuration(w, words, word_count, &n))
     return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
+  /* Same pure helper as the ordinary callback.  No MPI here: the wrapper's
+   * synchronize after the engine returns propagates this failure. */
+  if (support_of(w, &support) != MVMC_KRYLOV_STATUS_OK)
+    return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+  support_zero =
+      (w->boundary_exact_zero && (n == 0 || (size_t)n == w->orbital_count)) ||
+      support.zero_reasons != 0;
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  if (testing_fault_active(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_REFINED_UNMASKED))
+    support_zero =
+        w->boundary_exact_zero && (n == 0 || (size_t)n == w->orbital_count);
+#endif
   if (w->projection_parameter_count) {
     counts = calloc(w->projection_parameter_count, sizeof(*counts));
     if (counts == NULL) return MVMC_KRYLOV_STATUS_ALLOCATION_FAILURE;
@@ -535,13 +567,22 @@ static MVMCKrylovStatus refined_base(
   if (status == MVMC_KRYLOV_STATUS_OK)
     status = mvmc_refined_base_build(
         result, w->slater, w->orbital_count, w->ele_idx, (size_t)n,
-        w->global_weights, (size_t)w->qp_total,
-        (w->boundary_exact_zero && (n == 0 || (size_t)n == w->orbital_count)) ||
-            (w->spin_triplet_s0 && n % 4 == 2),
+        w->global_weights, (size_t)w->qp_total, support_zero,
         w->projection_parameters, counts, w->projection_parameter_count);
   free(counts);
   return status;
 }
+
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+static MVMCKrylovRefinementLimits testing_refinement_limits;
+static int testing_refinement_limits_set = 0;
+
+void mvmc_gc_krylov_amplitude_testing_set_refinement_limits(
+    const MVMCKrylovRefinementLimits *limits) {
+  testing_refinement_limits_set = limits != NULL;
+  if (limits != NULL) testing_refinement_limits = *limits;
+}
+#endif
 
 MVMCKrylovStatus mvmc_gc_krylov_refine_final(
     MVMCGCKrylovAmplitudeWorkspace *w, const MVMCKrylovFockModel *model,
@@ -573,7 +614,13 @@ MVMCKrylovStatus mvmc_gc_krylov_refine_final(
     return MVMC_KRYLOV_STATUS_COLLECTIVE_FAILURE;
   memset(&candidate, 0, sizeof(candidate));
   status = mvmc_krylov_refine_final(model, policy, current, proposal,
-      word_count, uniform, refined_base, w, NULL, &candidate);
+      word_count, uniform, refined_base, w,
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+      testing_refinement_limits_set ? &testing_refinement_limits : NULL,
+#else
+      NULL,
+#endif
+      &candidate);
   status = synchronize(w, status);
   if (status != MVMC_KRYLOV_STATUS_OK) return status;
   candidate.krylov.statistics.amplitude_generation_hash = w->generation_hash;
@@ -605,10 +652,12 @@ MVMCKrylovStatus mvmc_gc_krylov_scaled_amplitude(
       (MVMCGCKrylovAmplitudeWorkspace *)context;
   MVMCKrylovScaledAmplitudeResult projected;
   MVMCKrylovBoundedCollectiveResult collective;
+  MVMCGCSpinSupportResult support;
   MVMCKrylovStatus status;
   MVMCPfaffianStatus pf_status;
   double log_projection = 0.0;
   int electron_count = 0;
+  int support_zero = 0;
   int all_equal = 0;
   int all_valid = 0;
   size_t local_qp;
@@ -639,14 +688,27 @@ MVMCKrylovStatus mvmc_gc_krylov_scaled_amplitude(
   }
   if (!all_valid) return MVMC_KRYLOV_STATUS_INVALID_ARGUMENT;
 
-  /* Correlation factor from the private occupation numbers. */
-  status = mvmc_classic_krylov_projection_evaluate(
-      workspace->projection_workspace, workspace->ele_num,
-      workspace->orbital_count, NULL, 0, &log_projection);
+  /* Support of this configuration, then the correlation factor from the
+   * private occupation numbers.  A helper failure is an invariant failure
+   * agreed below; no collective is skipped. */
+  memset(&support, 0, sizeof(support));
+  status = support_of(workspace, &support) == MVMC_KRYLOV_STATUS_OK
+               ? MVMC_KRYLOV_STATUS_OK
+               : MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;
+  if (status == MVMC_KRYLOV_STATUS_OK) {
+    status = mvmc_classic_krylov_projection_evaluate(
+        workspace->projection_workspace, workspace->ele_num,
+        workspace->orbital_count, NULL, 0, &log_projection);
+  }
   if (status == MVMC_KRYLOV_STATUS_OK && !isfinite(log_projection)) {
     status = MVMC_KRYLOV_STATUS_NONFINITE;
   }
   status = synchronize(workspace, status);
+  support_zero = support.zero_reasons != 0;
+#if defined(MVMC_ENABLE_FAULT_INJECTION)
+  if (testing_fault_active(MVMC_GC_KRYLOV_AMPLITUDE_FAULT_ORDINARY_UNMASKED))
+    support_zero = 0;
+#endif
 
   /* Local QP components (-1)^(N/2) Pf(-Slater[x,x]) with capacity scratch. */
   for (local_qp = 0; status == MVMC_KRYLOV_STATUS_OK &&
@@ -690,7 +752,7 @@ MVMCKrylovStatus mvmc_gc_krylov_scaled_amplitude(
   if ((workspace->boundary_exact_zero &&
       (electron_count == 0 ||
        (size_t)electron_count == workspace->orbital_count)) ||
-      (workspace->spin_triplet_s0 && electron_count % 4 == 2)) {
+      support_zero) {
     if (mvmc_scaled_complex_make_exact_zero(&projected.value) !=
         MVMC_PFAFFIAN_STATUS_OK) {
       return MVMC_KRYLOV_STATUS_INTERNAL_INVARIANT_FAILURE;

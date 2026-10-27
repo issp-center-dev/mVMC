@@ -220,6 +220,7 @@ static void collective_case(int rank,int size) {
   layout.qp_total=1; layout.qp_start=rank/size; layout.qp_end=(rank+1)/size;
   layout.translation_count=1; layout.translation_weights=&weight;
   layout.projection.site_count=2;
+  layout.spin_support=mvmc_gc_spin_support_inactive();
 #ifdef _mpi_use
   layout.communicator=MPI_COMM_WORLD;
 #endif

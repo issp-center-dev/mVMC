@@ -5,8 +5,10 @@
  *
  * The input is one fixed-order whitespace token stream written by
  * runtest_gc_lanczos.py:
- *   GC_LANCZOS_PROBE_V2
- *   L domain QP R spin_triplet_s0
+ *   GC_LANCZOS_PROBE_V3
+ *   L domain QP R active G S symmetry   spin support descriptor (symmetry
+ *                                       0 general, 1 singlet, 2 triplet,
+ *                                       3 zero; inactive is 0 1 0 0)
  *   R x (re im)                    raw translation weights
  *   QP x (re im)                   QP weights
  *   QP x (2L)^2 x (re im)          row-major QP Slater matrices
@@ -17,7 +19,9 @@
  *   G J, G>0: L gutzwiller indices, J>0: L*L jastrow indices
  *   P, P x (re im)                 projection parameters
  *   END
- * Counts are validated, extra tokens and NaN/Inf values are rejected.
+ * Counts are validated, extra tokens and NaN/Inf values are rejected.  A
+ * V2 stream (spin_triplet_s0 instead of the descriptor) is an explicit
+ * error; it is never read as V3.
  * The output (rank 0) is one TSV: Q rows with the scaled q0..q2 of every
  * domain configuration, the guide-reweighted S/K/K^adj/T packed entries from
  * mvmc_krylov_matrix_measurement_sample_with_adjoint and the result of
@@ -96,7 +100,7 @@ typedef struct {
   int domain;
   int qp_total;
   int translation_count;
-  int spin_triplet_s0;
+  MVMCGCSpinSupport spin_support;
   double complex *translation;
   double complex *qp_weights;
   double complex *slater;
@@ -144,6 +148,7 @@ static int parse_pairs(Reader *reader, int count, int site_count,
   return !reader->failed;
 }
 
+/* 1 parsed, 0 invalid, -1 obsolete V2 magic. */
 static int parse_input(const char *path, ProbeInput *input) {
   Reader reader;
   char token[64];
@@ -154,15 +159,22 @@ static int parse_input(const char *path, ProbeInput *input) {
   reader.failed = reader.stream == NULL;
   if (reader.failed) return 0;
   if (!read_token(&reader, token, sizeof(token)) ||
-      strcmp(token, "GC_LANCZOS_PROBE_V2") != 0) {
+      strcmp(token, "GC_LANCZOS_PROBE_V3") != 0) {
+    const int obsolete = !reader.failed &&
+                         strcmp(token, "GC_LANCZOS_PROBE_V2") == 0;
     fclose(reader.stream);
-    return 0;
+    return obsolete ? -1 : 0;
   }
   input->site_count = (int)read_long(&reader, 1, 16);
   input->domain = (int)read_long(&reader, 1, 2);
   input->qp_total = (int)read_long(&reader, 1, 4096);
   input->translation_count = (int)read_long(&reader, 1, 4096);
-  input->spin_triplet_s0 = (int)read_long(&reader, 0, 1);
+  /* Range only; the bridge validates the descriptor itself. */
+  input->spin_support.active = (int)read_long(&reader, 0, 1);
+  input->spin_support.gauss_count = (int)read_long(&reader, 1, 4096);
+  input->spin_support.total_spin = (int)read_long(&reader, 0, 8);
+  input->spin_support.pair_symmetry =
+      (MVMCGCPairSymmetry)read_long(&reader, 0, 3);
   if (reader.failed) {
     fclose(reader.stream);
     return 0;
@@ -344,8 +356,12 @@ int main(int argc, char **argv) {
     return 2;
   }
   parsed = parse_input(argv[1], &input);
-  if (!parsed) {
-    if (rank == 0) fprintf(stderr, "gc_krylov_probe: invalid input\n");
+  if (parsed != 1) {
+    if (rank == 0)
+      fprintf(stderr, parsed < 0
+                          ? "gc_krylov_probe: obsolete GC_LANCZOS_PROBE_V2 "
+                            "input (regenerate as V3)\n"
+                          : "gc_krylov_probe: invalid input\n");
 #ifdef _mpi_use
     MPI_Finalize();
 #endif
@@ -398,7 +414,7 @@ int main(int argc, char **argv) {
   view.domain = (MVMCKrylovConfigurationDomain)input.domain;
   view.translation_count = input.translation_count;
   view.translation_weights = input.translation;
-  view.spin_triplet_s0 = input.spin_triplet_s0;
+  view.spin_support = input.spin_support;
 #ifdef _mpi_use
   status = mvmc_power_lanczos_gc_bridge_create(&view, MPI_COMM_WORLD,
                                                MPI_COMM_WORLD, &bridge);
@@ -431,8 +447,12 @@ int main(int argc, char **argv) {
     policy.log_basis_scale[index] = 0.0;
   }
   if (output != NULL) {
-    fprintf(output, "# GC_LANCZOS_PROBE_V2 L=%d domain=%d qp=%d\n",
-            input.site_count, input.domain, input.qp_total);
+    fprintf(output, "# GC_LANCZOS_PROBE_V3 L=%d domain=%d qp=%d active=%d "
+            "G=%d S=%d symmetry=%d\n",
+            input.site_count, input.domain, input.qp_total,
+            input.spin_support.active, input.spin_support.gauss_count,
+            input.spin_support.total_spin,
+            (int)input.spin_support.pair_symmetry);
     fprintf(output, "BRIDGE\t%s\n", mvmc_krylov_status_string(status));
   }
   for (mask = 0; status == MVMC_KRYLOV_STATUS_OK &&

@@ -9,7 +9,7 @@
 #include <complex.h>
 #include <stdint.h>
 
-#define MVMC_POWER_LANCZOS_GC_BRIDGE_VERSION UINT64_C(2)
+#define MVMC_POWER_LANCZOS_GC_BRIDGE_VERSION UINT64_C(3)
 
 /*
  * Production-shaped grand-canonical view.  data.up/down_electron_count and
@@ -18,15 +18,19 @@
  * (GC_EVEN); the canonical UNSUPPORTED_GENERAL_ORBITAL bit is not used and
  * any unsupported amplitude feature is rejected.  translation_weights are the
  * raw input translation weights (ParaQPTrans) used by the boundary rule.
- * Model rows are read on world rank 0 only; amplitude data is replicated on
- * every rank of each chain communicator.
+ * spin_support is the canonical descriptor of the same parameter generation
+ * as the Slater matrices (scalars valid on every rank; inactive is
+ * {0, 1, 0, GENERAL}).  An S > 0 pure singlet (SINGLET or ZERO) annihilates
+ * the state and is an AMPLITUDE_FAILURE.  Model rows are read on world rank
+ * 0 only; amplitude data is replicated on every rank of each chain
+ * communicator.
  */
 typedef struct {
   MVMCPowerLanczosClassicView data;
   MVMCKrylovConfigurationDomain domain;
   int translation_count;
   const double complex *translation_weights;
-  int spin_triplet_s0; /* Exact, generation-specific S=0 pair-parity proof. */
+  MVMCGCSpinSupport spin_support;
 } MVMCPowerLanczosGCView;
 
 typedef struct MVMCPowerLanczosGCBridge MVMCPowerLanczosGCBridge;
