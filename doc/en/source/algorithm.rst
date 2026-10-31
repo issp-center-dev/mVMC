@@ -896,6 +896,24 @@ direct recomputation already performed by measurement. It is a diagnostic
 of stored sampling weights, not a bound on energy errors. No per-proposal
 traces or additional full recomputations are performed for this summary.
 
+The same summary is available for the non-FSZ canonical BackFlow measurement
+(``NVMCCalMode=1``, ``NBackFlowIdx > 0``, ``NSplitSize=1``, real or complex),
+where component repair is not implemented: ``MVMC_SAMPLER_REPAIR=1`` is still
+rejected there, and the sampler columns of ``Q`` (committed accepts, repair
+attempts, repaired components) stay zero. By default the BackFlow summary is
+written only for the first-Lanczos measurement (``NLanczosMode=1``);
+``MVMC_SAMPLER_DRIFT_LOG=1`` also enables it for a plain BackFlow
+measurement. Drift uses the amplitude that the BackFlow measurement already
+recomputes from the stored configuration, so no additional factorization is
+performed. A fixed-configuration replay overwrites the stored weight with the
+direct value, and its drift is zero. Each bin additionally writes
+``B bin lanczosRejectRebuild lanczosRejectNonfinite`` with the samples that
+the BackFlow first-Lanczos step rejected after a failed numerical candidate
+rebuild or a non-finite local vector; those samples also appear as
+``E measure`` details with the actions ``skip-lanczos-rebuild`` and
+``skip-lanczos-nonfinite``. FSZ and grand-canonical BackFlow, and
+optimization, are unchanged.
+
 
 Zero and exceptional-event logging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

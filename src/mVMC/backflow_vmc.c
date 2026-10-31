@@ -4358,7 +4358,7 @@ cleanup:
 void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   int *eleIdx, *eleCfg, *eleNum, *eleProjCnt, *eleProjBFCnt;
   double complex e, ip; //db is double?
-  double w, db;
+  double w, db, x;
   double sqrtw;
   double complex we;
   int int_i, sampleSize, tmp_i;
@@ -4559,7 +4559,8 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     StopTimer(40);
 
     if (info != 0) {
-      fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n", rank, sample, info);
+      SamplerRepairMeasureFactorFailure(sample, info);
+      if (!Sr.logging) fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d info:%d (CalculateMAll)\n", rank, sample, info);
       continue;
     }
 
@@ -4588,7 +4589,9 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       logSqPfFullSlater[sample]=2.0*(LogProjVal(eleProjCnt)+log(cabs(ip)));
     }
 
-    LogProjVal(eleProjCnt);
+    x = LogProjVal(eleProjCnt);
+    if (Sr.logging)
+      SamplerRepairMeasure(log(cabs(ip)), x, logSqPfFullSlater[sample]);
     /* calculate reweight */
     // TODO: check ~ Is it OK to fix w ?
     //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
@@ -4599,7 +4602,8 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
        }
        */
     if (!isfinite(w)) {
-      fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d w=%e\n", rank, sample, w);
+      SamplerRepairMeasureFinish(sample, w, NAN, 1);
+      if (!Sr.logging) fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d w=%e\n", rank, sample, w);
       continue;
     }
 
@@ -4614,7 +4618,8 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     db = CalculateDoubleOccupation(eleIdx, eleCfg, eleNum, eleProjCnt);
     StopTimer(41);
     if (! (isfinite(creal(e)) && isfinite(cimag(e)))) {
-      fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d e=%e\n", rank, sample, creal(e));
+      SamplerRepairMeasureFinish(sample, w, creal(e), 2);
+      if (!Sr.logging) fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d e=%e\n", rank, sample, creal(e));
       continue;
     }
 
@@ -4634,6 +4639,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       StopTimer(43);
       if(lanczosInfo == LSLANCZOS_NUMERIC_REJECT) {
         lanczosRejectedSamples++;
+        SamplerRepairMeasureLanczosReject(sample, w, creal(e), 1);
         if(lanczosWarnings < 3) {
           fprintf(stderr,
                   "warning: BackFlow Lanczos rejected numerical candidate "
@@ -4654,6 +4660,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       }
       if(!lsbfLocalVectorFinite()) {
         lanczosRejectedSamples++;
+        SamplerRepairMeasureLanczosReject(sample, w, creal(e), 2);
         if(lanczosWarnings < 3) {
           fprintf(stderr,
                   "warning: BackFlow Lanczos rejected non-finite local vector rank:%d sample:%d.\n",
@@ -4682,6 +4689,7 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
       }
     }
 
+    SamplerRepairMeasureFinish(sample, w, creal(e), 0);
     Wc += w;
     Etot += w * e;
     Etot2 += w * conj(e) * e;

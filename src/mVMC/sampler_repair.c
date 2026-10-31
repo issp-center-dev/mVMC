@@ -1,6 +1,8 @@
 /* Selective post-accept repair for the real, non-block first-Lanczos sampler.
  * The growth rules and their ordering match the validated P1c/post/min scheme.
  * Included by vmcmain.h after matrix.c; no diagnostic proposal replay is needed.
+ * The measurement drift summary is also available to the non-FSZ BackFlow
+ * measurement (backflow_vmc.c), where repair itself is not implemented.
  */
 #ifndef MVMC_SAMPLER_REPAIR_C
 #define MVMC_SAMPLER_REPAIR_C
@@ -28,6 +30,8 @@ static struct {
   long recovery_full, recovery_restored, recovery_rollback, recovery_failed;
   long events_written, events_suppressed;
   int events_by_kind[4];
+  int backflow;
+  long lanczos_reject_rebuild, lanczos_reject_nonfinite;
 } Sr;
 
 static void SamplerRepairFail(const char *message);
@@ -86,6 +90,15 @@ static int SamplerRepairSupported(void) {
 #endif
 }
 
+/* Drift logging only. The measurement already recomputes the amplitude, so the
+ * summary adds no factorization. Non-FSZ canonical BackFlow is included even
+ * though component repair is not implemented for its update path. */
+static int SamplerDriftLogSupported(void) {
+  if (SamplerRepairSupported()) return 1;
+  return NVMCCalMode == 1 && NBackFlowIdx > 0 && iFlgOrbitalGeneral == 0 &&
+      !FlagGrandCanonical && NSplitSize == 1;
+}
+
 static int SamplerRepairSwitch(const char *name, int default_value) {
   const char *value = getenv(name);
   if (value == NULL || *value == '\0') return default_value;
@@ -104,6 +117,7 @@ static void *SamplerRepairAlloc(size_t count, size_t size) {
 static void SamplerRepairInit(MPI_Comm comm_parent) {
   int rank, world_rank, settings[2];
   const int supported = SamplerRepairSupported();
+  const int logSupported = SamplerDriftLogSupported();
   char path[64];
   MPI_Comm_rank(comm_parent, &rank);
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
@@ -116,11 +130,17 @@ static void SamplerRepairInit(MPI_Comm comm_parent) {
   if (settings[0] == 1 && !supported)
     SamplerRepairFail("enabled outside real non-FSZ/no-BF/no-RBM canonical, non-block, split1, hop/exchange, unguided legacy first-Lanczos measurement");
   Sr.enabled = supported && settings[0] != 0;
-  Sr.logging = settings[1] < 0 ? Sr.enabled : settings[1];
-  if (Sr.logging && !supported)
+  if (settings[1] >= 0)
+    Sr.logging = settings[1];
+  else if (supported)
+    Sr.logging = Sr.enabled;
+  else /* BackFlow: on by default only for the first-Lanczos measurement */
+    Sr.logging = logSupported && NLanczosMode == 1;
+  if (Sr.logging && !logSupported)
     SamplerRepairFail("drift logging requested outside the supported measurement path");
   Sr.bin = Sr.out_step = Sr.in_step = -1;
   Sr.n = NQPFull;
+  Sr.backflow = NBackFlowIdx > 0;
   if (rank == 0) {
     fprintf(stdout, "Sampler component repair: %s; growth=1000; drift_log=%d\n",
             Sr.enabled ? "on" : "off", Sr.logging);
@@ -149,6 +169,8 @@ static void SamplerRepairInit(MPI_Comm comm_parent) {
     fprintf(Sr.file, "# E bin out in move kind qp mask a b c d e f info action; max 4 per kind/rank/run\n");
     fprintf(Sr.file, "# R bin fullRebuild recovered rollback failed\n");
     fprintf(Sr.file, "# Q bin samples nonfinite maxAbsDrift gt1e6 gt1e3 gt1 accepts refreshAccepts components\n");
+    if (Sr.backflow)
+      fprintf(Sr.file, "# B bin lanczosRejectRebuild lanczosRejectNonfinite\n");
   }
 }
 
@@ -175,7 +197,14 @@ static void SamplerRepairFlush(void) {
     if (fflush(Sr.file) != 0 || ferror(Sr.file))
       SamplerRepairFail("cannot write recovery summary");
   }
+  if (Sr.file && Sr.bin >= 0 && Sr.backflow) {
+    fprintf(Sr.file, "B %d %ld %ld\n", Sr.bin, Sr.lanczos_reject_rebuild,
+            Sr.lanczos_reject_nonfinite);
+    if (fflush(Sr.file) != 0 || ferror(Sr.file))
+      SamplerRepairFail("cannot write BackFlow Lanczos summary");
+  }
   Sr.recovery_full = Sr.recovery_restored = Sr.recovery_rollback = Sr.recovery_failed = 0;
+  Sr.lanczos_reject_rebuild = Sr.lanczos_reject_nonfinite = 0;
   Sr.proposal_zero = Sr.ratio_underflow = Sr.ratio_nonfinite = Sr.current_nonfinite = 0;
   Sr.component_zero_pre = Sr.component_zero_post = Sr.measurement_zero = Sr.repair_failed = 0;
   Sr.measure_weight_zero = Sr.skip_weight = Sr.skip_energy = Sr.measure_factor_failed = 0;
@@ -399,6 +428,19 @@ static void SamplerRepairMeasureFinish(int sample, double weight, double energy,
                       outcome == 1 ? "skip-weight" : outcome == 2 ? "skip-energy" :
                       weight == 0.0 ? "zero-contribution" : "accumulate");
   }
+}
+
+/* BackFlow first-Lanczos rejects a sample after its energy is known. The
+ * existing accounting in lsbfFinalizeAccounting is unchanged. kind 1 is a
+ * failed numerical candidate rebuild, kind 2 a non-finite local vector. */
+static void SamplerRepairMeasureLanczosReject(int sample, double weight, double energy, int kind) {
+  if (!Sr.logging) return;
+  if (kind == 1) Sr.lanczos_reject_rebuild++;
+  else Sr.lanczos_reject_nonfinite++;
+  Sr.out_step = Sr.in_step = -1; Sr.move = 0;
+  SamplerRepairEvent("measure", -1, 0, Sr.measure_log, Sr.measure_projection,
+                    Sr.measure_stored, weight, energy, (double)sample, kind,
+                    kind == 1 ? "skip-lanczos-rebuild" : "skip-lanczos-nonfinite");
 }
 
 static void SamplerRepairMeasureFactorFailure(int sample, int info) {
