@@ -10,6 +10,7 @@ the environment are discarded so each run sees only its own switches.
 """
 import collections
 import hashlib
+import math
 import os
 import shutil
 import sys
@@ -170,6 +171,74 @@ def drift_mode(case):
     print("BackFlow drift summary PASS ({} rank)".format(case.rank_count))
 
 
+def first_energy(workdir, bin_index):
+    path = os.path.join(workdir, "output", "zvo_out_{:03d}.dat".format(bin_index + 1))
+    with open(path) as fp:
+        return float(fp.readline().split()[0])
+
+
+def read_weight_dump(workdir, rank_count):
+    rows = {}
+    for rank in range(rank_count):
+        path = os.path.join(workdir, "weight_dump.dat.rank{:04d}".format(rank))
+        with open(path) as fp:
+            rows[rank] = [[float(v) for v in line.split()] for line in fp if line.strip()]
+    return rows
+
+
+def reweight_mode(case):
+    lanczos = {"NVMCCalMode": "1", "NLanczosMode": "1", "NLanczosStep": "1",
+               "NVMCSample": str(LANCZOS_SAMPLES), "NVMCWarmUp": "8",
+               "NDataQtySmp": str(BINS)}
+    shift = math.log(4.0)
+    shift_env = {"MVMC_BF_TEST_STORED_WEIGHT_SHIFT": repr(shift)}
+    # reweight=0 is the previous fixed weight: identical to an unspecified key.
+    unset, _ = case.run("reweight-unset", lanczos, {})
+    off, _ = case.run("reweight-off", dict(lanczos, reweight="0"), {})
+    assert physical(unset) == physical(off)
+    # The stable sampler stores the amplitude the measurement recomputes:
+    # reweighting changes nothing beyond round-off.
+    on, _ = case.run("reweight-on", dict(lanczos, reweight="1"), {})
+    for rank, fname in enumerate(drift_files(on)):
+        check_drift_file(os.path.join(on, fname), rank, case.rank_count,
+                         LANCZOS_SAMPLES, BINS, 1.0e-9)
+    for b in range(BINS):
+        e_off, e_on = first_energy(off, b), first_energy(on, b)
+        assert abs(e_off - e_on) <= 1.0e-9 * max(1.0, abs(e_off)), (b, e_off, e_on)
+    # A shifted stored weight is ignored with reweight=0 ...
+    shifted_off, _ = case.run("shift-off", dict(lanczos, reweight="0"), shift_env)
+    assert physical(shifted_off) == physical(off)
+    # ... and applied with reweight=1: w = exp(2(direct + projection) - stored).
+    shifted_on, _ = case.run("shift-on", dict(lanczos, reweight="1"),
+                             dict(shift_env, MVMC_BF_TEST_WEIGHT_DUMP="weight_dump.dat"))
+    assert physical(shifted_on) != physical(on)
+    dump = read_weight_dump(shifted_on, case.rank_count)
+    for rank in range(case.rank_count):
+        rows = dump[rank]
+        assert len(rows) == BINS * LANCZOS_SAMPLES, (rank, len(rows))
+        for sample, stored, direct, projection, w, _energy in rows:
+            expected = math.exp(2.0 * (direct + projection) - stored)
+            assert abs(w - expected) <= 1.0e-12 * max(1.0, expected), (sample, w, expected)
+            target = 0.25 if int(sample) % 2 == 0 else 1.0
+            assert abs(w - target) <= 1.0e-9, (sample, w, target)
+    for b in range(BINS):
+        num = den = 0.0
+        for rank in range(case.rank_count):
+            for _s, _st, _d, _p, w, energy in dump[rank][b * LANCZOS_SAMPLES:(b + 1) * LANCZOS_SAMPLES]:
+                num += w * energy
+                den += w
+        e_out = first_energy(shifted_on, b)
+        assert abs(e_out - num / den) <= 1.0e-10 * max(1.0, abs(e_out)), (b, e_out, num / den)
+    for rank, fname in enumerate(drift_files(shifted_on)):
+        rows = read_rows(os.path.join(shifted_on, fname))
+        q = [r for r in rows if r[0] == "Q"]
+        assert len(q) == BINS
+        for row in q:
+            assert abs(float(row[4]) - shift) <= 1.0e-9, row
+            assert int(row[7]) == LANCZOS_SAMPLES // 2, row
+    print("BackFlow reweight PASS ({} rank)".format(case.rank_count))
+
+
 def main():
     if len(sys.argv) < 4 or sys.argv[2] != "--mode" or sys.argv[3] not in ("drift", "reweight"):
         print(__doc__)
@@ -189,7 +258,7 @@ def main():
     if mode == "drift":
         drift_mode(case)
     else:
-        raise SystemExit("reweight mode is added with the reweight change")
+        reweight_mode(case)
     return 0
 
 

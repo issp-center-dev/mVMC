@@ -1855,8 +1855,9 @@ NBodyInterAll指定ファイル(nbodyinterall.def)
 -  native の ``PairHop``、``Exchange``、``InterAll`` 入力は、通常の
    ``Orbital`` / ``OrbitalAntiParallel`` 形式でも ``OrbitalGeneral`` / FSZ でも
    BackFlow 用の二体 Green 関数で評価されます。``NBodyInterAll`` が必要なのは
-   3 次以上の項だけです。BackFlowと ``reweight=1`` の併用は
-   エラー終了します。
+   3 次以上の項だけです。FSZ BackFlowと ``reweight=1`` の併用は
+   エラー終了します。非FSZのBackFlowはBackFlowなしの測定と同じ
+   reweighting factorを使います。
 
 CoulombIntra指定ファイル(coulombintra.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3051,8 +3052,9 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 
 -  RBM、Twist、``NQPOptTrans>1`` は未対応です。周期境界に加えて、負の
    ``NMPTrans`` で指定する反周期境界（``APFlag=1``）を使用できます。
-   BF-FSZとBackFlow :math:`N` 体入力を含む全てのBackFlow計算で
-   ``reweight=1`` はエラー終了します。
+   非FSZのBackFlow（BackFlow :math:`N` 体入力を含む）では ``reweight=1`` を
+   受理し、BackFlowなしの測定と同じreweighting factorを使います。
+   BF-FSZでは引き続きエラー終了します。
    Single Lanczos Step は ``NVMCCalMode=1`` かつ ``NLanczosMode=1``
    のみ使用でき、Hamiltonian は ``Transfer`` と number-operator 型の
    対角相互作用に限定されます。``OrbitalGeneral`` / FSZ の
@@ -3140,9 +3142,10 @@ BackFlow :math:`N` 体機能のsupport matrix
      - エラー終了
      - real BackFlow :math:`N` 体measurement/local-energy kernelは未実装。
    * - ``reweight=1``
-     - エラー終了
-     - エラー終了
-     - reweightはBackFlowのsupport contract外。
+     - 受理（非FSZ）
+     - 受理（非FSZ）
+     - 非FSZのBackFlowは測定のreweighting factorを全ての蓄積量に掛けます
+       （BackFlowなしの測定と同じ）。FSZ BackFlowでは引き続きエラー終了。
    * - ``NLanczosMode>0``
      - エラー終了
      - エラー終了

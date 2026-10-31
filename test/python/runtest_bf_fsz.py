@@ -3772,15 +3772,17 @@ def run_spin_changing_c2_case(rootdir, case_name, mpi_procs=None):
 
 
 def run_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
+    # expected=None: the input is accepted (non-FSZ BackFlow honors reweight=1
+    # with the same estimator as the FSZ and no-BackFlow measurements).
     cases = {
-        "BackFlow_InvalidReweight": (
+        "BackFlow_ReweightAccepted": (
             {"reweight": "1"},
-            "BackFlow MVP does not support reweight",
+            None,
             False,
         ),
-        "BackFlow_InvalidReweight_mpi": (
+        "BackFlow_ReweightAccepted_mpi": (
             {"reweight": "1"},
-            "BackFlow MVP does not support reweight",
+            None,
             False,
         ),
     }
@@ -3808,6 +3810,15 @@ def run_nonfsz_invalid_case(rootdir, case_name, mpi_procs=None):
             fp.write("    0     1          0.370000000000000\n")
         append_namelist_entry(workdir, "PairHop", "pairhop.def")
     proc = run_vmc(rootdir, workdir, mpi_procs=mpi_procs)
+    if expected is None:
+        if proc.returncode != 0 or "Start: Sampling." not in proc.stdout:
+            print("ERROR: {} was not accepted".format(case_name))
+            print(proc.stdout)
+            return -1
+        if "does not support reweight" in proc.stdout:
+            print("ERROR: {} still reports the reweight rejection".format(case_name))
+            return -1
+        return 0
     if proc.returncode == 0:
         print("ERROR: {} unexpectedly succeeded".format(case_name))
         return -1

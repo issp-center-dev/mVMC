@@ -1455,6 +1455,28 @@ void copyToBurnSampleBF(const int *eleIdx) {
   return;
 }
 
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+/* Test only: MVMC_BF_TEST_STORED_WEIGHT_SHIFT=<finite c> is read once per rank. */
+static double BFTestStoredWeightShift(void) {
+  static int parsed = 0;
+  static double shift = 0.0;
+  if (!parsed) {
+    const char *value = getenv("MVMC_BF_TEST_STORED_WEIGHT_SHIFT");
+    parsed = 1;
+    if (value != NULL && *value != '\0') {
+      char *end = NULL;
+      shift = strtod(value, &end);
+      if (end == value || *end != '\0' || !isfinite(shift)) {
+        fprintf(stderr,
+                "Error: MVMC_BF_TEST_STORED_WEIGHT_SHIFT must be a finite number.\n");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+    }
+  }
+  return shift;
+}
+#endif
+
 void saveEleConfigBF(const int sample, const double logIp,
                      const int *eleIdx, const int *eleCfg, const int *eleNum, const int *eleProjCnt,
                      const int *eleProjBFCnt) {
@@ -1482,6 +1504,11 @@ void saveEleConfigBF(const int sample, const double logIp,
 
   x = LogProjVal(eleProjCnt);
   logSqPfFullSlater[sample] = 2.0 * (x + logIp);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  /* Test only: shift the stored weight of even samples so that the
+     measurement reweighting factor differs from one. */
+  if (sample % 2 == 0) logSqPfFullSlater[sample] += BFTestStoredWeightShift();
+#endif
   return;
 }
 
@@ -4404,6 +4431,31 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
   MPI_Comm_rank(comm_parent, &parentRank);
 
   const int replay=BFReplayMeasurementConfigurations(comm_parent);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  /* Test only: MVMC_BF_TEST_WEIGHT_DUMP=<path> appends one row per accumulated
+     sample (sample stored_log direct_log projection w e) to <path>.rankNNNN. */
+  FILE *weightDump = NULL;
+  {
+    const char *weightDumpPath = getenv("MVMC_BF_TEST_WEIGHT_DUMP");
+    if (weightDumpPath != NULL && weightDumpPath[0] != '\0') {
+      char dumpPath[1024];
+      int worldRank, pathLength;
+      MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+      pathLength = snprintf(dumpPath, sizeof(dumpPath), "%s.rank%04d",
+                            weightDumpPath, worldRank);
+      if (pathLength < 0 || (size_t)pathLength >= sizeof(dumpPath)) {
+        fprintf(stderr, "Error: BackFlow weight dump path is too long on rank %d.\n",
+                worldRank);
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+      weightDump = fopen(dumpPath, "a");
+      if (weightDump == NULL) {
+        fprintf(stderr, "Error: failed to open BackFlow weight dump '%s'.\n", dumpPath);
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+      }
+    }
+  }
+#endif
 
   if(BFNBodyOracleOpen(&nbodyOracle, parentRank, parentSize, 0) != 0) {
     fprintf(stderr,
@@ -4592,15 +4644,13 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     x = LogProjVal(eleProjCnt);
     if (Sr.logging)
       SamplerRepairMeasure(log(cabs(ip)), x, logSqPfFullSlater[sample]);
-    /* calculate reweight */
-    // TODO: check ~ Is it OK to fix w ?
-    //w = exp(2.0*(log(fabs(ip))+x) - logSqPfFullSlater[sample]);
-    w = 1.0;
-    /*
-       if(log(fabs(1.0-w)) > -5) {
-       printf("w=%.3e\n",w);
-       }
-       */
+    /* calculate reweight: the same estimator as the FSZ BackFlow and the
+       no-BackFlow measurements; reweight=0 keeps the previous fixed weight. */
+    if (reweight == 1) {
+      w = exp(2.0 * (log(cabs(ip)) + x) - logSqPfFullSlater[sample]);
+    } else {
+      w = 1.0;
+    }
     if (!isfinite(w)) {
       SamplerRepairMeasureFinish(sample, w, NAN, 1);
       if (!Sr.logging) fprintf(stderr, "waring: VMCMainCal rank:%d sample:%d w=%e\n", rank, sample, w);
@@ -4690,6 +4740,12 @@ void VMC_BF_MainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     }
 
     SamplerRepairMeasureFinish(sample, w, creal(e), 0);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+    if (weightDump != NULL) {
+      fprintf(weightDump, "%d %.17e %.17e %.17e %.17e %.17e\n", sample,
+              logSqPfFullSlater[sample], log(cabs(ip)), x, w, creal(e));
+    }
+#endif
     Wc += w;
     Etot += w * e;
     Etot2 += w * conj(e) * e;
@@ -4787,6 +4843,12 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
                            lanczosRejectedSamples);
   }
   if(lanczosOracleDump != NULL) fclose(lanczosOracleDump);
+#ifdef MVMC_ENABLE_FAULT_INJECTION
+  if (weightDump != NULL && fclose(weightDump) != 0) {
+    fprintf(stderr, "Error: failed to close the BackFlow weight dump.\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+#endif
   if(lanczosScratchReady) LSLanczosBFScratchFree(&lanczosScratch);
   BFNBodyOracleClose(&nbodyOracle);
 
