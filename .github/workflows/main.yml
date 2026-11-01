@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        os: ["ubuntu-latest"]
+        os: ["ubuntu-24.04"]
         mpi: [true, false]
         ompsize: [1, 4]
         include:
@@ -22,7 +22,7 @@ jobs:
             mpi: false
             ompsize: 1
         exclude:
-          - os: "ubuntu-latest"
+          - os: "ubuntu-24.04"
             mpi: true
             ompsize: 4
       fail-fast: false
@@ -120,7 +120,7 @@ jobs:
 
   nompi:
     name: "Linux, MPI=OFF, full CTest"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
@@ -240,7 +240,7 @@ jobs:
 
   refinement-fallback:
     name: "GC refinement without development dependencies"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container: debian:bookworm-slim
     env:
       OMP_NUM_THREADS: "1"
