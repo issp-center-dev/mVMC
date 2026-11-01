@@ -220,6 +220,16 @@ static void SamplerRepairSetBin(int bin) {
   Sr.out_step = Sr.in_step = -1; Sr.move = 0;
 }
 
+/* Write the open bin as soon as its measurement loop ends. The run may stop
+ * afterwards (support check, BackFlow reject threshold), and the summary of
+ * that bin must survive. A closed bin is written exactly once: the following
+ * SamplerRepairSetBin/SamplerRepairFinalize find nothing left to write. */
+static void SamplerRepairCloseBin(void) {
+  if (Sr.bin < 0) return;
+  SamplerRepairFlush();
+  Sr.bin = -1;
+}
+
 static void SamplerRepairRecompute(void) {
   if (!Sr.enabled) return;
   SamplerRepairKappa(PfM_real, Sr.reference);

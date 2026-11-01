@@ -103,9 +103,28 @@ static void recovery_test(const char *mode) {
   printf("recovery %s PASS\n",mode);
 }
 
+/* A bin is written once when it is closed; later SetBin/Flush/Finalize do not
+   repeat it, and a bin that was never opened writes nothing. */
+static void close_bin_test(void) {
+  char line[512];int q=0,bins[3]={0,0,0};
+  SamplerRepairInit(TEST_PARENT_COMM);Sr.logging=1;Sr.file=tmpfile();assert(Sr.file);
+  SamplerRepairSetBin(0);
+  SamplerRepairCloseBin();SamplerRepairCloseBin();SamplerRepairFlush();
+  SamplerRepairSetBin(1);SamplerRepairCloseBin();
+  SamplerRepairSetBin(2);SamplerRepairFlush();   /* legacy path: still open */
+  rewind(Sr.file);
+  while(fgets(line,sizeof line,Sr.file)) {
+    if(line[0]=='Q') {int b=atoi(line+2);q++;if(b>=0&&b<3)bins[b]++;}
+  }
+  assert(q==3 && bins[0]==1 && bins[1]==1 && bins[2]==1);
+  fseek(Sr.file,0,SEEK_END);SamplerRepairFinalize();assert(Sr.bin==0 && Sr.file==NULL);
+  printf("close-bin PASS\n");
+}
+
 int main(int argc,char **argv) {
   setenv("MVMC_SAMPLER_DRIFT_LOG","0",1);
   unsetenv("MVMC_SAMPLER_REPAIR");
+  if(argc>1 && !strcmp(argv[1],"close-bin")) {close_bin_test();return 0;}
   if(argc>1 && !strcmp(argv[1],"invalid")) {
     setenv("MVMC_SAMPLER_REPAIR","junk",1);SamplerRepairInit(TEST_PARENT_COMM);return 0;
   }

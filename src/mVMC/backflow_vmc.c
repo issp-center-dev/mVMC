@@ -4838,6 +4838,9 @@ for(i=0;i<nProj;i++) srOptO[i+1] = (double)(eleProjCnt[i]);
     }
   } /* end of for(sample) */
 
+  /* Keep the summary of this bin even if the reject threshold or the support
+     check stops the run below. */
+  SamplerRepairCloseBin();
   if(NVMCCalMode == 1 && NLanczosMode == 1) {
     lsbfFinalizeAccounting(comm_parent, parentRank, lanczosCheckedSamples,
                            lanczosRejectedSamples);

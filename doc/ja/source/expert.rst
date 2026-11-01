@@ -4672,8 +4672,10 @@ NBodyG指定ファイル(nbodyg.def)
    それ以外のモードでは各因子が :math:`\sigma_a = \tau_a` を満たす必要があります。
 
 -  本出力はBackFlowの有無によらず物理量計算で使用できます。BackFlow
-   :math:`N` 体測定では複素変分パラメータ、``NLanczosMode=0``、
-   ``reweight=0`` が必要です。real BackFlow :math:`N` 体kernelと
+   :math:`N` 体測定では複素変分パラメータと ``NLanczosMode=0`` が必要です。
+   FSZ BackFlowではさらに ``reweight=0`` が必要です。非FSZのBackFlowは
+   ``reweight=1`` を受理し、測定のreweighting factorを ``NBodyG`` にも
+   掛けます。real BackFlow :math:`N` 体kernelと
    Lanczos補正付き ``ls_NBodyG`` 出力は未実装です。
 
 -  通常の ``Orbital`` / ``OrbitalAntiParallel`` BackFlowでは全因子が

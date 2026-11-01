@@ -5044,7 +5044,9 @@ Use rules
 
 -  This output is supported for physical-quantity calculations with or
    without BackFlow. BackFlow N-body measurement requires complex
-   variational parameters, ``NLanczosMode=0``, and ``reweight=0``.
+   variational parameters and ``NLanczosMode=0``. FSZ BackFlow also
+   requires ``reweight=0``; non-FSZ BackFlow accepts ``reweight=1`` and
+   applies the measurement reweighting factor to ``NBodyG``.
    No real BackFlow N-body kernel or Lanczos-corrected ``ls_NBodyG``
    output is implemented.
 

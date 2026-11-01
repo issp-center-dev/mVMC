@@ -889,8 +889,12 @@ Each rank writes ``sampler_drift_rNNNN.dat`` in the working directory.
 A ``Q`` row contains the zero-based bin, evaluated-sample count, nonfinite
 count, maximum absolute log-weight drift, counts above 1e-6, 1e-3 and 1,
 committed accepts, repair attempts, and repaired components. Repair attempts
-and component work include an accepted move subsequently rolled back. The final
-``F refreshTotal`` row gives the total component count. Drift is
+and component work include an accepted move subsequently rolled back. The rows
+of a bin are written when its measurement loop ends, before the support check
+and the BackFlow reject threshold are evaluated, so a bin that stops the run
+keeps its summary. The final
+``F refreshTotal`` row gives the total component count and is written only on
+normal completion. Drift is
 ``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight``, using the
 direct recomputation already performed by measurement. It is a diagnostic
 of stored sampling weights, not a bound on energy errors. No per-proposal

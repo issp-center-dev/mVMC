@@ -839,7 +839,9 @@ hopまたはexchangeのaccept後、規格化したPfaffianの絶対値が、基�
 列は0始まりのbin、評価したsample数、非有限値の数、最大絶対drift、
 1e-6・1e-3・1を超えた数、確定accept数、修復発動数、修復成分数です。
 修復発動数と成分数には、その後取り消した仮acceptに対する作業も含みます。
-最後の ``F refreshTotal`` 行は全binの修復成分数です。
+各binの行は、そのbinの測定loopが終わった時点で、support検査やBackFlowの
+reject率判定より前に書きます。判定で停止したbinの集計も残ります。
+最後の ``F refreshTotal`` 行は全binの修復成分数で、正常終了時だけ書きます。
 driftは通常測定にある直接再計算を使った
 ``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight`` であり、
 energy誤差の上限ではありません。全proposalのtraceや、診断のための追加の

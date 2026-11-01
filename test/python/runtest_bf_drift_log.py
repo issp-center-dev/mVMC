@@ -43,7 +43,7 @@ def read_rows(path):
                 if line and line[0] != "#"]
 
 
-def prepare(rootdir, model, workdir, modpara_updates):
+def prepare(rootdir, model, workdir, modpara_updates, nonidentity=True):
     refdir = os.path.join(rootdir, "data", model)
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
@@ -58,6 +58,8 @@ def prepare(rootdir, model, workdir, modpara_updates):
                                             antiperiodic=False)
     bf.write_chain_nn_backflow(workdir, length=nsite, optimize=False,
                                compact=False, antiperiodic=False)
+    if not nonidentity:
+        return None
     bf.assert_nonidentity_init_layout(workdir)
     orbitalidx = os.path.join(workdir, "orbitalidx.def")
     nslater = bf.parse_norbitalidx(orbitalidx)
@@ -78,9 +80,11 @@ class Case(object):
         self.mpi_procs = mpi_procs
         self.rank_count = int(mpi_procs) if mpi_procs else 1
 
-    def run(self, name, modpara_updates, settings, expect_error=None):
+    def run(self, name, modpara_updates, settings, expect_error=None,
+            expect_summary=False, nonidentity=True):
         workdir = self.base + "_" + name
-        init_name = prepare(self.rootdir, self.model, workdir, modpara_updates)
+        init_name = prepare(self.rootdir, self.model, workdir, modpara_updates,
+                            nonidentity=nonidentity)
         proc = bf.run_vmc(self.rootdir, workdir, self.mpi_procs,
                           init_path=init_name, extra_env=dict(settings),
                           log_name="bf_drift_log_{}.log".format(name))
@@ -92,7 +96,7 @@ class Case(object):
             if proc.returncode == 0 or expect_error not in proc.stdout:
                 print(proc.stdout)
                 raise RuntimeError("{} did not stop with: {}".format(name, expect_error))
-            if drift_files(workdir):
+            if not expect_summary and drift_files(workdir):
                 raise RuntimeError("{} left drift files after a rejected start".format(name))
         return workdir, proc.stdout
 
@@ -124,6 +128,19 @@ def check_drift_file(path, rank, rank_count, nsample, bins, max_drift):
     assert rows[-1][0] == "F", rows[-1]
     assert os.path.getsize(path) < 16384, path
     return q
+
+
+def check_stopped_bin(path, nsample, expected_b):
+    """A run stopped by a numerical check keeps the summary of that bin."""
+    rows = read_rows(path)
+    kinds = collections.defaultdict(list)
+    for row in rows:
+        kinds[row[0]].append(row)
+    q, z, r, b = (kinds[k] for k in ("Q", "Z", "R", "B"))
+    assert len(q) == len(z) == len(r) == len(b) == 1, path
+    assert int(q[0][1]) == 0 and int(q[0][2]) == nsample and int(q[0][3]) == 0, q[0]
+    assert [int(v) for v in b[0][2:]] == list(expected_b), b[0]
+    assert not kinds["F"], "no final row after an abnormal stop"
 
 
 def drift_mode(case):
@@ -168,6 +185,27 @@ def drift_mode(case):
                     "NSROptItrStep": "1", "NSROptItrSmp": "1"}
     workdir, out = case.run("optimization", optimization, {})
     assert "Sampler component repair" not in out and not drift_files(workdir)
+    # A bin stopped by the BackFlow reject threshold (1/32 > 1% per rank)
+    # keeps its Q/Z/R/B rows, including the rejected sample.
+    stopped = dict(lanczos, NVMCSample="32", NDataQtySmp="1")
+    workdir, out = case.run("stop-reject", stopped,
+                            {"MVMC_LANCZOS_TEST_NONFINITE_SAMPLE": "0"},
+                            expect_error="biased output will not be written",
+                            expect_summary=True)
+    files = drift_files(workdir)
+    assert len(files) == case.rank_count, files
+    for fname in files:
+        check_stopped_bin(os.path.join(workdir, fname), 32, (0, 1))
+    if "Real" in case.model:
+        # Identity real BackFlow fails the strict support check after the
+        # measurement; the summary of that bin is still written.
+        workdir, out = case.run("stop-support", stopped, {},
+                                expect_error="power-Lanczos support",
+                                expect_summary=True, nonidentity=False)
+        files = drift_files(workdir)
+        assert len(files) == case.rank_count, files
+        for fname in files:
+            check_stopped_bin(os.path.join(workdir, fname), 32, (0, 0))
     print("BackFlow drift summary PASS ({} rank)".format(case.rank_count))
 
 
