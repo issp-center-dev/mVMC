@@ -822,6 +822,9 @@ void VMCMainCal(MPI_Comm comm_parent, MPI_Comm comm) {
     }
   } /* end of for(sample) */
 
+  /* Keep the summary of this bin even if the support check stops the run. */
+  SamplerRepairCloseBin();
+
 #ifdef MVMC_ENABLE_FAULT_INJECTION
   if(lanczos2CalHCAGuardAudit) {
     const long long directCount =

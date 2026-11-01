@@ -234,7 +234,10 @@ int BFValidateSettings(int hasBF, int hasBFRange, int backflowSupported) {
     fprintf(stderr, "Error: BackFlow MVP does not support Twist (NTwist=%d).\n", NTwist);
     return 1;
   }
-  if (reweight == 1) {
+  /* The non-FSZ BackFlow measurement applies the same reweighting estimator as
+     the no-BackFlow measurement. The FSZ BackFlow measurement is not validated
+     for it, so the rejection is kept there. */
+  if (reweight == 1 && iFlgOrbitalGeneral != 0) {
     fprintf(stderr, "Error: BackFlow MVP does not support reweight.\n");
     return 1;
   }

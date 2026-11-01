@@ -11,7 +11,7 @@ foreach(mode invalid unsupported factor-failure rollback-fails rebuild-fails rol
         $<TARGET_FILE:sampler_repair_unit> ${mode})
 endforeach()
 
-foreach(mode recover recover-nan rollback-hop rollback-exchange finite-fast)
+foreach(mode recover recover-nan rollback-hop rollback-exchange finite-fast close-bin)
     add_test(NAME Sampler_Component_Repair_${mode} COMMAND sampler_repair_unit ${mode})
 endforeach()
 
