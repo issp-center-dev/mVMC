@@ -180,11 +180,16 @@ def drift_mode(case):
     for rank, fname in enumerate(files):
         check_drift_file(os.path.join(workdir, fname), rank, case.rank_count,
                          LANCZOS_SAMPLES, BINS, 1.0e-9)
-    # Optimization never initializes the summary.
+    # Optimization never initializes the summary. Identity BackFlow with the
+    # fixture's optimizable orbitals and enough samples keeps the SR system
+    # well posed (the non-identity layout fixes every parameter, which makes
+    # DPOSV fail and stops the process under reference LAPACK).
     optimization = {"NVMCCalMode": "0", "NLanczosMode": "0",
-                    "NSROptItrStep": "1", "NSROptItrSmp": "1"}
-    workdir, out = case.run("optimization", optimization, {})
+                    "NSROptItrStep": "1", "NSROptItrSmp": "1",
+                    "NVMCSample": str(LANCZOS_SAMPLES), "NVMCWarmUp": "8"}
+    workdir, out = case.run("optimization", optimization, {}, nonidentity=False)
     assert "Sampler component repair" not in out and not drift_files(workdir)
+    assert "illegal value" not in out and "Error" not in out, out
     # A bin stopped by the BackFlow reject threshold (1/32 > 1% per rank)
     # keeps its Q/Z/R/B rows, including the rejected sample.
     stopped = dict(lanczos, NVMCSample="32", NDataQtySmp="1")
