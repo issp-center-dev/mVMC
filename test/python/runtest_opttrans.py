@@ -11,12 +11,36 @@ not optimized it stays at its initial value 0.
 """
 from __future__ import print_function
 
+import math
 import os
 import shutil
 import subprocess
 import sys
 
 MODEL = "OptTrans_HubbardChain"
+
+
+def check_weights(rows):
+    """Validate all SR steps before checking the final optimized weights."""
+    if len(rows) != 100:
+        raise ValueError("expected 100 SR steps, got {}".format(len(rows)))
+    # Six leading numbers, then (re, im, 0) per parameter. OptTrans is last.
+    weights = []
+    for step, row in enumerate(rows, 1):
+        if len(row) < 12 or (len(row) - 6) % 3 != 0:
+            raise ValueError("malformed parameter row at step {}".format(step))
+        values = tuple(float(row[i]) for i in (-6, -5, -3, -2))
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError("non-finite OptTrans weight at step {}".format(step))
+        a, ai, b, bi = values
+        if abs(ai) > 1e-12 or abs(bi) > 1e-12:
+            raise ValueError("OptTrans weights are not real at step {}".format(step))
+        if abs(max(abs(a), abs(b)) - 1.0) > 1e-12:
+            raise ValueError("OptTrans weights are not normalized at step {}".format(step))
+        weights.append((a, b))
+    if weights[-1][1] < 0.5:
+        raise ValueError("the weight of the translated term did not grow from 0")
+    return weights[-1]
 
 
 def main():
@@ -36,7 +60,7 @@ def main():
     if mpi_procs:
         command = ["mpirun", "-np", mpi_procs] + command
     environment = os.environ.copy()
-    environment["OMP_NUM_THREADS"] = "1"
+    environment.setdefault("OMP_NUM_THREADS", "1")
     process = subprocess.run(command, cwd=workdir, env=environment,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              universal_newlines=True)
@@ -45,22 +69,14 @@ def main():
         print(process.stdout)
         return process.returncode or 1
 
-    # each line of zvo_var_001.dat: 6 leading numbers, then (re, im, 0) per
-    # parameter; the two OptTrans weights are the last two parameters
     with open(var) as f:
         rows = [line.split() for line in f if line.strip()]
-    w0 = [float(r[-6]) for r in rows]
-    w1 = [float(r[-3]) for r in rows]
-    print("OptTrans weights after the last step: {:.4f} {:.4f}".format(w0[-1], w1[-1]))
-    if len(rows) != 100:
-        print("FAIL: expected 100 SR steps, got {}".format(len(rows)))
+    try:
+        w0, w1 = check_weights(rows)
+    except ValueError as error:
+        print("FAIL: {}".format(error))
         return 1
-    if any(abs(max(abs(a), abs(b)) - 1.0) > 1e-12 for a, b in zip(w0, w1)):
-        print("FAIL: the weights are not normalized to max |w| = 1")
-        return 1
-    if w1[-1] < 0.5:
-        print("FAIL: the weight of the translated term did not grow from 0")
-        return 1
+    print("OptTrans weights after the last step: {:.4f} {:.4f}".format(w0, w1))
     return 0
 
 
