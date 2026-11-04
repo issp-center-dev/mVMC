@@ -194,6 +194,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyg_exact_oracle.py DESTINATION ${CMAKE
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/nbodyinterall_exact_oracle.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyinterall_invalid.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_update_weight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_opttrans.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_opttrans_output.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_version.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_git_hash.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_real_rbm.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -737,6 +739,22 @@ if(MPI_FOUND)
     set_tests_properties(UpdateWeight_E2E_MPI PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
         RESOURCE_LOCK "update_weight_e2e_workdir")
+endif()
+
+add_test(NAME OptTrans_OutputValidation
+    COMMAND ${PYTHON_EXECUTABLE} test_opttrans_output.py)
+
+add_test(NAME OptTrans_WeightOptimization
+    COMMAND ${PYTHON_EXECUTABLE} runtest_opttrans.py)
+set_tests_properties(OptTrans_WeightOptimization PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python"
+    RESOURCE_LOCK "opttrans_e2e_workdir")
+if(MPI_FOUND)
+    add_test(NAME OptTrans_WeightOptimization_MPI
+        COMMAND ${PYTHON_EXECUTABLE} runtest_opttrans.py)
+    set_tests_properties(OptTrans_WeightOptimization_MPI PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;MVMC_MPI_PROCS=2"
+        RESOURCE_LOCK "opttrans_e2e_workdir")
 endif()
 
 add_test(NAME AbsoluteKrylovProfile_AuditParity

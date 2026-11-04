@@ -29,6 +29,9 @@ jobs:
 
     env:
       OMP_NUM_THREADS: ${{ matrix.ompsize }}
+      # Cover both CTest MPI commands and Python tests that launch MPI.
+      OMPI_MCA_rmaps_base_oversubscribe: "1"
+      PRTE_MCA_rmaps_default_mapping_policy: ":OVERSUBSCRIBE"
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -114,8 +117,6 @@ jobs:
         if: ${{ matrix.mpi == true }}
         working-directory: ${{ github.workspace }}/../build
         shell: bash
-        env:
-          OMPI_MCA_rmaps_base_oversubscribe: "1"
         run: ctest --output-on-failure -R '_mpi$'
 
   nompi:
