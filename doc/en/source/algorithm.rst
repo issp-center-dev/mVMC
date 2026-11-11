@@ -889,12 +889,34 @@ Each rank writes ``sampler_drift_rNNNN.dat`` in the working directory.
 A ``Q`` row contains the zero-based bin, evaluated-sample count, nonfinite
 count, maximum absolute log-weight drift, counts above 1e-6, 1e-3 and 1,
 committed accepts, repair attempts, and repaired components. Repair attempts
-and component work include an accepted move subsequently rolled back. The final
-``F refreshTotal`` row gives the total component count. Drift is
+and component work include an accepted move subsequently rolled back. The rows
+of a bin are written when its measurement loop ends, before the support check
+and the BackFlow reject threshold are evaluated, so a bin that stops the run
+keeps its summary. The final
+``F refreshTotal`` row gives the total component count and is written only on
+normal completion. Drift is
 ``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight``, using the
 direct recomputation already performed by measurement. It is a diagnostic
 of stored sampling weights, not a bound on energy errors. No per-proposal
 traces or additional full recomputations are performed for this summary.
+
+The same summary is available for the non-FSZ canonical BackFlow measurement
+(``NVMCCalMode=1``, ``NBackFlowIdx > 0``, ``NSplitSize=1``, real or complex),
+where component repair is not implemented: ``MVMC_SAMPLER_REPAIR=1`` is still
+rejected there, and the sampler columns of ``Q`` (committed accepts, repair
+attempts, repaired components) stay zero. By default the BackFlow summary is
+written only for the first-Lanczos measurement (``NLanczosMode=1``);
+``MVMC_SAMPLER_DRIFT_LOG=1`` also enables it for a plain BackFlow
+measurement. Drift uses the amplitude that the BackFlow measurement already
+recomputes from the stored configuration, so no additional factorization is
+performed. A fixed-configuration replay overwrites the stored weight with the
+direct value, and its drift is zero. Each bin additionally writes
+``B bin lanczosRejectRebuild lanczosRejectNonfinite`` with the samples that
+the BackFlow first-Lanczos step rejected after a failed numerical candidate
+rebuild or a non-finite local vector; those samples also appear as
+``E measure`` details with the actions ``skip-lanczos-rebuild`` and
+``skip-lanczos-nonfinite``. FSZ and grand-canonical BackFlow, and
+optimization, are unchanged.
 
 
 Zero and exceptional-event logging
