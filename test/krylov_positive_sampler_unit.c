@@ -9,6 +9,9 @@
 
 static int failures = 0;
 
+_Static_assert(sizeof(double) == sizeof(uint64_t),
+               "bitwise scaled-value tests require 64-bit double storage");
+
 #define CHECK(condition, ...)                                                 \
   do {                                                                        \
     if (!(condition)) {                                                       \
@@ -43,6 +46,33 @@ typedef struct {
 
 static int close_double(double actual, double expected, double tolerance) {
   return fabs(actual - expected) <= tolerance * fmax(1.0, fabs(expected));
+}
+
+/* Compare every value bit without depending on structure padding. */
+static void scaled_value_field_bits(const MVMCScaledComplex *value,
+                                    uint64_t bits[8]) {
+  double fields[7];
+  size_t field;
+  bits[0] = (uint64_t)(unsigned int)value->state;
+  fields[0] = creal(value->phase);
+  fields[1] = cimag(value->phase);
+  fields[2] = value->log_abs;
+  fields[3] = value->log_abs_error_bound;
+  fields[4] = value->max_input_log_abs;
+  fields[5] = value->cancellation_log_abs;
+  fields[6] = value->cancellation_ratio;
+  for (field = 0; field < 7; ++field) {
+    memcpy(&bits[field + 1], &fields[field], sizeof(bits[field + 1]));
+  }
+}
+
+static int scaled_values_bitwise_equal(const MVMCScaledComplex *left,
+                                       const MVMCScaledComplex *right) {
+  uint64_t left_bits[8];
+  uint64_t right_bits[8];
+  scaled_value_field_bits(left, left_bits);
+  scaled_value_field_bits(right, right_bits);
+  return memcmp(left_bits, right_bits, sizeof(left_bits)) == 0;
 }
 
 static uint64_t hash_u64_value(uint64_t hash, uint64_t value) {
@@ -419,10 +449,10 @@ static void test_persistent_session_body(
                 legacy_step.proposal_guide.log_guide,
         "persistent sampler changed guide/acceptance bytes");
   for (order = 0; order <= policy.order; ++order) {
-    CHECK(memcmp(&session_step.proposal_krylov.value[order],
-                 &legacy_step.proposal_krylov.value[order],
-                 sizeof(session_step.proposal_krylov.value[order])) == 0,
-          "persistent sampler changed proposal value[%d] bytes", order);
+    CHECK(scaled_values_bitwise_equal(
+              &session_step.proposal_krylov.value[order],
+              &legacy_step.proposal_krylov.value[order]),
+          "persistent sampler changed proposal value[%d] field bits", order);
   }
   CHECK(mvmc_bounded_krylov_session_end(workspace) ==
             MVMC_KRYLOV_STATUS_OK,
@@ -450,8 +480,12 @@ static void test_persistent_session_body(
             uninterrupted.final_words == split.final_words &&
             uninterrupted.accepted == split.accepted &&
             uninterrupted.rejected == split.rejected &&
-            memcmp(&uninterrupted.rng, &split.rng,
-                   sizeof(uninterrupted.rng)) == 0 &&
+            uninterrupted.rng.valid == split.rng.valid &&
+            uninterrupted.rng.state_version == split.rng.state_version &&
+            uninterrupted.rng.algorithm == split.rng.algorithm &&
+            uninterrupted.rng.state == split.rng.state &&
+            uninterrupted.rng.stream == split.rng.stream &&
+            uninterrupted.rng.draws == split.rng.draws &&
             uninterrupted.current.accepted_generation ==
                 split.current.accepted_generation &&
             uninterrupted.current.guide.log_guide ==

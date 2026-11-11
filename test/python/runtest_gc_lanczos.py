@@ -1419,6 +1419,7 @@ def finite_spin_entry_mode(args):
                     overrides={"NSPStot": 1})
     done = run_vmc(args.vmc, work, args.np,
                    env={"MVMC_GC_B0_LANCZOS_TRACE": "1"})
+    require_finite_spin_entry_outcome("auto", done, work, chains, args.refinement)
     trace = (work / "gc-b0-lanczos.chain0").read_text().splitlines()
     kinds = {}
     for line in trace:
@@ -1437,7 +1438,6 @@ def finite_spin_entry_mode(args):
                 for f in lines.values()),
             "auto: expected N2 selected on every chain, got %r\n%s" %
             (lines, (done.stdout + done.stderr)[-3000:]))
-    require_finite_spin_entry_outcome("auto", done, work, chains, args.refinement)
     auto_code = done.returncode
     # Explicit N4: rejected with the parity reason, no draw.
     work = pathlib.Path(args.workdir)/"explicit_N4"
