@@ -1607,7 +1607,7 @@ void outputData() {
     fprintf(FileVar, "\n");
     //for(i=0;i<NPara;i++)  printf("DEBUG:i=%d: % .18e % .18e  \n",i, creal(Para[i]),cimag(Para[i]));
   } else { /* binary output */
-    fwrite(Para, sizeof(double), NPara, FileVar);
+    fwrite(Para, sizeof(*Para), NPara, FileVar);
   }
 
   if (NVMCCalMode == 1) {

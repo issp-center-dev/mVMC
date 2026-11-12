@@ -103,6 +103,33 @@ a number given by
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
 
+Binary parameter output (xxx\_varbin\_yyy.dat)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``-b`` option (for example, ``vmc.out -b -e namelist.def initial.def``)
+replaces ``xxx_var_yyy.dat`` with binary parameter output. The file contains:
+
+* Two native C ``int`` values: ``NPara`` and the planned number of records.
+  Optimization writes ``NSROptItrStep`` records to the file indexed by
+  ``NDataIdxStart``; ordinary physical measurement writes one record per bin.
+* For each record, ``NPara`` native C ``double complex`` values in the same
+  parameter order as the text output: real and imaginary ``double`` components
+  for each parameter, including parameters treated as real variables.
+  Energy and deviation columns are not included.
+
+A complete file occupies ``2*sizeof(int) + records*NPara*sizeof(double complex)``
+bytes. This is a native binary format: byte order and type sizes depend on the
+producer, and the header has no format-version field. Interrupted calculations
+can leave fewer records than the header declares.
+
+.. warning::
+
+   Older executables with the parameter-size bug wrote only ``NPara`` doubles
+   per record, truncating half of each complex parameter array. Readers of
+   those files must be updated for the complete complex records described
+   here. Check the producer version and file size; missing values cannot be
+   recovered from the truncated file alone.
+
 Output file for gutzwiller factors (\*\*\*\_gutzwiller\_opt.dat)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
