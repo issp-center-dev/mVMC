@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Algorithm &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b308ce55"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=9172181d"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Program for the unrestricted Hartree-Fock approximation" href="appendix.html" />
     <link rel="prev" title="Output files" href="output.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,9 +42,9 @@
           <div class="body" role="main">
             
   <section id="algorithm">
-<h1>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this heading">¶</a></h1>
+<h1>Algorithm<a class="headerlink" href="#algorithm" title="Link to this heading">¶</a></h1>
 <section id="variational-monte-calro-method">
-<h2>Variational Monte Calro Method<a class="headerlink" href="#variational-monte-calro-method" title="Permalink to this heading">¶</a></h2>
+<h2>Variational Monte Calro Method<a class="headerlink" href="#variational-monte-calro-method" title="Link to this heading">¶</a></h2>
 <p>The variational Monte Carlo (VMC) method is a method for calculating
 approximate wave functions of a ground state and low-lying excited
 states by optimizing variational parameters included in a trial wave
@@ -80,7 +80,7 @@ twister method as a random number generator for
 sampling [<a class="reference external" href="http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT">Mutsuo2008</a> ].</p>
 </section>
 <section id="bogoliubov-representation">
-<h2>Bogoliubov representation<a class="headerlink" href="#bogoliubov-representation" title="Permalink to this heading">¶</a></h2>
+<h2>Bogoliubov representation<a class="headerlink" href="#bogoliubov-representation" title="Link to this heading">¶</a></h2>
 <p>In the VMC calculation for spin systems, we use the Bogoliubov
 representation. In the input files defining the one-body term
 (<code class="docutils literal notranslate"><span class="pre">transfer</span></code>) and the two-body term (<code class="docutils literal notranslate"><span class="pre">InterAll</span></code>), and the output
@@ -104,7 +104,7 @@ Bogoliubov representation obtained by substituting <span class="math notranslate
 the above equations is used.</p>
 </section>
 <section id="properties-of-the-pfaffian-slater-determinant">
-<span id="puffandslater"></span><h2>Properties of the Pfaffian-Slater determinant<a class="headerlink" href="#properties-of-the-pfaffian-slater-determinant" title="Permalink to this heading">¶</a></h2>
+<span id="puffandslater"></span><h2>Properties of the Pfaffian-Slater determinant<a class="headerlink" href="#properties-of-the-pfaffian-slater-determinant" title="Link to this heading">¶</a></h2>
 <p>In this section, we explain some properties of the Pfaffian-Slater
 determinant. We derive the general relation between a Pfaffian-Slater
 determinant and a single Slater determinant in <a class="reference internal" href="#pfaffianap"><span class="std std-ref">Antiparallel Pfaffian</span></a>
@@ -112,7 +112,7 @@ and <a class="reference internal" href="#pfaffianp"><span class="std std-ref">Ge
 decomposition of coefficients <span class="math notranslate nohighlight">\(f_{ij}\)</span> in
 <a class="reference internal" href="#pfaffiansingular"><span class="std std-ref">SVD</span></a>.</p>
 <section id="relation-between-f-ij-and-phi-in-sigma-the-case-of-the-anti-parallel-pairing">
-<span id="pfaffianap"></span><h3>Relation between <span class="math notranslate nohighlight">\(f_{ij}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> (the case of the anti-parallel pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-sigma-the-case-of-the-anti-parallel-pairing" title="Permalink to this heading">¶</a></h3>
+<span id="pfaffianap"></span><h3>Relation between <span class="math notranslate nohighlight">\(f_{ij}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> (the case of the anti-parallel pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-sigma-the-case-of-the-anti-parallel-pairing" title="Link to this heading">¶</a></h3>
 <p>In the many-variable variational Monte Carlo (mVMC) method, the one-body
 part of the trial wave function is expressed by the Pfaffian Slater
 determinant defined as</p>
@@ -179,7 +179,7 @@ the gauge degrees of freedom (i.e., the sign of
 redundancy.</p>
 </section>
 <section id="relation-between-f-ij-and-phi-in-the-case-of-the-general-pairing">
-<span id="pfaffianp"></span><h3>Relation between <span class="math notranslate nohighlight">\(F_{IJ}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> (the case of the general pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-the-case-of-the-general-pairing" title="Permalink to this heading">¶</a></h3>
+<span id="pfaffianp"></span><h3>Relation between <span class="math notranslate nohighlight">\(F_{IJ}\)</span> and <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> (the case of the general pairing)<a class="headerlink" href="#relation-between-f-ij-and-phi-in-the-case-of-the-general-pairing" title="Link to this heading">¶</a></h3>
 <p>We extend the relation between the Pfaffian-Slater wave function and the
 single Slater wave function into the general pairing case including the
 spin-parallel pairing. We define the Pfaffian-Slater wave function and
@@ -200,7 +200,7 @@ F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{I,2n-1}\Phi_{J,2n}-\Phi_{J,2n-1}\P
 employ this relation in mVMC ver 1.0 and later.</p>
 </section>
 <section id="singular-value-decomposition-of-f-ij">
-<span id="pfaffiansingular"></span><h3>Singular value decomposition of <span class="math notranslate nohighlight">\(f_{ij}\)</span><a class="headerlink" href="#singular-value-decomposition-of-f-ij" title="Permalink to this heading">¶</a></h3>
+<span id="pfaffiansingular"></span><h3>Singular value decomposition of <span class="math notranslate nohighlight">\(f_{ij}\)</span><a class="headerlink" href="#singular-value-decomposition-of-f-ij" title="Link to this heading">¶</a></h3>
 <p>We define matrices <span class="math notranslate nohighlight">\(F\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\uparrow}\)</span>,
 <span class="math notranslate nohighlight">\(\Phi_{\downarrow}\)</span>, and <span class="math notranslate nohighlight">\(\Sigma\)</span> as</p>
 <div class="math notranslate nohighlight">
@@ -229,7 +229,7 @@ determinant.</p>
 </section>
 </section>
 <section id="power-lanczos-method">
-<h2>Power Lanczos method<a class="headerlink" href="#power-lanczos-method" title="Permalink to this heading">¶</a></h2>
+<h2>Power Lanczos method<a class="headerlink" href="#power-lanczos-method" title="Link to this heading">¶</a></h2>
 <p>The power-Lanczos method improves an optimized VMC wave function
 <span class="math notranslate nohighlight">\(|\psi\rangle\)</span> by using the trial wave function</p>
 <div class="math notranslate nohighlight">
@@ -254,7 +254,7 @@ determines <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> in
 stabilization used by the implementation. The final subsection describes
 the calculation of observables after the first power-Lanczos step.</p>
 <section id="first-power-lanczos-step-and-determination-of-alpha">
-<h3>First power-Lanczos step and determination of <span class="math notranslate nohighlight">\(\alpha\)</span><a class="headerlink" href="#first-power-lanczos-step-and-determination-of-alpha" title="Permalink to this heading">¶</a></h3>
+<h3>First power-Lanczos step and determination of <span class="math notranslate nohighlight">\(\alpha\)</span><a class="headerlink" href="#first-power-lanczos-step-and-determination-of-alpha" title="Link to this heading">¶</a></h3>
 <p>First, we briefly explain the sampling procedure of the variational
 Monte Carlo (VMC) method. Here, <span class="math notranslate nohighlight">\(x\)</span> denotes a configuration sampled
 from the base VMC wave function <span class="math notranslate nohighlight">\(|\psi\rangle\)</span>. The expectation
@@ -397,7 +397,7 @@ optimized <span class="math notranslate nohighlight">\(|\phi_1\rangle\)</span> i
 \end{aligned}\]</div>
 </section>
 <section id="grand-canonical-first-step-refinement-and-resource-limits">
-<h3>Grand-canonical first-step refinement and resource limits<a class="headerlink" href="#grand-canonical-first-step-refinement-and-resource-limits" title="Permalink to this heading">¶</a></h3>
+<h3>Grand-canonical first-step refinement and resource limits<a class="headerlink" href="#grand-canonical-first-step-refinement-and-resource-limits" title="Link to this heading">¶</a></h3>
 <p>For the supported grand-canonical first-step stabilized estimator
 (<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=1</span></code>), an optional GMP/MPFR backend resolves ambiguous
@@ -441,9 +441,9 @@ line reports calls, accepted proposals, exact zeros, and maximum precision;
 GEVP failures and refinement failures are reported on stderr.</p>
 </section>
 <section id="second-power-lanczos-step">
-<h3>Second power-Lanczos step<a class="headerlink" href="#second-power-lanczos-step" title="Permalink to this heading">¶</a></h3>
+<h3>Second power-Lanczos step<a class="headerlink" href="#second-power-lanczos-step" title="Link to this heading">¶</a></h3>
 <section id="variational-determination-of-alpha-and-beta">
-<h4>Variational determination of <span class="math notranslate nohighlight">\(\alpha\)</span> and <span class="math notranslate nohighlight">\(\beta\)</span><a class="headerlink" href="#variational-determination-of-alpha-and-beta" title="Permalink to this heading">¶</a></h4>
+<h4>Variational determination of <span class="math notranslate nohighlight">\(\alpha\)</span> and <span class="math notranslate nohighlight">\(\beta\)</span><a class="headerlink" href="#variational-determination-of-alpha-and-beta" title="Link to this heading">¶</a></h4>
 <p>For <code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code>, mVMC minimizes the variational energy</p>
 <div class="math notranslate nohighlight">
 \[E_2(\alpha,\beta)
@@ -495,7 +495,7 @@ applies the same variational principle with the dimension of the Krylov
 subspace extended from two to three.</p>
 </section>
 <section id="numerically-stable-implementation">
-<h4>Numerically stable implementation<a class="headerlink" href="#numerically-stable-implementation" title="Permalink to this heading">¶</a></h4>
+<h4>Numerically stable implementation<a class="headerlink" href="#numerically-stable-implementation" title="Link to this heading">¶</a></h4>
 <p>The following operations do not change the variational principle. They
 evaluate the same matrix elements from Monte Carlo samples and solve the
 generalized eigenvalue problem more stably.</p>
@@ -601,7 +601,7 @@ variance is evaluated in the centered basis as</p>
  -(\boldsymbol{d}^\dagger\widetilde{\cal H}\boldsymbol{d})^2.\]</div>
 </section>
 <section id="computational-cost">
-<h4>Computational cost<a class="headerlink" href="#computational-cost" title="Permalink to this heading">¶</a></h4>
+<h4>Computational cost<a class="headerlink" href="#computational-cost" title="Link to this heading">¶</a></h4>
 <p>The new cost introduced by the second step is the evaluation of the
 local powers <span class="math notranslate nohighlight">\(F_2(x)\)</span> and <span class="math notranslate nohighlight">\(F_3(x)\)</span> for every sample, among
 which
@@ -669,7 +669,7 @@ depth-three call count is bounded by <span class="math notranslate nohighlight">
 </section>
 </section>
 <section id="calculation-of-physical-quantities-after-the-first-power-lanczos-step">
-<h3>Calculation of physical quantities after the first power-Lanczos step<a class="headerlink" href="#calculation-of-physical-quantities-after-the-first-power-lanczos-step" title="Permalink to this heading">¶</a></h3>
+<h3>Calculation of physical quantities after the first power-Lanczos step<a class="headerlink" href="#calculation-of-physical-quantities-after-the-first-power-lanczos-step" title="Link to this heading">¶</a></h3>
 <p>For <code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code>, by using the optimized parameter
 <span class="math notranslate nohighlight">\(\alpha\)</span>, the physical quantities (one-body and two-body Green
 functions) are calculated for the first-step wave function
@@ -708,7 +708,7 @@ program, the one-body and two-body Green functions are calculated based
 on this expression.</p>
 </section>
 <section id="selective-repair-in-the-first-lanczos-sampler">
-<h3>Selective repair in the first-Lanczos sampler<a class="headerlink" href="#selective-repair-in-the-first-lanczos-sampler" title="Permalink to this heading">¶</a></h3>
+<h3>Selective repair in the first-Lanczos sampler<a class="headerlink" href="#selective-repair-in-the-first-lanczos-sampler" title="Link to this heading">¶</a></h3>
 <p>For real, spin-conserving canonical wave functions without BackFlow, RBM,
 or a sampling guide, the non-block sampler enables selective component
 repair in legacy first-Lanczos energy measurements (<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>,
@@ -741,14 +741,35 @@ is off. By default, logging follows repair.</p></li>
 A <code class="docutils literal notranslate"><span class="pre">Q</span></code> row contains the zero-based bin, evaluated-sample count, nonfinite
 count, maximum absolute log-weight drift, counts above 1e-6, 1e-3 and 1,
 committed accepts, repair attempts, and repaired components. Repair attempts
-and component work include an accepted move subsequently rolled back. The final
-<code class="docutils literal notranslate"><span class="pre">F</span> <span class="pre">refreshTotal</span></code> row gives the total component count. Drift is
+and component work include an accepted move subsequently rolled back. The rows
+of a bin are written when its measurement loop ends, before the support check
+and the BackFlow reject threshold are evaluated, so a bin that stops the run
+keeps its summary. The final
+<code class="docutils literal notranslate"><span class="pre">F</span> <span class="pre">refreshTotal</span></code> row gives the total component count and is written only on
+normal completion. Drift is
 <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">(log(abs(ip_direct))</span> <span class="pre">+</span> <span class="pre">LogProjVal)</span> <span class="pre">-</span> <span class="pre">stored_log_weight</span></code>, using the
 direct recomputation already performed by measurement. It is a diagnostic
 of stored sampling weights, not a bound on energy errors. No per-proposal
 traces or additional full recomputations are performed for this summary.</p>
+<p>The same summary is available for the non-FSZ canonical BackFlow measurement
+(<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">NSplitSize=1</span></code>, real or complex),
+where component repair is not implemented: <code class="docutils literal notranslate"><span class="pre">MVMC_SAMPLER_REPAIR=1</span></code> is still
+rejected there, and the sampler columns of <code class="docutils literal notranslate"><span class="pre">Q</span></code> (committed accepts, repair
+attempts, repaired components) stay zero. By default the BackFlow summary is
+written only for the first-Lanczos measurement (<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>);
+<code class="docutils literal notranslate"><span class="pre">MVMC_SAMPLER_DRIFT_LOG=1</span></code> also enables it for a plain BackFlow
+measurement. Drift uses the amplitude that the BackFlow measurement already
+recomputes from the stored configuration, so no additional factorization is
+performed. A fixed-configuration replay overwrites the stored weight with the
+direct value, and its drift is zero. Each bin additionally writes
+<code class="docutils literal notranslate"><span class="pre">B</span> <span class="pre">bin</span> <span class="pre">lanczosRejectRebuild</span> <span class="pre">lanczosRejectNonfinite</span></code> with the samples that
+the BackFlow first-Lanczos step rejected after a failed numerical candidate
+rebuild or a non-finite local vector; those samples also appear as
+<code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">measure</span></code> details with the actions <code class="docutils literal notranslate"><span class="pre">skip-lanczos-rebuild</span></code> and
+<code class="docutils literal notranslate"><span class="pre">skip-lanczos-nonfinite</span></code>. FSZ and grand-canonical BackFlow, and
+optimization, are unchanged.</p>
 <section id="zero-and-exceptional-event-logging">
-<h4>Zero and exceptional-event logging<a class="headerlink" href="#zero-and-exceptional-event-logging" title="Permalink to this heading">¶</a></h4>
+<h4>Zero and exceptional-event logging<a class="headerlink" href="#zero-and-exceptional-event-logging" title="Link to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">Q</span></code> remains the compact drift/repair summary. Each bin also writes <code class="docutils literal notranslate"><span class="pre">Z</span></code>:</p>
 <p><code class="docutils literal notranslate"><span class="pre">Z</span> <span class="pre">bin</span> <span class="pre">proposalZero</span> <span class="pre">ratioUnderflow</span> <span class="pre">ratioNonfinite</span> <span class="pre">currentNonfinite</span> <span class="pre">componentZeroPre</span> <span class="pre">componentZeroPost</span> <span class="pre">measurementZero</span> <span class="pre">repairFailed</span> <span class="pre">measureWeightZero</span> <span class="pre">skipWeight</span> <span class="pre">skipEnergy</span> <span class="pre">measureFactorFailed</span> <span class="pre">detailsTotal</span> <span class="pre">suppressedTotal</span></code></p>
 <p><code class="docutils literal notranslate"><span class="pre">proposalZero</span></code> counts a computed projected-amplitude log of negative
@@ -794,7 +815,7 @@ stderr lines. A failed repair additionally prints rank, bin, step, component,
 factorization status and before/after values to stderr before aborting.</p>
 </section>
 <section id="exceptional-current-state-recovery">
-<h4>Exceptional current-state recovery<a class="headerlink" href="#exceptional-current-state-recovery" title="Permalink to this heading">¶</a></h4>
+<h4>Exceptional current-state recovery<a class="headerlink" href="#exceptional-current-state-recovery" title="Link to this heading">¶</a></h4>
 <p>With repair enabled, a zero/nonfinite log amplitude after an accepted update
 triggers one full reconstruction of that proposed configuration. A finite
 result replaces the stored weight and resets the repair reference/minimum.
@@ -836,10 +857,10 @@ numerical diagnostics.</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">Table of Contents</a></h3>
@@ -892,7 +913,7 @@ numerical diagnostics.</p>
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -900,13 +921,13 @@ numerical diagnostics.</p>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -924,7 +945,7 @@ numerical diagnostics.</p>
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

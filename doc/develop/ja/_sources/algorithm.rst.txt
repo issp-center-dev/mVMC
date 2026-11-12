@@ -839,11 +839,28 @@ hopまたはexchangeのaccept後、規格化したPfaffianの絶対値が、基�
 列は0始まりのbin、評価したsample数、非有限値の数、最大絶対drift、
 1e-6・1e-3・1を超えた数、確定accept数、修復発動数、修復成分数です。
 修復発動数と成分数には、その後取り消した仮acceptに対する作業も含みます。
-最後の ``F refreshTotal`` 行は全binの修復成分数です。
+各binの行は、そのbinの測定loopが終わった時点で、support検査やBackFlowの
+reject率判定より前に書きます。判定で停止したbinの集計も残ります。
+最後の ``F refreshTotal`` 行は全binの修復成分数で、正常終了時だけ書きます。
 driftは通常測定にある直接再計算を使った
 ``2 * (log(abs(ip_direct)) + LogProjVal) - stored_log_weight`` であり、
 energy誤差の上限ではありません。全proposalのtraceや、診断のための追加の
 全成分再計算は行いません。
+
+同じ集計は、非FSZ・粒子数固定のBackFlow測定（``NVMCCalMode=1``、
+``NBackFlowIdx > 0``、``NSplitSize=1``、実数・複素とも）でも使えます。
+BackFlowの更新経路には成分単位修復を実装していないため、
+``MVMC_SAMPLER_REPAIR=1`` は従来どおり入力エラーとし、``Q`` 行の確定accept数・
+修復発動数・修復成分数は0のままです。未指定時は第1Lanczos測定
+（``NLanczosMode=1``）でだけ集計し、``MVMC_SAMPLER_DRIFT_LOG=1`` で
+通常のBackFlow測定でも集計します。driftにはBackFlow測定が保存配置から
+再計算する振幅をそのまま使い、追加の行列分解は行いません。固定配置のreplayでは
+保存重みを直接値で上書きするため、driftは0です。各binには
+``B bin lanczosRejectRebuild lanczosRejectNonfinite`` を追加し、BackFlowの
+第1Lanczosで数値的な候補再構築の失敗・非有限な局所ベクトルにより除外した
+sample数を記録します。これらは ``E measure`` の詳細にも
+``skip-lanczos-rebuild``・``skip-lanczos-nonfinite`` として入ります。
+FSZ・grand-canonicalのBackFlowと最適化は従来どおりです。
 
 
 zero・異常時のログ

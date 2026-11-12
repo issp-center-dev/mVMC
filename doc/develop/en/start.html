@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>How to use mVMC? &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b308ce55"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/documentation_options.js?v=9172181d"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Tutorial" href="tutorial.html" />
     <link rel="prev" title="What is mVMC?" href="intro.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -41,9 +41,9 @@
           <div class="body" role="main">
             
   <section id="how-to-use-mvmc">
-<h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="Permalink to this heading">¶</a></h1>
+<h1>How to use mVMC?<a class="headerlink" href="#how-to-use-mvmc" title="Link to this heading">¶</a></h1>
 <section id="prerequisite">
-<h2>Prerequisite<a class="headerlink" href="#prerequisite" title="Permalink to this heading">¶</a></h2>
+<h2>Prerequisite<a class="headerlink" href="#prerequisite" title="Link to this heading">¶</a></h2>
 <p>mVMC requires the following packages:</p>
 <ul class="simple">
 <li><p>C compiler (intel, Fujitsu, GNU, etc. )</p></li>
@@ -68,7 +68,7 @@ $<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/
 </div>
 </section>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
 <p>You can download mVMC in the following place.
 <a class="reference external" href="https://github.com/issp-center-dev/mVMC/releases">https://github.com/issp-center-dev/mVMC/releases</a></p>
 <p>You can obtain the mVMC directory by typing</p>
@@ -77,7 +77,7 @@ $<span class="w"> </span><span class="nb">source</span><span class="w"> </span>/
 </div>
 <p>There are two kind of procedures to install mVMC.</p>
 <section id="using-mvmcconfig-sh">
-<h3>Using <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code><a class="headerlink" href="#using-mvmcconfig-sh" title="Permalink to this heading">¶</a></h3>
+<h3>Using <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code><a class="headerlink" href="#using-mvmcconfig-sh" title="Link to this heading">¶</a></h3>
 <p>Please run <code class="docutils literal notranslate"><span class="pre">mVMCconfig.sh</span></code> script in the mVMC directory as follow (for
 ISSP system-B “sekirei”):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>bash<span class="w"> </span>mVMCconfig.sh<span class="w"> </span>sekirei
@@ -125,7 +125,7 @@ If you keep this PATH, you should write above in <code class="docutils literal n
 <code class="docutils literal notranslate"><span class="pre">bash</span></code> as a login shell)</p>
 </section>
 <section id="using-cmake">
-<h3>Using <code class="docutils literal notranslate"><span class="pre">cmake</span></code><a class="headerlink" href="#using-cmake" title="Permalink to this heading">¶</a></h3>
+<h3>Using <code class="docutils literal notranslate"><span class="pre">cmake</span></code><a class="headerlink" href="#using-cmake" title="Link to this heading">¶</a></h3>
 <p>We can compile mVMC as</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span><span class="nv">$HOME</span>/build/mvmc
 cmake<span class="w"> </span>-DCONFIG<span class="o">=</span>gcc<span class="w"> </span><span class="nv">$PathTomvmc</span>
@@ -156,7 +156,7 @@ make
 and an execute <code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> in the <code class="docutils literal notranslate"><span class="pre">src/</span></code> directory. We can select
 ScaLAPACK instead of LAPACK for vmc calculation by adding the following
 as the cmake option</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DUSE_SCALAPACK</span><span class="o">=</span><span class="n">ON</span> <span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;xxx&quot;</span><span class="o">.</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DUSE_SCALAPACK</span><span class="o">=</span><span class="n">ON</span> <span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">"xxx"</span><span class="o">.</span>
 </pre></div>
 </div>
 <p>Here, xxx is the libraries to use ScaLAPACK. Please note that we must
@@ -173,9 +173,9 @@ change the compiler.</p>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">-DSCALAPACK_LIBRARIES</span></code> is automatically set as</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">&quot;\$</span><span class="si">{MKLROOT}</span><span class="s2">/lib/intel64 -lmkl_scalapack_lp64</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">DSCALAPACK_LIBRARIES</span><span class="o">=</span><span class="s2">"\$</span><span class="si">{MKLROOT}</span><span class="s2">/lib/intel64 -lmkl_scalapack_lp64</span>
 <span class="o">-</span><span class="n">lmkl_intel_lp64</span> <span class="o">-</span><span class="n">lmkl_intel_thread</span> <span class="o">-</span><span class="n">lmkl_core</span>
-<span class="o">-</span><span class="n">lmkl_blacs_sgimpt_lp64</span><span class="s2">&quot;.</span>
+<span class="o">-</span><span class="n">lmkl_blacs_sgimpt_lp64</span><span class="s2">".</span>
 </pre></div>
 </div>
 <p>When the path to libraries for ScaLAPACK is different in your
@@ -184,7 +184,7 @@ circumstance, please set <code class="docutils literal notranslate"><span class=
 </section>
 </section>
 <section id="directory-structure">
-<h2>Directory structure<a class="headerlink" href="#directory-structure" title="Permalink to this heading">¶</a></h2>
+<h2>Directory structure<a class="headerlink" href="#directory-structure" title="Link to this heading">¶</a></h2>
 <blockquote>
 <div><p>When mVMC-xxx.tar.gz is unzipped, the following directory structure is composed.:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>.
@@ -231,7 +231,7 @@ circumstance, please set <code class="docutils literal notranslate"><span class=
 </div></blockquote>
 </section>
 <section id="basic-usage">
-<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this heading">¶</a></h2>
+<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
 <p>mVMC works as whether the following two modes:</p>
 <ul>
 <li><p>Expert mode</p>
@@ -309,7 +309,7 @@ as follows (in case of 16 threads) before the running:</p>
 </div>
 </section>
 <section id="printing-version-id">
-<h2>Printing version ID<a class="headerlink" href="#printing-version-id" title="Permalink to this heading">¶</a></h2>
+<h2>Printing version ID<a class="headerlink" href="#printing-version-id" title="Link to this heading">¶</a></h2>
 <p>By using <code class="docutils literal notranslate"><span class="pre">-v</span></code> (or <code class="docutils literal notranslate"><span class="pre">--version</span></code>) option as follows, you can check
 which version of mVMC you are using.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>PATH/vmcdry.out<span class="w"> </span>-v
@@ -330,10 +330,10 @@ built without CMake).</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">Table of Contents</a></h3>
@@ -370,7 +370,7 @@ built without CMake).</p>
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -378,13 +378,13 @@ built without CMake).</p>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -402,7 +402,7 @@ built without CMake).</p>
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

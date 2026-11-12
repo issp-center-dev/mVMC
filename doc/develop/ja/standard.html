@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>スタンダードモード用入力ファイル書式 &#8212; mVMC 1.4.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2a1275fb"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="_static/translations.js?v=4dbe4bdc"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=0868a3b3"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=4755f45a"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
     <link rel="next" title="エキスパートモード入力ファイル書式" href="expert.html" />
     <link rel="prev" title="チュートリアル" href="tutorial.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -43,21 +43,21 @@
           <div class="body" role="main">
             
   <section id="howtostandard">
-<span id="id1"></span><h1>スタンダードモード用入力ファイル書式<a class="headerlink" href="#howtostandard" title="この見出しへのパーマリンク">¶</a></h1>
+<span id="id1"></span><h1>スタンダードモード用入力ファイル書式<a class="headerlink" href="#howtostandard" title="Link to this heading">¶</a></h1>
 <p>スタンダードモード用入力ファイルは次のような格好をしています。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">W</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">L</span> <span class="o">=</span> <span class="mi">4</span>
-<span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;spin&quot;</span>
+<span class="n">model</span> <span class="o">=</span> <span class="s2">"spin"</span>
 
-<span class="n">lattice</span> <span class="o">=</span> <span class="s2">&quot;triangular lattice&quot;</span>
+<span class="n">lattice</span> <span class="o">=</span> <span class="s2">"triangular lattice"</span>
 <span class="o">//</span><span class="n">mu</span> <span class="o">=</span> <span class="mf">1.0</span>
 <span class="o">//</span> <span class="n">t</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
-<span class="o">//</span> <span class="n">t</span><span class="s1">&#39; = -0.5</span>
+<span class="o">//</span> <span class="sa">t</span><span class="s1">' = -0.5</span>
 <span class="o">//</span> <span class="n">U</span> <span class="o">=</span> <span class="mf">8.0</span>
 <span class="o">//</span><span class="n">V</span> <span class="o">=</span> <span class="mf">4.0</span>
-<span class="o">//</span><span class="n">V</span><span class="s1">&#39;=2.0</span>
+<span class="o">//</span><span class="n">V</span><span class="s1">'=2.0</span>
 <span class="n">J</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
-<span class="n">J</span><span class="s1">&#39;=-0.5</span>
+<span class="n">J</span><span class="s1">'=-0.5</span>
 <span class="o">//</span> <span class="n">ncond</span> <span class="o">=</span> <span class="mi">8</span>
 </pre></div>
 </div>
@@ -77,7 +77,7 @@
 </ul>
 <p>次に各キーワードの説明をします。</p>
 <section id="id2">
-<h2>計算の種類に関する必須パラメーター<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>計算の種類に関する必須パラメーター<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p>
 <p><strong>形式 :</strong> 文字列( <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">Hubbard&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Spin&quot;</span></code>,
@@ -86,7 +86,7 @@
 <p><strong>説明 :</strong> 計算対象の模型を指定します。
 文字列 <code class="docutils literal notranslate"><span class="pre">&quot;Fermion</span> <span class="pre">Hubbard&quot;</span></code> は、カノニカル集団のフェルミ粒子Hubbard模型</p>
 <div class="math notranslate nohighlight" id="equation-hubbard">
-<span class="eqno">(1)<a class="headerlink" href="#equation-hubbard" title="この数式へのパーマリンク">¶</a></span>\[\begin{aligned}
+<span class="eqno">(1)<a class="headerlink" href="#equation-hubbard" title="Link to this equation">¶</a></span>\[\begin{aligned}
 H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
 - \sum_{i \neq j \sigma} t_{i j} c^\dagger_{i \sigma} c_{j \sigma}
 + \sum_{i} U n_{i \uparrow} n_{i \downarrow}
@@ -95,7 +95,7 @@ H = - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
 <p>文字列 <code class="docutils literal notranslate"><span class="pre">&quot;Spin&quot;</span></code> はカノニカル集団のスピン模型
 ( <span class="math notranslate nohighlight">\(\sigma_1, \sigma_2=x, y, z\)</span> )</p>
 <div class="math notranslate nohighlight" id="equation-spin">
-<span class="eqno">(2)<a class="headerlink" href="#equation-spin" title="この数式へのパーマリンク">¶</a></span>\[\begin{split}\begin{aligned}
+<span class="eqno">(2)<a class="headerlink" href="#equation-spin" title="Link to this equation">¶</a></span>\[\begin{split}\begin{aligned}
 H &amp;= -h \sum_{i} S_{i z} - \Gamma \sum_{i} S_{i x} + D \sum_{i} S_{i z} S_{i z}
 \nonumber \\
 &amp;+ \sum_{i j, \sigma_1}J_{i j \sigma_1} S_{i \sigma_1} S_{j \sigma_1}+ \sum_{i j, \sigma_1 \neq \sigma_2} J_{i j \sigma_1 \sigma_2} S_{i \sigma_1} S_{j \sigma_2} ,
@@ -103,7 +103,7 @@ H &amp;= -h \sum_{i} S_{i z} - \Gamma \sum_{i} S_{i x} + D \sum_{i} S_{i z} S_{i
 <p>文字列 <code class="docutils literal notranslate"><span class="pre">&quot;Kondo</span> <span class="pre">Lattice&quot;</span></code> はカノニカル集団の近藤格子模型
 (Hubbard模型と同様に <span class="math notranslate nohighlight">\(U\)</span> と <span class="math notranslate nohighlight">\(J\)</span> を入れることも可能)</p>
 <div class="math notranslate nohighlight" id="equation-kondo">
-<span class="eqno">(3)<a class="headerlink" href="#equation-kondo" title="この数式へのパーマリンク">¶</a></span>\[\begin{split}\begin{aligned}
+<span class="eqno">(3)<a class="headerlink" href="#equation-kondo" title="Link to this equation">¶</a></span>\[\begin{split}\begin{aligned}
 H &amp;= - \mu \sum_{i \sigma} c^\dagger_{i \sigma} c_{i \sigma}
 - t \sum_{\langle i j \rangle \sigma} c^\dagger_{i \sigma} c_{j \sigma}
 + \frac{J}{2} \sum_{i} \left\{
@@ -140,41 +140,45 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 <a href="#honeycombpng">3</a>)、 カゴメ格子(Fig. <a href="#kagomepng">4</a>)、
 梯子格子(Fig. <a href="#ladderpng">5</a>)に対応します。</p>
 <figure class="align-default" id="id17">
-<span id="latticepng"></span><a class="reference internal image-reference" href="_images/chap04_1_lattice.png"><img alt="_images/chap04_1_lattice.png" src="_images/chap04_1_lattice.png" style="width: 15.00000cm;" /></a>
+<span id="latticepng"></span><a class="reference internal image-reference" href="_images/chap04_1_lattice.png"><img alt="_images/chap04_1_lattice.png" src="_images/chap04_1_lattice.png" style="width: 15cm;" />
+</a>
 <figcaption>
 <p><span class="caption-text">Figure 2: (a)1次元鎖、(b)2次元正方格子、(c)2次元三角格子の模式図.
 ホッピング積分、オフサイトクーロン積分、スピン結合は、
 再近接サイト間(マゼンタの実線)ではそれぞれ <span class="math notranslate nohighlight">\(t,V,J\)</span> となり、
-次近接サイト間(緑の破線)ではそれぞれ <span class="math notranslate nohighlight">\(t',V',J'\)</span> となります。</span><a class="headerlink" href="#id17" title="この画像へのパーマリンク">¶</a></p>
+次近接サイト間(緑の破線)ではそれぞれ <span class="math notranslate nohighlight">\(t',V',J'\)</span> となります。</span><a class="headerlink" href="#id17" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <figure class="align-default" id="id18">
-<span id="honeycombpng"></span><a class="reference internal image-reference" href="_images/chap04_1_honeycomb.png"><img alt="_images/chap04_1_honeycomb.png" src="_images/chap04_1_honeycomb.png" style="width: 15.00000cm;" /></a>
+<span id="honeycombpng"></span><a class="reference internal image-reference" href="_images/chap04_1_honeycomb.png"><img alt="_images/chap04_1_honeycomb.png" src="_images/chap04_1_honeycomb.png" style="width: 15cm;" />
+</a>
 <figcaption>
 <p><span class="caption-text">Figure 3: 2次元異方的蜂の巣格子の模式図.
 ホッピング積分、オフサイトクーロン積分、スピン結合は、
-ボンドの方向によって異なります。</span><a class="headerlink" href="#id18" title="この画像へのパーマリンク">¶</a></p>
+ボンドの方向によって異なります。</span><a class="headerlink" href="#id18" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <figure class="align-default" id="id19">
-<span id="kagomepng"></span><a class="reference internal image-reference" href="_images/kagome.png"><img alt="_images/kagome.png" src="_images/kagome.png" style="width: 15.00000cm;" /></a>
+<span id="kagomepng"></span><a class="reference internal image-reference" href="_images/kagome.png"><img alt="_images/kagome.png" src="_images/kagome.png" style="width: 15cm;" />
+</a>
 <figcaption>
-<p><span class="caption-text">Figure 4: カゴメ格子の模式図.</span><a class="headerlink" href="#id19" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-text">Figure 4: カゴメ格子の模式図.</span><a class="headerlink" href="#id19" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <figure class="align-default" id="id20">
-<span id="ladderpng"></span><a class="reference internal image-reference" href="_images/ladder.png"><img alt="_images/ladder.png" src="_images/ladder.png" style="width: 10.00000cm;" /></a>
+<span id="ladderpng"></span><a class="reference internal image-reference" href="_images/ladder.png"><img alt="_images/ladder.png" src="_images/ladder.png" style="width: 10cm;" />
+</a>
 <figcaption>
-<p><span class="caption-text">Figure 5: 梯子格子の模式図.</span><a class="headerlink" href="#id20" title="この画像へのパーマリンク">¶</a></p>
+<p><span class="caption-text">Figure 5: 梯子格子の模式図.</span><a class="headerlink" href="#id20" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </li>
 </ul>
 </section>
 <section id="id3">
-<h2>格子に関するパラメーター<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>格子に関するパラメーター<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
 <section id="id4">
-<h3>1次元鎖<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>1次元鎖<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <p>Fig. <a href="#latticepng">2</a> (a)</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
@@ -184,7 +188,7 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 </ul>
 </section>
 <section id="id5">
-<h3>梯子格子<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>梯子格子<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
 <p>Fig. <a href="#ladderpng">5</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">L</span></code></p>
@@ -197,16 +201,17 @@ S_{i}^{+} c_{i \downarrow}^\dagger c_{i \uparrow}
 </li>
 </ul>
 <figure class="align-default" id="id21">
-<span id="unitlatticepng"></span><a class="reference internal image-reference" href="_images/chap04_1_unitlattice.png"><img alt="_images/chap04_1_unitlattice.png" src="_images/chap04_1_unitlattice.png" style="width: 15.00000cm;" /></a>
+<span id="unitlatticepng"></span><a class="reference internal image-reference" href="_images/chap04_1_unitlattice.png"><img alt="_images/chap04_1_unitlattice.png" src="_images/chap04_1_unitlattice.png" style="width: 15cm;" />
+</a>
 <figcaption>
 <p><span class="caption-text">Figure 6: 三角格子において、 <span class="math notranslate nohighlight">\({\vec a}_0 = (6, 2), {\vec a}_1 = (2, 4)\)</span> とした場合のセル形状。
 <span class="math notranslate nohighlight">\({\vec a}_0\)</span> (マゼンタ)および <span class="math notranslate nohighlight">\({\vec a}_1\)</span> (グリーン)
-で囲まれた部分(サイト数は20)が計算するセルとなる。</span><a class="headerlink" href="#id21" title="この画像へのパーマリンク">¶</a></p>
+で囲まれた部分(サイト数は20)が計算するセルとなる。</span><a class="headerlink" href="#id21" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="id6">
-<h3>正方格子、 三角格子、 蜂の巣格子、 カゴメ格子<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>正方格子、 三角格子、 蜂の巣格子、 カゴメ格子<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
 <p>正方格子[Fig. <a href="#latticepng">2</a> (b)]、 三角格子[Fig. <a href="#latticepng">2</a> (c)]、 蜂の巣格子(Fig. <a href="#honeycombpng">3</a>)、 カゴメ格子(Fig. <a href="#kagomepng">4</a>)</p>
 <p>これらの格子では、標準の単位胞(図中の黒の破線を参照)を用いて格子形状を指定する方法と、
 それらとは別の方向に格子ベクトルを取る方法が選択できます。
@@ -235,7 +240,7 @@ coordinate) で指定されます。</p>
 </section>
 </section>
 <section id="id7">
-<h2>副格子<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>副格子<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h2>
 <p>以下パラメータを用いると変分波動関数のペア軌道部分に副格子の周期性を持たせることが出来ます。</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">a0Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a0Lsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a1Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">a1Lsub</span></code>, <code class="docutils literal notranslate"><span class="pre">Wsub</span></code>, <code class="docutils literal notranslate"><span class="pre">Lsub</span></code></p>
@@ -249,12 +254,12 @@ coordinate) で指定されます。</p>
 </ul>
 </section>
 <section id="id8">
-<h2>ハミルトニアンの各項の係数<a class="headerlink" href="#id8" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>ハミルトニアンの各項の係数<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h2>
 <p>デフォルト値は特に記載されていないものについては0に設定してあります。
 型が複素数のパラメータは「実部, 虚部」(間に“,”)の形式で指定し、
 実数の場合には「実部」で指定が可能です。</p>
 <section id="id9">
-<h3>局所項<a class="headerlink" href="#id9" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>局所項<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">mu</span></code></p>
 <p><strong>形式 :</strong> 実数</p>
@@ -399,7 +404,7 @@ Hubbardおよび近藤格子模型でのオンサイトクーロン積分を指�
 <p>Table: 各格子で定義可能な相互作用一覧。ただし、スピン結合については行列として与えることが可能。</p>
 </section>
 <section id="id10">
-<h3>非局所項[梯子格子]<a class="headerlink" href="#id10" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>非局所項[梯子格子]<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
 <p>Fig. <a href="#ladderpng">5</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t1'</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code>, <code class="docutils literal notranslate"><span class="pre">t2'</span></code></p>
@@ -434,7 +439,7 @@ Hubbardおよび近藤格子模型でのオンサイトクーロン積分を指�
 </ul>
 </section>
 <section id="id11">
-<h3>非局所項 (梯子格子以外)<a class="headerlink" href="#id11" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>非局所項 (梯子格子以外)<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
 <p>Figs. <a href="#latticepng">2</a> , <a href="#honeycombpng">3</a> , <a href="#kagomepng">4</a></p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">t</span></code>, <code class="docutils literal notranslate"><span class="pre">t0</span></code>, <code class="docutils literal notranslate"><span class="pre">t1</span></code>, <code class="docutils literal notranslate"><span class="pre">t2</span></code></p>
@@ -584,7 +589,7 @@ Hubbardおよび近藤格子模型での、第三近接サイト間のCoulomb積
 </section>
 </section>
 <section id="id12">
-<h2>計算条件のパラメーター<a class="headerlink" href="#id12" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>計算条件のパラメーター<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h2>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">ncond</span></code></p>
 <p><strong>形式 :</strong> int型 (1以上、必須)</p>
@@ -780,10 +785,10 @@ stored <span class="math notranslate nohighlight">\(O\)</span> 経路を内部�
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">目次</a></h3>
@@ -826,7 +831,7 @@ stored <span class="math notranslate nohighlight">\(O\)</span> 経路を内部�
             rel="nofollow">ソースコードを表示</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -834,13 +839,13 @@ stored <span class="math notranslate nohighlight">\(O\)</span> 経路を内部�
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -858,7 +863,7 @@ stored <span class="math notranslate nohighlight">\(O\)</span> 経路を内部�
     </div>
     <div class="footer" role="contentinfo">
     &#169; 著作権 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

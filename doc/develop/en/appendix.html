@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Program for the unrestricted Hartree-Fock approximation &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b308ce55"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=9172181d"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="HPhi/mVMC Fourier-Transformation utility" href="fourier/index.html" />
     <link rel="prev" title="Algorithm" href="algorithm.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,7 +42,7 @@
           <div class="body" role="main">
             
   <section id="program-for-the-unrestricted-hartree-fock-approximation">
-<h1>Program for the unrestricted Hartree-Fock approximation<a class="headerlink" href="#program-for-the-unrestricted-hartree-fock-approximation" title="Permalink to this heading">¶</a></h1>
+<h1>Program for the unrestricted Hartree-Fock approximation<a class="headerlink" href="#program-for-the-unrestricted-hartree-fock-approximation" title="Link to this heading">¶</a></h1>
 <p>In mVMC package, there is a program to calculate the initial values of
 the pair orbital parameters <span class="math notranslate nohighlight">\(f_{ij}\)</span> by using the unrestricted
 Hartree-Fock (UHF) approximation (relation between Pfaffian Slater
@@ -50,7 +50,7 @@ determinant and single Slater determinant is explained in sec.
 <a class="reference internal" href="algorithm.html#puffandslater"><span class="std std-ref">Properties of the Pfaffian-Slater determinant</span></a>). It is noted that the target system of this program
 is the itinerant electron system.</p>
 <section id="overview">
-<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h2>
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
 <p>In UHF approximation, two-body interaction terms are approximated as
 one-body interaction terms by taking into account of the fluctuation,
 <span class="math notranslate nohighlight">\(\delta A \equiv A-\langle A \rangle\)</span>, up to the first order. As
@@ -76,12 +76,12 @@ one-body problem by using a similar approximation. Actual calculation is
 performed iteratively until that self-consistent solution for the mean
 values of the above observables are obtained.</p>
 <section id="source-code">
-<h3>Source code<a class="headerlink" href="#source-code" title="Permalink to this heading">¶</a></h3>
+<h3>Source code<a class="headerlink" href="#source-code" title="Link to this heading">¶</a></h3>
 <p>A set of source codes are included in the directory
 <code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code>.</p>
 </section>
 <section id="how-to-compile">
-<h3>How to compile<a class="headerlink" href="#how-to-compile" title="Permalink to this heading">¶</a></h3>
+<h3>How to compile<a class="headerlink" href="#how-to-compile" title="Link to this heading">¶</a></h3>
 <p>To compile source codes, move to the directory just below the main
 directory of mVMC, and execute</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>mvmc
@@ -91,9 +91,9 @@ directory of mVMC, and execute</p>
 file <code class="docutils literal notranslate"><span class="pre">UHF</span></code> is generated in <code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code>.</p>
 </section>
 <section id="input-files">
-<h3>Input files<a class="headerlink" href="#input-files" title="Permalink to this heading">¶</a></h3>
+<h3>Input files<a class="headerlink" href="#input-files" title="Link to this heading">¶</a></h3>
 <section id="a-file-for-assigning-input-files-namelist-def">
-<h4>A file for assigning input files (namelist.def)<a class="headerlink" href="#a-file-for-assigning-input-files-namelist-def" title="Permalink to this heading">¶</a></h4>
+<h4>A file for assigning input files (namelist.def)<a class="headerlink" href="#a-file-for-assigning-input-files-namelist-def" title="Link to this heading">¶</a></h4>
 <p>The following files are needed to use the program of UHF. The format
 of <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> is the same as defined in <a class="reference internal" href="expert.html#inputfilelist"><span class="std std-ref">List file for Input files (namelist.def)</span></a>.</p>
 <ul class="simple">
@@ -119,7 +119,7 @@ basically, the following items are different:</p>
 <p>We explain details of the format of these files as follows.</p>
 </section>
 <section id="parameters-assigned-in-modpara-file">
-<h4>Parameters assigned in ModPara file<a class="headerlink" href="#parameters-assigned-in-modpara-file" title="Permalink to this heading">¶</a></h4>
+<h4>Parameters assigned in ModPara file<a class="headerlink" href="#parameters-assigned-in-modpara-file" title="Link to this heading">¶</a></h4>
 <p>The parameters needed in the program of UHF are as follows:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Nsite</span></code></p></li>
@@ -149,7 +149,7 @@ stopped.</p>
 output to the standard output (the calculation is not stopped).</p>
 </section>
 <section id="initial-file">
-<h4>Initial file<a class="headerlink" href="#initial-file" title="Permalink to this heading">¶</a></h4>
+<h4>Initial file<a class="headerlink" href="#initial-file" title="Link to this heading">¶</a></h4>
 <p>Initial values of Green’s function
 <span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dagger c_{j\sigma_2}\rangle\)</span>
 are given. The format is the same as <code class="docutils literal notranslate"><span class="pre">Trans</span></code> file, and instead of
@@ -159,7 +159,7 @@ are described. Green’s function is set as zero if values are not given.</p>
 </section>
 </section>
 <section id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this heading">¶</a></h2>
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h2>
 <p>Calculation of UHF is performed by the same way as mVMC, i.e., by
 executing the command</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ UHF namelist.def
@@ -245,10 +245,10 @@ calculated).</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">Table of Contents</a></h3>
@@ -288,7 +288,7 @@ calculated).</p>
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -296,13 +296,13 @@ calculated).</p>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -320,7 +320,7 @@ calculated).</p>
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

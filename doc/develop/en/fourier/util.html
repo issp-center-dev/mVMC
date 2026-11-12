@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Behavior of greenr2k utility &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b308ce55"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/documentation_options.js?v=9172181d"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Contact" href="contact.html" />
     <link rel="prev" title="File format" href="format.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -43,7 +43,7 @@
           <div class="body" role="main">
             
   <section id="behavior-of-greenr2k-utility">
-<h1>Behavior of <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> utility<a class="headerlink" href="#behavior-of-greenr2k-utility" title="Permalink to this heading">¶</a></h1>
+<h1>Behavior of <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> utility<a class="headerlink" href="#behavior-of-greenr2k-utility" title="Link to this heading">¶</a></h1>
 <p>This utility is used as follows:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="si">${</span><span class="nv">PATH</span><span class="si">}</span>/greenr2k<span class="w"> </span><span class="si">${</span><span class="nv">NAMELIST</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">GEOMETRY</span><span class="si">}</span>
 </pre></div>
@@ -58,7 +58,7 @@ and mVMC.
 In the following cases, we assume that
 <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> in the ModPara input file is <code class="docutils literal notranslate"><span class="pre">&quot;zvo&quot;</span></code> (default).</p>
 <section id="hphi-lanczos">
-<h2>HPhi-Lanczos<a class="headerlink" href="#hphi-lanczos" title="Permalink to this heading">¶</a></h2>
+<h2>HPhi-Lanczos<a class="headerlink" href="#hphi-lanczos" title="Link to this heading">¶</a></h2>
 <p>In this case, <code class="docutils literal notranslate"><span class="pre">HPhi</span></code> writes correlation functions to the files
 <code class="docutils literal notranslate"><span class="pre">zvo_cisajs.dat</span></code> (one body) and <code class="docutils literal notranslate"><span class="pre">zvo_cisajscktalt.dat</span></code> (two body)
 in <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.
@@ -66,7 +66,7 @@ in <code class="docutils literal notranslate"><span class="pre">output/</span></
 generate single file <code class="docutils literal notranslate"><span class="pre">zvo_corr.dat</span></code> in <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.</p>
 </section>
 <section id="hphi-tpq">
-<h2>HPhi-TPQ<a class="headerlink" href="#hphi-tpq" title="Permalink to this heading">¶</a></h2>
+<h2>HPhi-TPQ<a class="headerlink" href="#hphi-tpq" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">HPhi</span></code> writes correlation functions to files
 <code class="docutils literal notranslate"><span class="pre">zvo_cisajs_run*step*.dat</span></code> (one body), <code class="docutils literal notranslate"><span class="pre">zvo_cisajscktalt_run*step*.dat</span></code> (two body)
 at each trial and TPQ step to the <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.
@@ -75,7 +75,7 @@ and performs Fourier transformation, and
 write to a file <code class="docutils literal notranslate"><span class="pre">zvo_corr_run*step*.dat</span></code> in <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.</p>
 </section>
 <section id="hphi-full-diagonalization-and-lobcg">
-<h2>HPhi-Full diagonalization and LOBCG<a class="headerlink" href="#hphi-full-diagonalization-and-lobcg" title="Permalink to this heading">¶</a></h2>
+<h2>HPhi-Full diagonalization and LOBCG<a class="headerlink" href="#hphi-full-diagonalization-and-lobcg" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">HPhi</span></code> writes correlation functions to files
 <code class="docutils literal notranslate"><span class="pre">zvo_cisajs_eigen*.dat</span></code> (one body) and <code class="docutils literal notranslate"><span class="pre">zvo_cisajscktalt_eigen*.dat</span></code> (two body)
 for each wavefunction to the <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.
@@ -84,7 +84,7 @@ and performs Fourier transformation, and
 write to a file <code class="docutils literal notranslate"><span class="pre">zvo_corr_eigen*.dat</span></code> in <code class="docutils literal notranslate"><span class="pre">output/</span></code>.</p>
 </section>
 <section id="mvmc">
-<h2>mVMC<a class="headerlink" href="#mvmc" title="Permalink to this heading">¶</a></h2>
+<h2>mVMC<a class="headerlink" href="#mvmc" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">vmc.out</span></code> performs calculations according to the input parameters <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>
 in <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file, and it generates
 <code class="docutils literal notranslate"><span class="pre">zvo_cisajs_???.dat</span></code> (one body) and <code class="docutils literal notranslate"><span class="pre">zvo_cisajscktalt_???.dat</span></code> (two body)
@@ -111,10 +111,10 @@ writes them to a file <code class="docutils literal notranslate"><span class="pr
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../index.html">
-              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="../_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="../index.html">Table of Contents</a></h3>
@@ -146,7 +146,7 @@ writes them to a file <code class="docutils literal notranslate"><span class="pr
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -154,13 +154,13 @@ writes them to a file <code class="docutils literal notranslate"><span class="pr
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -179,7 +179,7 @@ writes them to a file <code class="docutils literal notranslate"><span class="pr
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

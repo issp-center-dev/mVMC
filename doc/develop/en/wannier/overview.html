@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Overview &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b308ce55"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/documentation_options.js?v=9172181d"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Tutorial" href="tutorial.html" />
     <link rel="prev" title="Downfolding with Wannier functions" href="index.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -43,7 +43,7 @@
           <div class="body" role="main">
             
   <section id="overview">
-<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h1>
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h1>
 <p>In this document, we introduce how we compute downfolded models
 with mVMC or <span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> in conjunction to
 <a class="reference external" href="https://sites.google.com/view/kazuma7k6r">RESPACK</a>.
@@ -97,7 +97,7 @@ D_{mn}({\bf R}_{ij}) &amp;\equiv \sum_{\sigma}
 <p>Here, <span class="math notranslate nohighlight">\(t_{mm}^{\rm DC}({\bf 0})\)</span> is the term to correct the chemical potntial, <span class="math notranslate nohighlight">\(t_{mn}^{\rm DC}({\bf R}_{ij})\)</span> is term to correct transfer integrals
 . <span class="math notranslate nohighlight">\(\alpha\)</span> is the tuning parameter for one-body correction from the on-site Coulomb interactions. These terms are introduced to avoid double counting in analyzing the lattice model. To adopt these corrections or not can be selected by the option <code class="docutils literal notranslate"><span class="pre">doublecounting</span></code> in the input file. The strength of <span class="math notranslate nohighlight">\(U_{Rij}\)</span> and <span class="math notranslate nohighlight">\(J_{Rij}\)</span> can be controled by multiplying tuning parameters <span class="math notranslate nohighlight">\(\lambda_U, \lambda_J\)</span>. For details, see <code class="docutils literal notranslate"><span class="pre">Input</span> <span class="pre">parameters</span> <span class="pre">for</span> <span class="pre">Standard</span> <span class="pre">mode</span></code>.</p>
 <section id="prerequisite">
-<h2>Prerequisite<a class="headerlink" href="#prerequisite" title="Permalink to this heading">¶</a></h2>
+<h2>Prerequisite<a class="headerlink" href="#prerequisite" title="Link to this heading">¶</a></h2>
 <p>We compute the Kohn-Sham orbitals with
 <a class="reference external" href="http://www.quantum-espresso.org/">QuantumESPRESSO</a>
 or
@@ -115,10 +115,10 @@ Therefore, these programs must be available in our machine.</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../index.html">
-              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="../_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="../index.html">Table of Contents</a></h3>
@@ -147,7 +147,7 @@ Therefore, these programs must be available in our machine.</p>
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -155,13 +155,13 @@ Therefore, these programs must be available in our machine.</p>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -180,7 +180,7 @@ Therefore, these programs must be available in our machine.</p>
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

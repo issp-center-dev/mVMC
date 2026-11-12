@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>File format &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b308ce55"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/documentation_options.js?v=9172181d"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Behavior of greenr2k utility" href="util.html" />
     <link rel="prev" title="Tutorial" href="tutorial.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -43,9 +43,9 @@
           <div class="body" role="main">
             
   <section id="file-format">
-<span id="fileformat"></span><h1>File format<a class="headerlink" href="#file-format" title="Permalink to this heading">¶</a></h1>
+<span id="fileformat"></span><h1>File format<a class="headerlink" href="#file-format" title="Link to this heading">¶</a></h1>
 <section id="geometry">
-<span id="id1"></span><h2>Geometry<a class="headerlink" href="#geometry" title="Permalink to this heading">¶</a></h2>
+<span id="id1"></span><h2>Geometry<a class="headerlink" href="#geometry" title="Link to this heading">¶</a></h2>
 <p>The file name in the <a class="reference internal" href="tutorial.html#tutorial"><span class="std std-ref">Tutorial</span></a> is <code class="docutils literal notranslate"><span class="pre">geometry.dat</span></code>.
 When we use Standard mode of mVMC/<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span>,
 the information of the cell and geometry is generated automatically.</p>
@@ -88,9 +88,9 @@ along high symmetry line.</p></li>
 </ol>
 </section>
 <section id="one-and-two-body-correlation-function-in-the-site-representation">
-<h2>One- and Two-body correlation function in the site representation<a class="headerlink" href="#one-and-two-body-correlation-function-in-the-site-representation" title="Permalink to this heading">¶</a></h2>
+<h2>One- and Two-body correlation function in the site representation<a class="headerlink" href="#one-and-two-body-correlation-function-in-the-site-representation" title="Link to this heading">¶</a></h2>
 <section id="specify-the-index-of-correlation-function-to-be-computed">
-<span id="greenindex"></span><h3>Specify the index of correlation function to be computed<a class="headerlink" href="#specify-the-index-of-correlation-function-to-be-computed" title="Permalink to this heading">¶</a></h3>
+<span id="greenindex"></span><h3>Specify the index of correlation function to be computed<a class="headerlink" href="#specify-the-index-of-correlation-function-to-be-computed" title="Link to this heading">¶</a></h3>
 <p>Specify the index of correlation functions
 computed with mVMC/<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span>.
 When we use the standard mode, this file is generated automatically.
@@ -138,7 +138,7 @@ the above indices are specified automatically.
 Therefore we do not have to care it.</p>
 </section>
 <section id="results-of-correlation-function-in-the-site-representation">
-<span id="zvocisajs"></span><h3>Results of correlation function in the site representation<a class="headerlink" href="#results-of-correlation-function-in-the-site-representation" title="Permalink to this heading">¶</a></h3>
+<span id="zvocisajs"></span><h3>Results of correlation function in the site representation<a class="headerlink" href="#results-of-correlation-function-in-the-site-representation" title="Link to this heading">¶</a></h3>
 <p>The correlation functions having the indices specified in <a class="reference internal" href="#greenindex"><span class="std std-ref">Specify the index of correlation function to be computed</span></a>
 are computed by mVMC/<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span>,
 and written to files.
@@ -153,7 +153,7 @@ this utility assume them as 0.</p>
 </section>
 </section>
 <section id="correlation-functions-on-the-k-path">
-<span id="zvocorr"></span><h2>Correlation functions on the <em>k</em> path<a class="headerlink" href="#correlation-functions-on-the-k-path" title="Permalink to this heading">¶</a></h2>
+<span id="zvocorr"></span><h2>Correlation functions on the <em>k</em> path<a class="headerlink" href="#correlation-functions-on-the-k-path" title="Link to this heading">¶</a></h2>
 <p>This file contains the Fourier-transformed correlation function and
 generated by the utility <code class="docutils literal notranslate"><span class="pre">fourier</span></code>.
 The file name in the <a class="reference internal" href="tutorial.html#tutorial"><span class="std std-ref">Tutorial</span></a> is <code class="docutils literal notranslate"><span class="pre">output/zvo_corr.dat</span></code>.</p>
@@ -172,18 +172,18 @@ then the <em>k</em> coordinate along the path and the real- and imaginary- part
 of the correlation function are written.</p>
 </section>
 <section id="gnuplot-script">
-<span id="gnuplot"></span><h2>gnuplot script<a class="headerlink" href="#gnuplot-script" title="Permalink to this heading">¶</a></h2>
+<span id="gnuplot"></span><h2>gnuplot script<a class="headerlink" href="#gnuplot-script" title="Link to this heading">¶</a></h2>
 <p>This file is generated by <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code>.
 This script is used for displaying the <em>k</em> labels in gnuplot.
 The file name is <code class="docutils literal notranslate"><span class="pre">kpath.gp</span></code>.</p>
-<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">set</span><span class="w"> </span><span class="nb">xtics</span><span class="w"> </span><span class="p">(</span><span class="s">&#39;G&#39;</span><span class="w">     </span><span class="mf">0.00000</span><span class="o">,</span><span class="w"> </span><span class="s">&#39;X&#39;</span><span class="w">     </span><span class="mf">0.50000</span><span class="o">,</span><span class="w"> </span><span class="s">&#39;M&#39;</span><span class="w">     </span><span class="mf">1.00000</span><span class="o">,</span><span class="w"> </span><span class="s">&#39;G&#39;</span><span class="w">    </span><span class="mf">1.70711</span><span class="p">)</span>
-<span class="k">set</span><span class="w"> </span><span class="nb">ylabel</span><span class="w"> </span><span class="s">&#39;Correlation function&#39;</span>
+<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">set</span><span class="w"> </span><span class="nb">xtics</span><span class="w"> </span><span class="p">(</span><span class="s">'G'</span><span class="w">     </span><span class="mf">0.00000</span><span class="o">,</span><span class="w"> </span><span class="s">'X'</span><span class="w">     </span><span class="mf">0.50000</span><span class="o">,</span><span class="w"> </span><span class="s">'M'</span><span class="w">     </span><span class="mf">1.00000</span><span class="o">,</span><span class="w"> </span><span class="s">'G'</span><span class="w">    </span><span class="mf">1.70711</span><span class="p">)</span>
+<span class="k">set</span><span class="w"> </span><span class="nb">ylabel</span><span class="w"> </span><span class="s">'Correlation function'</span>
 <span class="k">set</span><span class="w"> </span><span class="nb">grid</span><span class="w"> </span><span class="n">xtics</span><span class="w"> </span><span class="n">lt</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">lc</span><span class="w"> </span><span class="mi">0</span>
 </pre></div>
 </div>
 </section>
 <section id="fermisurfer-file-to-display-the-isosurface-of-the-momentum-distribution">
-<span id="correlation"></span><h2>FermiSurfer file to display the isosurface of the momentum distribution<a class="headerlink" href="#fermisurfer-file-to-display-the-isosurface-of-the-momentum-distribution" title="Permalink to this heading">¶</a></h2>
+<span id="correlation"></span><h2>FermiSurfer file to display the isosurface of the momentum distribution<a class="headerlink" href="#fermisurfer-file-to-display-the-isosurface-of-the-momentum-distribution" title="Link to this heading">¶</a></h2>
 <p>This file is generated by <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code>.
 The file name in the tutorial is <code class="docutils literal notranslate"><span class="pre">output/zvo_corr_eigen0.dat.frmsf</span></code>.</p>
 </section>
@@ -194,10 +194,10 @@ The file name in the tutorial is <code class="docutils literal notranslate"><spa
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../index.html">
-              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="../_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="../index.html">Table of Contents</a></h3>
@@ -234,7 +234,7 @@ The file name in the tutorial is <code class="docutils literal notranslate"><spa
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -242,13 +242,13 @@ The file name in the tutorial is <code class="docutils literal notranslate"><spa
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -267,7 +267,7 @@ The file name in the tutorial is <code class="docutils literal notranslate"><spa
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

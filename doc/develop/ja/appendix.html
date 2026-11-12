@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>非制限Hartree-Fock近似プログラム &#8212; mVMC 1.4.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2a1275fb"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="_static/translations.js?v=4dbe4bdc"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=0868a3b3"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=4755f45a"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
     <link rel="next" title="相関関数のFourier変換ユーティリティー" href="fourier/index.html" />
     <link rel="prev" title="アルゴリズム" href="algorithm.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -43,12 +43,12 @@
           <div class="body" role="main">
             
   <section id="hartree-fock">
-<h1>非制限Hartree-Fock近似プログラム<a class="headerlink" href="#hartree-fock" title="この見出しへのパーマリンク">¶</a></h1>
+<h1>非制限Hartree-Fock近似プログラム<a class="headerlink" href="#hartree-fock" title="Link to this heading">¶</a></h1>
 <p>mVMCでは補助プログラムとして、多変数変分モンテカルロ法のペア軌道 <span class="math notranslate nohighlight">\(f_{ij}\)</span> の初期値を
 非制限Hartree-Fock(UHF)近似から与えるためのプログラムを用意しています(対応関係は <a class="reference internal" href="algorithm.html#puffandslater"><span class="std std-ref">パフィアン-スレーター行列式の性質</span></a> を参照)。
 なお、本プログラムは遍歴電子系を対象としており、スピン系、近藤系では正しく動作しません。</p>
 <section id="id1">
-<h2>概要<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>概要<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
 <p>UHF近似では揺らぎ <span class="math notranslate nohighlight">\(\delta A \equiv A-\langle A \rangle\)</span> の一次までを考慮することで、二体項を一体項へと近似します。
 たとえば、サイト間クーロン相互作用</p>
 <div class="math notranslate nohighlight">
@@ -70,11 +70,11 @@ n_ {i}n_{j} &amp;=
 <p>と近似されます。このような形式で、その他の相互作用についても近似を行うことで、一体問題に帰着させることができます。
 計算では、上記の各平均値がself-consistentになるまで計算を行います。</p>
 <section id="id2">
-<h3>ソースコード<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ソースコード<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
 <p>ソースコード一式は <code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code> 以下に入っています。</p>
 </section>
 <section id="id3">
-<h3>コンパイル方法<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>コンパイル方法<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
 <p>コンパイルはmVMCのコンパイルと同様にmVMCのフォルダ直下で</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>make<span class="w"> </span>mvmc
 </pre></div>
@@ -83,9 +83,9 @@ n_ {i}n_{j} &amp;=
 <code class="docutils literal notranslate"><span class="pre">src/ComplexUHF/src</span></code> に実行ファイル <code class="docutils literal notranslate"><span class="pre">UHF</span></code> が作成されます。</p>
 </section>
 <section id="id4">
-<h3>必要な入力ファイル<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>必要な入力ファイル<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <section id="namelsit-def">
-<h4>入力ファイル指定用ファイル (namelsit.def)<a class="headerlink" href="#namelsit-def" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>入力ファイル指定用ファイル (namelsit.def)<a class="headerlink" href="#namelsit-def" title="Link to this heading">¶</a></h4>
 <p>UHFで指定するファイルは以下のファイルです。
 <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> は <a class="reference internal" href="expert.html#inputfilelist"><span class="std std-ref">入力ファイル指定用ファイル(namelist.def)</span></a> で定義されているファイルと同じ様式です。</p>
 <ul class="simple">
@@ -110,7 +110,7 @@ n_ {i}n_{j} &amp;=
 <p>がmVMCと異なります。以下、その詳細を記載します。</p>
 </section>
 <section id="modpara">
-<h4>ModParaファイルで指定するパラメータ<a class="headerlink" href="#modpara" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>ModParaファイルで指定するパラメータ<a class="headerlink" href="#modpara" title="Link to this heading">¶</a></h4>
 <p>UHFで指定するパラメータは以下のパラメータです。</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Nsite</span></code></p></li>
@@ -137,7 +137,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
 <p>なお、mVMCで使用するその他パラメータが存在する場合はWarningが標準出力されます(計算は中断せずに実行されます)。</p>
 </section>
 <section id="initial">
-<h4>Initialファイル<a class="headerlink" href="#initial" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>Initialファイル<a class="headerlink" href="#initial" title="Link to this heading">¶</a></h4>
 <p>グリーン関数 <span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\equiv \langle c_{i\sigma_1}^\dagger c_{j\sigma_2}\rangle\)</span> の初期値を与えます。
 ファイル様式は <code class="docutils literal notranslate"><span class="pre">Trans</span></code> ファイルと同じで、 <span class="math notranslate nohighlight">\(t_{ij\sigma_1\sigma_2}\)</span> の代わりに
 <span class="math notranslate nohighlight">\(G_{ij\sigma_1\sigma_2}\)</span> の値を記述します。
@@ -146,7 +146,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
 </section>
 </section>
 <section id="id5">
-<h2>使用方法<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>使用方法<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h2>
 <p>UHF自体はmVMCと同じように</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>UHF<span class="w"> </span>namelist.def
 </pre></div>
@@ -219,10 +219,10 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">目次</a></h3>
@@ -262,7 +262,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
             rel="nofollow">ソースコードを表示</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -270,13 +270,13 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -294,7 +294,7 @@ mixingをdouble型で指定します。mix=1とすると完全に新しいGreen�
     </div>
     <div class="footer" role="contentinfo">
     &#169; 著作権 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

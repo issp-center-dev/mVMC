@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>エキスパートモード入力ファイル書式 &#8212; mVMC 1.4.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2a1275fb"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="_static/translations.js?v=4dbe4bdc"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=0868a3b3"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=4755f45a"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
     <link rel="next" title="出力ファイル" href="output.html" />
     <link rel="prev" title="スタンダードモード用入力ファイル書式" href="standard.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -43,7 +43,7 @@
           <div class="body" role="main">
             
   <section id="howtoexpert">
-<span id="id1"></span><h1>エキスパートモード入力ファイル書式<a class="headerlink" href="#howtoexpert" title="この見出しへのパーマリンク">¶</a></h1>
+<span id="id1"></span><h1>エキスパートモード入力ファイル書式<a class="headerlink" href="#howtoexpert" title="Link to this heading">¶</a></h1>
 <p>ここではmVMCで使用する詳細入力ファイル(*def)のフォーマットに関して説明します。
 入力ファイルの種別は以下の6つで分類されます。
 なお、キーワードの後にある括弧内に記載されているファイル名はvmcdry.outにより作成されるファイル名を表します。</p>
@@ -234,7 +234,7 @@ BackFlow 相関のパラメータ group と最適化フラグを指定します�
 </li>
 </ol>
 <section id="namelist-def">
-<span id="inputfilelist"></span><h2>入力ファイル指定用ファイル(namelist.def)<a class="headerlink" href="#namelist-def" title="この見出しへのパーマリンク">¶</a></h2>
+<span id="inputfilelist"></span><h2>入力ファイル指定用ファイル(namelist.def)<a class="headerlink" href="#namelist-def" title="Link to this heading">¶</a></h2>
 <p>計算で使用する入力ファイル一式を指定します。ファイル形式に関しては、
 以下のようなフォーマットをしています。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ModPara</span>  <span class="n">modpara</span><span class="o">.</span><span class="k">def</span>
@@ -254,11 +254,11 @@ BackFlow 相関のパラメータ group と最適化フラグを指定します�
 </pre></div>
 </div>
 <section id="id2">
-<h3>ファイル形式<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
 <p>[string01] [string02]</p>
 </section>
 <section id="id3">
-<h3>パラメータ<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (固定)</p>
@@ -271,7 +271,7 @@ BackFlow 相関のパラメータ group と最適化フラグを指定します�
 </ul>
 </section>
 <section id="id4">
-<h3>使用ルール<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>キーワードを記載後、半角空白(複数可)を開けた後にファイル名を書きます。ファイル名は自由に設定できます。</p></li>
@@ -439,7 +439,7 @@ TransSymです。それ以外のキーワードについては、指定がない
 </section>
 </section>
 <section id="modpara-modpara-def">
-<h2>ModParaファイル (modpara.def)<a class="headerlink" href="#modpara-modpara-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>ModParaファイル (modpara.def)<a class="headerlink" href="#modpara-modpara-def" title="Link to this heading">¶</a></h2>
 <div class="line-block">
 <div class="line">計算で使用するパラメータを指定します。以下のようなフォーマットをしています。</div>
 </div>
@@ -483,7 +483,7 @@ TransSymです。それ以外のキーワードについては、指定がない
 </pre></div>
 </div>
 <section id="id5">
-<h3>ファイル形式<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1 - 5行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -525,7 +525,7 @@ TransSymです。それ以外のキーワードについては、指定がない
 </ul>
 </section>
 <section id="id6">
-<h3>使用ルール<a class="headerlink" href="#id6" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>9行目以降ではキーワードを記載後、半角空白(複数可)を開けた後に整数値を書きます。</p></li>
@@ -533,7 +533,7 @@ TransSymです。それ以外のキーワードについては、指定がない
 </ul>
 </section>
 <section id="id7">
-<h3>キーワード<a class="headerlink" href="#id7" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>キーワード<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code></p>
 <p><strong>形式 :</strong> int型 (デフォルト値 = 0)</p>
@@ -1251,7 +1251,7 @@ overlap行列の統計ノイズが大きい、または条件が悪い場合は�
 </section>
 </section>
 <section id="updateweight-updateweight-def">
-<h2>UpdateWeight指定ファイル(updateweight.def)<a class="headerlink" href="#updateweight-updateweight-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>UpdateWeight指定ファイル(updateweight.def)<a class="headerlink" href="#updateweight-updateweight-def" title="Link to this heading">¶</a></h2>
 <p><a href="#id20"><span class="problematic" id="id21">``</span></a>NExUpdatePath=2``で用いるローカル更新kernelの相対重みを指定する任意入力です。
 <a href="#id22"><span class="problematic" id="id23">``</span></a>namelist.def``へ``InUpdateWeight updateweight.def``を追加すると有効になります。
 ファイルを指定しない場合、従来のselector、乱数消費順、<a href="#id24"><span class="problematic" id="id25">``</span></a>zvo_time``の列構成を
@@ -1287,7 +1287,7 @@ legacy runと一致しません。乱数消費順の互換性を保証するの�
 有効な場合、PAIRSPINFLIPのproposal数とacceptanceを``zvo_time``末尾へ追記します。</p>
 </section>
 <section id="locspin-locspn-def">
-<h2>LocSpin指定ファイル(locspn.def)<a class="headerlink" href="#locspin-locspn-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>LocSpin指定ファイル(locspn.def)<a class="headerlink" href="#locspin-locspn-def" title="Link to this heading">¶</a></h2>
 <p>局在スピンを指定します。以下のようなフォーマットをしています。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">================================</span>
 <span class="n">NlocalSpin</span>     <span class="mi">6</span>
@@ -1309,7 +1309,7 @@ legacy runと一致しません。乱数消費順の互換性を保証するの�
 </pre></div>
 </div>
 <section id="id30">
-<h3>ファイル形式<a class="headerlink" href="#id30" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id30" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1319,7 +1319,7 @@ legacy runと一致しません。乱数消費順の互換性を保証するの�
 </ul>
 </section>
 <section id="id31">
-<h3>パラメータ<a class="headerlink" href="#id31" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id31" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1344,7 +1344,7 @@ legacy runと一致しません。乱数消費順の互換性を保証するの�
 </ul>
 </section>
 <section id="id32">
-<h3>使用ルール<a class="headerlink" href="#id32" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id32" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1355,7 +1355,7 @@ legacy runと一致しません。乱数消費順の互換性を保証するの�
 </section>
 </section>
 <section id="trans-trans-def">
-<h2>Trans指定ファイル(trans.def)<a class="headerlink" href="#trans-trans-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Trans指定ファイル(trans.def)<a class="headerlink" href="#trans-trans-def" title="Link to this heading">¶</a></h2>
 <p>一般的な一体相互作用をハミルトニアンに付け加え、ハミルトニアン中の相互作用パラメータ <span class="math notranslate nohighlight">\(t_{ij\sigma_1\sigma2}\)</span> を指定します。付け加える項は以下で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
@@ -1384,7 +1384,7 @@ NTransfer      24
 </pre></div>
 </div>
 <section id="id33">
-<h3>ファイル形式<a class="headerlink" href="#id33" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id33" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1394,7 +1394,7 @@ NTransfer      24
 </ul>
 </section>
 <section id="id34">
-<h3>パラメータ<a class="headerlink" href="#id34" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id34" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1429,7 +1429,7 @@ NTransfer      24
 </ul>
 </section>
 <section id="id35">
-<h3>使用ルール<a class="headerlink" href="#id35" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id35" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1441,7 +1441,7 @@ NTransfer      24
 </section>
 </section>
 <section id="interall">
-<h2>InterAll指定ファイル<a class="headerlink" href="#interall" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>InterAll指定ファイル<a class="headerlink" href="#interall" title="Link to this heading">¶</a></h2>
 <p>一般的な二体相互作用をハミルトニアンに付け加え、ハミルトニアン中の相互作用パラメータを指定します。
 付け加える項は以下で与えられます。</p>
 <div class="math notranslate nohighlight">
@@ -1475,7 +1475,7 @@ NInterAll      36
 </pre></div>
 </div>
 <section id="id36">
-<h3>ファイル形式<a class="headerlink" href="#id36" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id36" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1486,7 +1486,7 @@ NInterAll      36
 </ul>
 </section>
 <section id="id37">
-<h3>パラメータ<a class="headerlink" href="#id37" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id37" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1523,7 +1523,7 @@ NInterAll      36
 </ul>
 </section>
 <section id="id38">
-<h3>使用ルール<a class="headerlink" href="#id38" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id38" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1537,7 +1537,7 @@ NInterAll      36
 </section>
 </section>
 <section id="lanczos-lstrans-def-lsinterall-def">
-<h2>独立Lanczos演算子指定ファイル(lstrans.def, lsinterall.def)<a class="headerlink" href="#lanczos-lstrans-def-lsinterall-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>独立Lanczos演算子指定ファイル(lstrans.def, lsinterall.def)<a class="headerlink" href="#lanczos-lstrans-def-lsinterall-def" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> と <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> は、物理Hamiltonianとは独立な演算子 <span class="math notranslate nohighlight">\(H'\)</span> を
 定義します。ファイル形式と符号規約は <code class="docutils literal notranslate"><span class="pre">Trans</span></code> と <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> と同じです。
 <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> の1行は <span class="math notranslate nohighlight">\(-t c^\dagger c\)</span>、<code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> の1行は記載した
@@ -1546,7 +1546,7 @@ CACA順で作用します。どちらか一方は省略できますが、両者�
 行ごとの有限性・index・sector条件を検査し、Hermitian closureは入力生成側の責務です。</p>
 </section>
 <section id="nbodyinterall-nbodyinterall-def">
-<h2>NBodyInterAll指定ファイル(nbodyinterall.def)<a class="headerlink" href="#nbodyinterall-nbodyinterall-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>NBodyInterAll指定ファイル(nbodyinterall.def)<a class="headerlink" href="#nbodyinterall-nbodyinterall-def" title="Link to this heading">¶</a></h2>
 <p>可変次数の <span class="math notranslate nohighlight">\(N\)</span> 体相互作用をハミルトニアンに付け加えます。付け加える項は以下で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_{N} =
@@ -1567,7 +1567,7 @@ c_{j_{\alpha a}\tau_{\alpha a}}\]</div>
 </pre></div>
 </div>
 <section id="id39">
-<h3>ファイル形式<a class="headerlink" href="#id39" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id39" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1578,7 +1578,7 @@ c_{j_{\alpha a}\tau_{\alpha a}}\]</div>
 </ul>
 </section>
 <section id="id40">
-<h3>パラメータ<a class="headerlink" href="#id40" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id40" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1611,7 +1611,7 @@ c_{j_{\alpha a}\tau_{\alpha a}}\]</div>
 </ul>
 </section>
 <section id="id41">
-<h3>使用ルール<a class="headerlink" href="#id41" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id41" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1638,13 +1638,14 @@ Slater/Pfaffianを完全構築する計算量が必要です。</p></li>
 <li><p>native の <code class="docutils literal notranslate"><span class="pre">PairHop</span></code>、<code class="docutils literal notranslate"><span class="pre">Exchange</span></code>、<code class="docutils literal notranslate"><span class="pre">InterAll</span></code> 入力は、通常の
 <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> 形式でも <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ でも
 BackFlow 用の二体 Green 関数で評価されます。<code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> が必要なのは
-3 次以上の項だけです。BackFlowと <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> の併用は
-エラー終了します。</p></li>
+3 次以上の項だけです。FSZ BackFlowと <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> の併用は
+エラー終了します。非FSZのBackFlowはBackFlowなしの測定と同じ
+reweighting factorを使います。</p></li>
 </ul>
 </section>
 </section>
 <section id="coulombintra-coulombintra-def">
-<h2>CoulombIntra指定ファイル(coulombintra.def)<a class="headerlink" href="#coulombintra-coulombintra-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>CoulombIntra指定ファイル(coulombintra.def)<a class="headerlink" href="#coulombintra-coulombintra-def" title="Link to this heading">¶</a></h2>
 <p>オンサイトクーロン相互作用をハミルトニアンに付け加えます。付け加える項は以下で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_U =\sum_{i}U_i n_ {i \uparrow}n_{i \downarrow}\]</div>
@@ -1663,7 +1664,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </pre></div>
 </div>
 <section id="id42">
-<h3>ファイル形式<a class="headerlink" href="#id42" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id42" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1673,7 +1674,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </ul>
 </section>
 <section id="id43">
-<h3>パラメータ<a class="headerlink" href="#id43" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id43" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1696,7 +1697,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </ul>
 </section>
 <section id="id44">
-<h3>使用ルール<a class="headerlink" href="#id44" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id44" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1706,7 +1707,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </section>
 </section>
 <section id="coulombinter-coulombiter-def">
-<h2>CoulombInter指定ファイル(coulombiter.def)<a class="headerlink" href="#coulombinter-coulombiter-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>CoulombInter指定ファイル(coulombiter.def)<a class="headerlink" href="#coulombinter-coulombiter-def" title="Link to this heading">¶</a></h2>
 <p>サイト間クーロン相互作用をハミルトニアンに付け加えます。付け加える項は以下で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_V = \sum_{i,j}V_{ij} n_ {i}n_{j}\]</div>
@@ -1731,7 +1732,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </pre></div>
 </div>
 <section id="id45">
-<h3>ファイル形式<a class="headerlink" href="#id45" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id45" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1741,7 +1742,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </ul>
 </section>
 <section id="id46">
-<h3>パラメータ<a class="headerlink" href="#id46" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id46" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1764,7 +1765,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </ul>
 </section>
 <section id="id47">
-<h3>使用ルール<a class="headerlink" href="#id47" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id47" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1774,7 +1775,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </section>
 </section>
 <section id="hund-hund-def">
-<h2>Hund指定ファイル(hund.def)<a class="headerlink" href="#hund-hund-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Hund指定ファイル(hund.def)<a class="headerlink" href="#hund-hund-def" title="Link to this heading">¶</a></h2>
 <p>Hundカップリングをハミルトニアンに付け加えます。付け加える項は以下で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_H =-\sum_{i,j}J_{ij}^{\rm Hund} (n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})\]</div>
@@ -1793,7 +1794,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </pre></div>
 </div>
 <section id="id48">
-<h3>ファイル形式<a class="headerlink" href="#id48" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id48" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1803,7 +1804,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </ul>
 </section>
 <section id="id49">
-<h3>パラメータ<a class="headerlink" href="#id49" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id49" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1825,7 +1826,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </ul>
 </section>
 <section id="id50">
-<h3>使用ルール<a class="headerlink" href="#id50" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id50" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1835,7 +1836,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </section>
 </section>
 <section id="pairhop">
-<h2>PairHop指定ファイル<a class="headerlink" href="#pairhop" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>PairHop指定ファイル<a class="headerlink" href="#pairhop" title="Link to this heading">¶</a></h2>
 <p>PairHopカップリングをハミルトニアンに付け加えます。付け加える項は以下で与えられます。</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_P=\sum_{i,j}J_{ij}^{\rm Pair}
@@ -1856,7 +1857,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </pre></div>
 </div>
 <section id="id51">
-<h3>ファイル形式<a class="headerlink" href="#id51" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id51" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1866,7 +1867,7 @@ BackFlow 用の二体 Green 関数で評価されます。<code class="docutils 
 </ul>
 </section>
 <section id="id52">
-<h3>パラメータ<a class="headerlink" href="#id52" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id52" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1889,7 +1890,7 @@ PairHopカップリングの総数のキーワード名を指定します(任意
 </ul>
 </section>
 <section id="id53">
-<h3>使用ルール<a class="headerlink" href="#id53" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id53" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1899,7 +1900,7 @@ PairHopカップリングの総数のキーワード名を指定します(任意
 </section>
 </section>
 <section id="exchange-exchange-def">
-<h2>Exchange指定ファイル (exchange.def)<a class="headerlink" href="#exchange-exchange-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Exchange指定ファイル (exchange.def)<a class="headerlink" href="#exchange-exchange-def" title="Link to this heading">¶</a></h2>
 <p>Exchangeカップリングをハミルトニアンに付け加えます。 電子系,スピン系の両方の場合に</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_E  =\sum_{i,j}J_{ij}^{\rm Ex}
@@ -1920,7 +1921,7 @@ PairHopカップリングの総数のキーワード名を指定します(任意
 </pre></div>
 </div>
 <section id="id54">
-<h3>ファイル形式<a class="headerlink" href="#id54" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id54" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -1930,7 +1931,7 @@ PairHopカップリングの総数のキーワード名を指定します(任意
 </ul>
 </section>
 <section id="id55">
-<h3>パラメータ<a class="headerlink" href="#id55" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id55" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -1953,7 +1954,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 <section id="id56">
-<h3>使用ルール<a class="headerlink" href="#id56" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id56" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -1963,7 +1964,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </section>
 </section>
 <section id="gutzwiller-gutzwiller-def">
-<h2>Gutzwiller指定ファイル(gutzwiller.def)<a class="headerlink" href="#gutzwiller-gutzwiller-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Gutzwiller指定ファイル(gutzwiller.def)<a class="headerlink" href="#gutzwiller-gutzwiller-def" title="Link to this heading">¶</a></h2>
 <p>Gutzwiller因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right]\]</div>
@@ -1988,7 +1989,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </pre></div>
 </div>
 <section id="id57">
-<h3>ファイル形式<a class="headerlink" href="#id57" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id57" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_g\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2000,7 +2001,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 <section id="id58">
-<h3>パラメータ<a class="headerlink" href="#id58" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id58" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2044,7 +2045,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 <section id="id59">
-<h3>使用ルール<a class="headerlink" href="#id59" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id59" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2054,7 +2055,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </section>
 </section>
 <section id="jastrow-jastrow-def">
-<h2>Jastrow指定ファイル(jastrow.def)<a class="headerlink" href="#jastrow-jastrow-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Jastrow指定ファイル(jastrow.def)<a class="headerlink" href="#jastrow-jastrow-def" title="Link to this heading">¶</a></h2>
 <p>Jastrow因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1) (n_j-1)\right]\]</div>
@@ -2076,7 +2077,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </pre></div>
 </div>
 <section id="id60">
-<h3>ファイル形式<a class="headerlink" href="#id60" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id60" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_j\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2089,7 +2090,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 <section id="id61">
-<h3>パラメータ<a class="headerlink" href="#id61" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id61" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2133,7 +2134,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 <section id="id62">
-<h3>使用ルール<a class="headerlink" href="#id62" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id62" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2143,7 +2144,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </section>
 </section>
 <section id="spin-jastrow-spinjastrow-def">
-<h2>Spin Jastrow指定ファイル(spinjastrow.def)<a class="headerlink" href="#spin-jastrow-spinjastrow-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Spin Jastrow指定ファイル(spinjastrow.def)<a class="headerlink" href="#spin-jastrow-spinjastrow-def" title="Link to this heading">¶</a></h2>
 <p>Spin Jastrow因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal P}_{SJ}=\exp\left[\sum_{i&lt;j} v^s_{ij} m_i m_j\right],
@@ -2167,7 +2168,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </pre></div>
 </div>
 <section id="id63">
-<h3>ファイル形式<a class="headerlink" href="#id63" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id63" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{sj}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2180,7 +2181,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 <section id="id64">
-<h3>パラメータ<a class="headerlink" href="#id64" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id64" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2224,7 +2225,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </ul>
 </section>
 <section id="id65">
-<h3>使用ルール<a class="headerlink" href="#id65" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id65" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2236,7 +2237,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 </section>
 </section>
 <section id="backflow-rangebf-def-bf-def">
-<h2>BackFlow 指定ファイル (rangebf.def, bf.def)<a class="headerlink" href="#backflow-rangebf-def-bf-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>BackFlow 指定ファイル (rangebf.def, bf.def)<a class="headerlink" href="#backflow-rangebf-def-bf-def" title="Link to this heading">¶</a></h2>
 <p>BackFlow 相関は、電子配置に依存してペア軌道
 <span class="math notranslate nohighlight">\(f_{ij}\)</span> を有効なペア軌道 <span class="math notranslate nohighlight">\(f^b_{ij}\)</span> に置き換える相関因子です。
 エキスパートモードでは <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> に <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> と <code class="docutils literal notranslate"><span class="pre">BF</span></code> の
@@ -2251,7 +2252,7 @@ Exchangeカップリングの総数のキーワード名を指定します(任�
 指定します。現時点の実装はエキスパートモード入力のみを対象としており、
 StdFace/Standard mode はこれらのファイルを生成しません。</p>
 <section id="id66">
-<h3>波動関数の形<a class="headerlink" href="#id66" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>波動関数の形<a class="headerlink" href="#id66" title="Link to this heading">¶</a></h3>
 <p>BackFlow 付きペア積波動関数の定義は、Ido ら [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.92.245106">Ido2015</a>] の格子 BackFlow
 拡張に従っています。Slater 行列式に対する格子 BackFlow については
 Tocchio ら [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.78.041101">Tocchio2008</a>], [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.83.195138">Tocchio2011</a>] も参照してください。
@@ -2340,7 +2341,7 @@ FSZ では <code class="docutils literal notranslate"><span class="pre">TransSym
 結合を評価し、そのような元軌道の対称性は仮定しません。</p>
 </section>
 <section id="id67">
-<h3>パラメータ数<a class="headerlink" href="#id67" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ数<a class="headerlink" href="#id67" title="Link to this heading">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">rangebf.def</span></code> の <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> と <code class="docutils literal notranslate"><span class="pre">NzBF</span></code>、<code class="docutils literal notranslate"><span class="pre">bf.def</span></code> の
 <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> から、BackFlow の変分パラメータ数は以下のように決まります。</p>
 <div class="math notranslate nohighlight">
@@ -2360,7 +2361,7 @@ BackFlow が無い極限は <code class="docutils literal notranslate"><span cla
 初期値ファイルを使わない場合、mVMC はこの identity 初期値を設定します。</p>
 </section>
 <section id="bfrange-rangebf-def">
-<h3>BFRange ファイル (rangebf.def)<a class="headerlink" href="#bfrange-rangebf-def" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>BFRange ファイル (rangebf.def)<a class="headerlink" href="#bfrange-rangebf-def" title="Link to this heading">¶</a></h3>
 <p>以下に 1 次元 4 サイト周期鎖で、自サイトと左右最近接を BackFlow 範囲にする例を示します。
 この例では <code class="docutils literal notranslate"><span class="pre">Nrange=3</span></code>、<code class="docutils literal notranslate"><span class="pre">NzBF=2</span></code> です。
 <code class="docutils literal notranslate"><span class="pre">rangebf.def</span></code> は 10 行のヘッダを持ち、本文は 11 行目から始まります。
@@ -2393,7 +2394,7 @@ BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal
 </div>
 </section>
 <section id="id68">
-<h3>ファイル形式<a class="headerlink" href="#id68" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id68" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>1-5行: 共通ヘッダ。2行目は <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> [int01] [int02] とします。</p></li>
 <li><p>6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
@@ -2403,7 +2404,7 @@ BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal
 </ul>
 </section>
 <section id="id69">
-<h3>パラメータ<a class="headerlink" href="#id69" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id69" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ int01 ]</p>
 <p><strong>形式 :</strong> int型 (1以上)</p>
@@ -2432,7 +2433,7 @@ BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal
 </ul>
 </section>
 <section id="id70">
-<h3>使用ルール<a class="headerlink" href="#id70" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id70" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>各中心サイト [int03] について、ちょうど <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> 行を指定する必要があります。</p></li>
 <li><p>各中心サイトには自サイト行 <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">i</span> <span class="pre">0</span></code> が必須です。
@@ -2466,7 +2467,7 @@ orbital-general では使用する OptTrans との合成および両者の符号
 入力・parameter の hash を保持し、新定義では再最適化してください。</p>
 </section>
 <section id="bf-bf-def">
-<h3>BF ファイル (bf.def)<a class="headerlink" href="#bf-bf-def" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>BF ファイル (bf.def)<a class="headerlink" href="#bf-bf-def" title="Link to this heading">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">BF</span></code> ファイルでは、<code class="docutils literal notranslate"><span class="pre">BFRange</span></code> で定義した近傍の組に BackFlow group を
 割り当てます。現在の実装では <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code> のみをサポートするため、
 group 番号 [int06] は常に 0 です。
@@ -2524,7 +2525,7 @@ BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal
 上に示した従来の full 形式も引き続き使用できます。</p>
 </section>
 <section id="id71">
-<h3>ファイル形式<a class="headerlink" href="#id71" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id71" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>1-5行: 共通ヘッダ。2行目は <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01] とします。</p></li>
 <li><p>6-10行: BackFlow 用の追加ヘッダ。読み込み時には読み飛ばされますが省略できません。
@@ -2537,7 +2538,7 @@ BackFlow 用の追加ヘッダです。7 行目の <code class="docutils literal
 </ul>
 </section>
 <section id="id72">
-<h3>パラメータ<a class="headerlink" href="#id72" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id72" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ int01 ]</p>
 <p><strong>形式 :</strong> int型</p>
@@ -2571,7 +2572,7 @@ BackFlow 範囲に含まれている必要があります。</p>
 </ul>
 </section>
 <section id="id73">
-<h3>使用ルール<a class="headerlink" href="#id73" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id73" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">BFRange</span></code> と <code class="docutils literal notranslate"><span class="pre">BF</span></code> は必ず両方を <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code> に指定してください。</p></li>
 <li><p>従来の full 形式では、<code class="docutils literal notranslate"><span class="pre">BF</span></code> のサイト行は、全ての <span class="math notranslate nohighlight">\(i,j\)</span> と
@@ -2587,7 +2588,7 @@ BackFlow group 番号は 0 として扱われます。</p></li>
 </ul>
 </section>
 <section id="id74">
-<h3>制限事項<a class="headerlink" href="#id74" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>制限事項<a class="headerlink" href="#id74" title="Link to this heading">¶</a></h3>
 <p>BackFlow は現時点では以下の範囲でのみ使用できます。範囲外の入力は
 エラー終了します。</p>
 <ul class="simple">
@@ -2606,8 +2607,9 @@ conduction electron の hopping / spin flip sampler と、spin-changing
 <li><p>スピン射影は未対応です。<code class="docutils literal notranslate"><span class="pre">NSPGaussLeg==1</span></code> を指定してください。</p></li>
 <li><p>RBM、Twist、<code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> は未対応です。周期境界に加えて、負の
 <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code> で指定する反周期境界（<code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>）を使用できます。
-BF-FSZとBackFlow <span class="math notranslate nohighlight">\(N\)</span> 体入力を含む全てのBackFlow計算で
-<code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> はエラー終了します。
+非FSZのBackFlow（BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体入力を含む）では <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> を
+受理し、BackFlowなしの測定と同じreweighting factorを使います。
+BF-FSZでは引き続きエラー終了します。
 Single Lanczos Step は <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> かつ <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>
 のみ使用でき、Hamiltonian は <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> と number-operator 型の
 対角相互作用に限定されます。<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ の
@@ -2662,7 +2664,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="backflow-n-support-matrix">
-<h3>BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体機能のsupport matrix<a class="headerlink" href="#backflow-n-support-matrix" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体機能のsupport matrix<a class="headerlink" href="#backflow-n-support-matrix" title="Link to this heading">¶</a></h3>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 28.0%" />
@@ -2702,9 +2704,10 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 <td><p>real BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体measurement/local-energy kernelは未実装。</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reweight=1</span></code></p></td>
-<td><p>エラー終了</p></td>
-<td><p>エラー終了</p></td>
-<td><p>reweightはBackFlowのsupport contract外。</p></td>
+<td><p>受理（非FSZ）</p></td>
+<td><p>受理（非FSZ）</p></td>
+<td><p>非FSZのBackFlowは測定のreweighting factorを全ての蓄積量に掛けます
+（BackFlowなしの測定と同じ）。FSZ BackFlowでは引き続きエラー終了。</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;0</span></code></p></td>
 <td><p>エラー終了</p></td>
@@ -2716,7 +2719,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </section>
 </section>
 <section id="dh2">
-<h2>DH2指定ファイル<a class="headerlink" href="#dh2" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>DH2指定ファイル<a class="headerlink" href="#dh2" title="Link to this heading">¶</a></h2>
 <div class="math notranslate nohighlight">
 \[{\cal P}_{d-h}^{(2)}= \exp \left[ \sum_t \sum_{n=0}^2
 (\alpha_{2nt}^d \sum_{i}\xi_{i2nt}^d+\alpha_{2nt}^h \sum_{i}\xi_{i2nt}^h)\right]\]</div>
@@ -2747,7 +2750,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </pre></div>
 </div>
 <section id="id77">
-<h3>ファイル形式<a class="headerlink" href="#id77" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id77" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm dh2}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2761,7 +2764,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id78">
-<h3>パラメータ<a class="headerlink" href="#id78" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id78" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2818,7 +2821,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id79">
-<h3>使用ルール<a class="headerlink" href="#id79" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id79" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2828,7 +2831,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </section>
 </section>
 <section id="dh4">
-<h2>DH4指定ファイル<a class="headerlink" href="#dh4" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>DH4指定ファイル<a class="headerlink" href="#dh4" title="Link to this heading">¶</a></h2>
 <div class="math notranslate nohighlight">
 \[{\cal P}_{d-h}^{(4)}= \exp \left[ \sum_t \sum_{n=0}^4
 (\alpha_{4nt}^d \sum_{i}\xi_{i4nt}^d+\alpha_{4nt}^h \sum_{i}\xi_{i4nt}^h)\right]\]</div>
@@ -2858,7 +2861,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </pre></div>
 </div>
 <section id="id80">
-<h3>ファイル形式<a class="headerlink" href="#id80" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id80" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm dh4}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2872,7 +2875,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id81">
-<h3>パラメータ<a class="headerlink" href="#id81" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id81" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -2930,7 +2933,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id82">
-<h3>使用ルール<a class="headerlink" href="#id82" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id82" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -2940,7 +2943,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </section>
 </section>
 <section id="generalrbm-physlayer">
-<h2>GeneralRBM_PhysLayer指定ファイル<a class="headerlink" href="#generalrbm-physlayer" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>GeneralRBM_PhysLayer指定ファイル<a class="headerlink" href="#generalrbm-physlayer" title="Link to this heading">¶</a></h2>
 <p>RBM因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
@@ -2959,7 +2962,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </pre></div>
 </div>
 <section id="id83">
-<h3>ファイル形式<a class="headerlink" href="#id83" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id83" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -2972,7 +2975,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id84">
-<h3>パラメータ<a class="headerlink" href="#id84" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id84" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3021,7 +3024,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id85">
-<h3>使用ルール<a class="headerlink" href="#id85" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id85" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
@@ -3033,7 +3036,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </section>
 </section>
 <section id="generalrbm-hiddenlayer">
-<h2>GeneralRBM_HiddenLayer指定ファイル<a class="headerlink" href="#generalrbm-hiddenlayer" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>GeneralRBM_HiddenLayer指定ファイル<a class="headerlink" href="#generalrbm-hiddenlayer" title="Link to this heading">¶</a></h2>
 <p>RBM因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
@@ -3053,7 +3056,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </pre></div>
 </div>
 <section id="id86">
-<h3>ファイル形式<a class="headerlink" href="#id86" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id86" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> は隠れニューロンの数、 <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3066,7 +3069,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id87">
-<h3>パラメータ<a class="headerlink" href="#id87" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id87" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3110,7 +3113,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id88">
-<h3>使用ルール<a class="headerlink" href="#id88" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id88" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
@@ -3122,7 +3125,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </section>
 </section>
 <section id="generalrbm-physhidden">
-<h2>GeneralRBM_PhysHidden指定ファイル<a class="headerlink" href="#generalrbm-physhidden" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>GeneralRBM_PhysHidden指定ファイル<a class="headerlink" href="#generalrbm-physhidden" title="Link to this heading">¶</a></h2>
 <p>RBM因子</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
@@ -3145,7 +3148,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </pre></div>
 </div>
 <section id="id89">
-<h3>ファイル形式<a class="headerlink" href="#id89" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id89" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、<span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> は隠れニューロンの数、 <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3158,7 +3161,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id90">
-<h3>パラメータ<a class="headerlink" href="#id90" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id90" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3212,7 +3215,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id91">
-<h3>使用ルール<a class="headerlink" href="#id91" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id91" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。</p></li>
@@ -3224,7 +3227,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </section>
 </section>
 <section id="orbital-orbitalantiparallel-orbitalidx-def">
-<h2>Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)<a class="headerlink" href="#orbital-orbitalantiparallel-orbitalidx-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Orbital/OrbitalAntiParallel指定ファイル(orbitalidx.def)<a class="headerlink" href="#orbital-orbitalantiparallel-orbitalidx-def" title="Link to this heading">¶</a></h2>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{ij}c_{i\uparrow}^{\dagger}c_{j\downarrow}^{\dagger} \right]^{N/2}|0 \rangle\]</div>
 <p>で表されるペア軌道の設定を行います。指定するパラメータはサイト番号 <span class="math notranslate nohighlight">\(i, j\)</span> と変分パラメータの種類を設定します。以下にファイル例を記載します。</p>
@@ -3248,7 +3251,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </pre></div>
 </div>
 <section id="id92">
-<h3>ファイル形式<a class="headerlink" href="#id92" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id92" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm o}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3260,7 +3263,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id93">
-<h3>パラメータ<a class="headerlink" href="#id93" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id93" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3309,7 +3312,7 @@ BackFlow を使う場合は、エキスパートモード入力として <code c
 </ul>
 </section>
 <section id="id94">
-<h3>使用ルール<a class="headerlink" href="#id94" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id94" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3338,7 +3341,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </section>
 </section>
 <section id="orbitalparallel">
-<h2>OrbitalParallel指定ファイル<a class="headerlink" href="#orbitalparallel" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>OrbitalParallel指定ファイル<a class="headerlink" href="#orbitalparallel" title="Link to this heading">¶</a></h2>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} f_{i\sigma j\sigma}c_{i\sigma}^{\dagger}c_{j\sigma}^{\dagger} \right]^{N/2}|0 \rangle\]</div>
 <p>で表されるペア軌道の設定を行います。指定するパラメータはサイト番号 <span class="math notranslate nohighlight">\(i, j\)</span> と変分パラメータの種類を設定します。以下にファイル例を記載します。</p>
@@ -3361,7 +3364,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </pre></div>
 </div>
 <section id="id95">
-<h3>ファイル形式<a class="headerlink" href="#id95" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id95" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm o}\)</span> は変分パラメータの種類の数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3374,7 +3377,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id96">
-<h3>パラメータ<a class="headerlink" href="#id96" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id96" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3423,7 +3426,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id97">
-<h3>使用ルール<a class="headerlink" href="#id97" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id97" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3433,7 +3436,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </section>
 </section>
 <section id="orbitalgeneral">
-<h2>OrbitalGeneral指定ファイル<a class="headerlink" href="#orbitalgeneral" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>OrbitalGeneral指定ファイル<a class="headerlink" href="#orbitalgeneral" title="Link to this heading">¶</a></h2>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma_1, \sigma_2}f_{i\sigma_1 j \sigma_2}c_{i\sigma_1}^{\dagger}c_{j\sigma_2}^{\dagger} \right]^{N/2}|0 \rangle\]</div>
 <p>で表されるペア軌道の設定を行います。指定するパラメータはサイト番号 <span class="math notranslate nohighlight">\(i, j\)</span>,
@@ -3456,7 +3459,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </pre></div>
 </div>
 <section id="id98">
-<h3>ファイル形式<a class="headerlink" href="#id98" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id98" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm o}\)</span> は変分パラメータの種類の数)。
 変分パラメータの総数 <span class="math notranslate nohighlight">\(N_p\)</span> は <span class="math notranslate nohighlight">\(i+\sigma_1 N_s &lt; j+\sigma_2 N_s\)</span> (<span class="math notranslate nohighlight">\(\sigma=0 ,1\)</span>)を満たすペアの総数に対応し、
 <span class="math notranslate nohighlight">\(S_z=0\)</span> の場合は <span class="math notranslate nohighlight">\(N_p=N_s^2\)</span> 、 <span class="math notranslate nohighlight">\(S_z\)</span> 非保存の場合は <span class="math notranslate nohighlight">\(N_p=2N_s^2-N_s\)</span> 個となります。</p>
@@ -3471,7 +3474,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id99">
-<h3>パラメータ<a class="headerlink" href="#id99" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id99" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3526,7 +3529,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id100">
-<h3>使用ルール<a class="headerlink" href="#id100" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id100" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3548,7 +3551,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </section>
 </section>
 <section id="transsym-qptransidx-def">
-<h2>TransSym指定ファイル(qptransidx.def)<a class="headerlink" href="#transsym-qptransidx-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>TransSym指定ファイル(qptransidx.def)<a class="headerlink" href="#transsym-qptransidx-def" title="Link to this heading">¶</a></h2>
 <p>運動量射影 <span class="math notranslate nohighlight">\({\cal L}_K=\frac{1}{N_s}\sum_{{\boldsymbol R}}e^{i {\boldsymbol K} \cdot{\boldsymbol R} } \hat{T}_{\boldsymbol R}\)</span> と格子対称性射影 <span class="math notranslate nohighlight">\({\cal L}_P=\sum_{\alpha}p_{\alpha} \hat{G}_{\alpha}\)</span> について、重みとサイト番号に関する指定を行います。射影するパターンは <span class="math notranslate nohighlight">\((\alpha, {\boldsymbol R})\)</span> で指定されます。射影を行わない場合も重み1.0
 で“恒等演算”を指定してください。 以下にファイル例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================================</span>
@@ -3567,7 +3570,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </pre></div>
 </div>
 <section id="id101">
-<h3>ファイル形式<a class="headerlink" href="#id101" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id101" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_s\)</span> はサイト数、 <span class="math notranslate nohighlight">\(N_{\rm TS}\)</span> は射影演算子の種類の総数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3579,7 +3582,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id102">
-<h3>パラメータ<a class="headerlink" href="#id102" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id102" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3626,7 +3629,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id103">
-<h3>使用ルール<a class="headerlink" href="#id103" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id103" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3636,7 +3639,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </section>
 </section>
 <section id="inputparam">
-<span id="id104"></span><h2>変分パラメータ初期値指定ファイル<a class="headerlink" href="#inputparam" title="この見出しへのパーマリンク">¶</a></h2>
+<span id="id104"></span><h2>変分パラメータ初期値指定ファイル<a class="headerlink" href="#inputparam" title="Link to this heading">¶</a></h2>
 <p>各変分パラメータの初期値を設定することが可能です。
 変分パラメータの種類は <a class="reference internal" href="#inputfilelist"><span class="std std-ref">入力ファイル指定用ファイル(namelist.def)</span></a> において
 <code class="docutils literal notranslate"><span class="pre">InGutzwiller</span></code>, <code class="docutils literal notranslate"><span class="pre">InJastrow</span></code>, <code class="docutils literal notranslate"><span class="pre">InSpinJastrow</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH2</span></code>, <code class="docutils literal notranslate"><span class="pre">InDH4</span></code>,  <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysLayer</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_HiddenLayer</span></code>, <code class="docutils literal notranslate"><span class="pre">InGeneralRBM_PhysHidden</span></code>, <code class="docutils literal notranslate"><span class="pre">InOrbital</span></code>,
@@ -3657,7 +3660,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </pre></div>
 </div>
 <section id="id105">
-<h3>ファイル形式<a class="headerlink" href="#id105" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id105" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります( <span class="math notranslate nohighlight">\(N_v\)</span> は変分パラメータの種類の総数)。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3667,7 +3670,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id106">
-<h3>パラメータ<a class="headerlink" href="#id106" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id106" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3692,7 +3695,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id107">
-<h3>使用ルール<a class="headerlink" href="#id107" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id107" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>RBM相関因子のインプット機能は、現バージョンではベータ版です。今後のバージョンアップにより、ファイル形式や実装が変更される可能性があります。本機能を使用する際は、十分な検証を行ってください。</p></li>
@@ -3702,7 +3705,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </section>
 </section>
 <section id="onebodyg-greenone-def">
-<h2>OneBodyG指定ファイル(greenone.def)<a class="headerlink" href="#onebodyg-greenone-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>OneBodyG指定ファイル(greenone.def)<a class="headerlink" href="#onebodyg-greenone-def" title="Link to this heading">¶</a></h2>
 <p>計算・出力する一体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span> を指定します。以下にファイル例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">===============================</span>
 <span class="n">NCisAjs</span>         <span class="mi">24</span>
@@ -3736,7 +3739,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </pre></div>
 </div>
 <section id="id108">
-<h3>ファイル形式<a class="headerlink" href="#id108" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id108" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3746,7 +3749,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id109">
-<h3>パラメータ<a class="headerlink" href="#id109" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id109" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3773,7 +3776,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </ul>
 </section>
 <section id="id110">
-<h3>使用ルール<a class="headerlink" href="#id110" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id110" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3783,7 +3786,7 @@ grand-canonical用readerの拡張です。index順の記載を推奨します。
 </section>
 </section>
 <section id="twobodyg-greentwo-def">
-<h2>TwoBodyG指定ファイル(greentwo.def)<a class="headerlink" href="#twobodyg-greentwo-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>TwoBodyG指定ファイル(greentwo.def)<a class="headerlink" href="#twobodyg-greentwo-def" title="Link to this heading">¶</a></h2>
 <p>計算・出力する二体グリーン関数 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span> を指定します。
 以下にファイル例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>=============================================
@@ -3820,7 +3823,7 @@ NCisAjsCktAltDC        576
 </pre></div>
 </div>
 <section id="id111">
-<h3>ファイル形式<a class="headerlink" href="#id111" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id111" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3831,7 +3834,7 @@ NCisAjsCktAltDC        576
 </ul>
 </section>
 <section id="id112">
-<h3>パラメータ<a class="headerlink" href="#id112" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id112" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3860,7 +3863,7 @@ NCisAjsCktAltDC        576
 </ul>
 </section>
 <section id="id113">
-<h3>使用ルール<a class="headerlink" href="#id113" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id113" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3882,7 +3885,7 @@ NCisAjsCktAltDC        576
 </section>
 </section>
 <section id="nbodyg-nbodyg-def">
-<h2>NBodyG指定ファイル(nbodyg.def)<a class="headerlink" href="#nbodyg-nbodyg-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>NBodyG指定ファイル(nbodyg.def)<a class="headerlink" href="#nbodyg-nbodyg-def" title="Link to this heading">¶</a></h2>
 <p>計算・出力する <span class="math notranslate nohighlight">\(N\)</span> 体相関関数
 <span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span>
 を指定します。以下にファイル例を記載します。</p>
@@ -3897,7 +3900,7 @@ NCisAjsCktAltDC        576
 </pre></div>
 </div>
 <section id="id116">
-<h3>ファイル形式<a class="headerlink" href="#id116" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id116" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -3908,7 +3911,7 @@ NCisAjsCktAltDC        576
 </ul>
 </section>
 <section id="id117">
-<h3>パラメータ<a class="headerlink" href="#id117" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id117" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -3937,7 +3940,7 @@ NCisAjsCktAltDC        576
 </ul>
 </section>
 <section id="id118">
-<h3>使用ルール<a class="headerlink" href="#id118" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id118" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -3949,8 +3952,10 @@ NCisAjsCktAltDC        576
 受け付け、その期待値は0になります。
 それ以外のモードでは各因子が <span class="math notranslate nohighlight">\(\sigma_a = \tau_a\)</span> を満たす必要があります。</p></li>
 <li><p>本出力はBackFlowの有無によらず物理量計算で使用できます。BackFlow
-<span class="math notranslate nohighlight">\(N\)</span> 体測定では複素変分パラメータ、<code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>、
-<code class="docutils literal notranslate"><span class="pre">reweight=0</span></code> が必要です。real BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体kernelと
+<span class="math notranslate nohighlight">\(N\)</span> 体測定では複素変分パラメータと <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code> が必要です。
+FSZ BackFlowではさらに <code class="docutils literal notranslate"><span class="pre">reweight=0</span></code> が必要です。非FSZのBackFlowは
+<code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> を受理し、測定のreweighting factorを <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code> にも
+掛けます。real BackFlow <span class="math notranslate nohighlight">\(N\)</span> 体kernelと
 Lanczos補正付き <code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code> 出力は未実装です。</p></li>
 <li><p>通常の <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> BackFlowでは全因子が
 スピンを保存する必要があります。<code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZで
@@ -3965,7 +3970,7 @@ BackFlow Slater/Pfaffianを完全構築する計算量が必要です。</p></li
 </section>
 </section>
 <section id="anomaloustermanomalousg">
-<h2>AnomalousTerm・AnomalousG指定ファイル<a class="headerlink" href="#anomaloustermanomalousg" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>AnomalousTerm・AnomalousG指定ファイル<a class="headerlink" href="#anomaloustermanomalousg" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> はgrand-canonical Hamiltonianへpair生成・消滅項を追加し、
 <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> は物理量計算で対応する期待値を選択します。複素係数を持つ
 Hermitian pairと4つの測定行を指定する完全な例を次に示します。</p>
@@ -3992,7 +3997,7 @@ Hermitian pairと4つの測定行を指定する完全な例を次に示しま�
 </pre></div>
 </div>
 <section id="id119">
-<h3>ファイル形式<a class="headerlink" href="#id119" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id119" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>2行目に <code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span> <span class="pre">N</span></code> または <code class="docutils literal notranslate"><span class="pre">NAnomalousG</span> <span class="pre">N</span></code> を指定します。
 <code class="docutils literal notranslate"><span class="pre">N</span></code> は0以上 <code class="docutils literal notranslate"><span class="pre">INT_MAX</span></code> 以下の整数で、実際のdata行数と一致する必要があります。</p></li>
@@ -4012,7 +4017,7 @@ spin番号は0（up）または1（down）です。同じfermion演算子を1つ
 </ul>
 </section>
 <section id="hermiticitymode">
-<h3>Hermiticityとmode制約<a class="headerlink" href="#hermiticitymode" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>Hermiticityとmode制約<a class="headerlink" href="#hermiticitymode" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span></code> は偶数である必要があります。隣接する2行ごとに、indexを転置し、
 <code class="docutils literal notranslate"><span class="pre">type</span></code> を反転し、係数を複素共役にしてください。係数の許容差は <code class="docutils literal notranslate"><span class="pre">1e-12</span></code> です。
@@ -4033,7 +4038,7 @@ spinの組合せを指定できます。反平行pair（<code class="docutils li
 </section>
 </section>
 <section id="twist-twist-def">
-<h2>Twist指定ファイル(twist.def)<a class="headerlink" href="#twist-twist-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Twist指定ファイル(twist.def)<a class="headerlink" href="#twist-twist-def" title="Link to this heading">¶</a></h2>
 <p>計算・出力するTwist演算子 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span> を指定します。位置演算子 <span class="math notranslate nohighlight">\(\mu_i\)</span> はLattice指定ファイル(lattice.def)で定義します。
 以下にファイル例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------
@@ -4059,7 +4064,7 @@ idx_site_s_x_y_z
 </pre></div>
 </div>
 <section id="id120">
-<h3>ファイル形式<a class="headerlink" href="#id120" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id120" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -4070,7 +4075,7 @@ idx_site_s_x_y_z
 </ul>
 </section>
 <section id="id121">
-<h3>パラメータ<a class="headerlink" href="#id121" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id121" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -4108,7 +4113,7 @@ Twist演算子の番号 <span class="math notranslate nohighlight">\(\alpha\)</s
 </ul>
 </section>
 <section id="id122">
-<h3>使用ルール<a class="headerlink" href="#id122" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id122" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -4117,7 +4122,7 @@ Twist演算子の番号 <span class="math notranslate nohighlight">\(\alpha\)</s
 </section>
 </section>
 <section id="lattice-lattice-def">
-<h2>Lattice指定ファイル(lattice.def)<a class="headerlink" href="#lattice-lattice-def" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Lattice指定ファイル(lattice.def)<a class="headerlink" href="#lattice-lattice-def" title="Link to this heading">¶</a></h2>
 <p>サイト番号 <span class="math notranslate nohighlight">\(i\)</span> に対応する位置演算子 <span class="math notranslate nohighlight">\(\mu_i\)</span> とユニットセル内の軌道番号を定義します。
 以下にファイル例を記載します。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------
@@ -4135,7 +4140,7 @@ i_x_y_z_orb
 </pre></div>
 </div>
 <section id="id123">
-<h3>ファイル形式<a class="headerlink" href="#id123" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>ファイル形式<a class="headerlink" href="#id123" title="Link to this heading">¶</a></h3>
 <p>以下のように行数に応じ異なる形式をとります。</p>
 <ul class="simple">
 <li><p>1行: ヘッダ(何が書かれても問題ありません)。</p></li>
@@ -4146,7 +4151,7 @@ i_x_y_z_orb
 </ul>
 </section>
 <section id="id124">
-<h3>パラメータ<a class="headerlink" href="#id124" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>パラメータ<a class="headerlink" href="#id124" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>形式 :</strong> string型 (空白不可)</p>
@@ -4187,7 +4192,7 @@ i_x_y_z_orb
 </ul>
 </section>
 <section id="id125">
-<h3>使用ルール<a class="headerlink" href="#id125" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>使用ルール<a class="headerlink" href="#id125" title="Link to this heading">¶</a></h3>
 <p>本ファイルを使用するにあたってのルールは以下の通りです。</p>
 <ul class="simple">
 <li><p>行数固定で読み込みを行う為、ヘッダの省略はできません。</p></li>
@@ -4212,10 +4217,10 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">目次</a></h3>
@@ -4439,7 +4444,7 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
             rel="nofollow">ソースコードを表示</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -4447,13 +4452,13 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -4471,7 +4476,7 @@ lattice.def の座標と twist.def の位相が意図した幾何を表すよう
     </div>
     <div class="footer" role="contentinfo">
     &#169; 著作権 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>アルゴリズム &#8212; mVMC 1.4.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2a1275fb"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="_static/translations.js?v=4dbe4bdc"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=0868a3b3"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/translations.js?v=4755f45a"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
     <link rel="next" title="非制限Hartree-Fock近似プログラム" href="appendix.html" />
     <link rel="prev" title="出力ファイル" href="output.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -43,9 +43,9 @@
           <div class="body" role="main">
             
   <section id="id1">
-<h1>アルゴリズム<a class="headerlink" href="#id1" title="この見出しへのパーマリンク">¶</a></h1>
+<h1>アルゴリズム<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h1>
 <section id="id2">
-<h2>変分モンテカルロ法<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>変分モンテカルロ法<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
 <p>変分モンテカルロ法では, 試行波動関数を用意して,
 その試行波動関数が含むパラメータを
 変分原理に従って最適化することで量子多体系の基底状態(または低励起エネルギー状態)の波動関数を
@@ -83,7 +83,7 @@ c_{r_{n\downarrow}}^{\dagger} |0 \rangle\]</div>
 メルセンヌツイスター法を使用しています[<a class="reference external" href="http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT">Mutsuo2008</a> ]。</p>
 </section>
 <section id="bogoliubov">
-<span id="bogoliubovrep"></span><h2>Bogoliubov表現<a class="headerlink" href="#bogoliubov" title="この見出しへのパーマリンク">¶</a></h2>
+<span id="bogoliubovrep"></span><h2>Bogoliubov表現<a class="headerlink" href="#bogoliubov" title="Link to this heading">¶</a></h2>
 <p>スピン系の計算において一体項( <code class="docutils literal notranslate"><span class="pre">transfer</span></code>),
 <code class="docutils literal notranslate"><span class="pre">InterAll</span></code> 形式での相互作用,
 相関関数のインデックスの指定にはBogoliubov表現が使われています。
@@ -105,13 +105,13 @@ c_{i \sigma}^\dagger c_{i \sigma+1}
 <span class="math notranslate nohighlight">\(S=1/2\)</span> と置いたものを用いています。</p>
 </section>
 <section id="puffandslater">
-<span id="id3"></span><h2>パフィアン-スレーター行列式の性質<a class="headerlink" href="#puffandslater" title="この見出しへのパーマリンク">¶</a></h2>
+<span id="id3"></span><h2>パフィアン-スレーター行列式の性質<a class="headerlink" href="#puffandslater" title="Link to this heading">¶</a></h2>
 <p>この節では,
 パフィアン-スレーター行列式のもつ性質について簡単にまとめます。
 <a class="reference internal" href="#pfaffianap"><span class="std std-ref">次節</span></a> と <a class="reference internal" href="#pfaffianp"><span class="std std-ref">次々節</span></a> でパフィアン-スレーター行列式と単一スレーター行列式の間の関係を導出し、
 <a class="reference internal" href="#pfaffiansingular"><span class="std std-ref">最後</span></a> に <span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解の意味について説明します。</p>
 <section id="f-ij-phi-in-sigma">
-<span id="pfaffianap"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の関係 (スピン反平行の場合)<a class="headerlink" href="#f-ij-phi-in-sigma" title="この見出しへのパーマリンク">¶</a></h3>
+<span id="pfaffianap"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{in\sigma}\)</span> の関係 (スピン反平行の場合)<a class="headerlink" href="#f-ij-phi-in-sigma" title="Link to this heading">¶</a></h3>
 <p>多変数変分モンテカルロ法で試行波動関数の一体部分として用いられるパフィアン-スレーター行列式は</p>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm Pf}\rangle=\Big(\sum_{i,j=1}^{N_{s}}f_{ij}
@@ -174,7 +174,7 @@ f_{ij}=\sum_{n=1}^{\frac{N_{e}}{2}}\Phi_{in\uparrow}\Phi_{jn\downarrow}.
 この自由度の多さが <span class="math notranslate nohighlight">\(f_{ij}\)</span> の冗長性につながっています。</p>
 </section>
 <section id="f-ij-phi-in">
-<span id="pfaffianp"></span><h3><span class="math notranslate nohighlight">\(F_{IJ}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> の関係 (スピン平行も含めた場合)<a class="headerlink" href="#f-ij-phi-in" title="この見出しへのパーマリンク">¶</a></h3>
+<span id="pfaffianp"></span><h3><span class="math notranslate nohighlight">\(F_{IJ}\)</span> と <span class="math notranslate nohighlight">\(\Phi_{In}\)</span> の関係 (スピン平行も含めた場合)<a class="headerlink" href="#f-ij-phi-in" title="Link to this heading">¶</a></h3>
 <p>前節で考察したパフィアン-スレーター波動関数と単一スレーター波動関数の間の関係は、
 同種スピンのペアリングも考えた場合に拡張することができます。
 パフィアン-スレーター波動関数とスレーター波動関数をそれぞれ</p>
@@ -192,7 +192,7 @@ F_{IJ}=\sum_{n=1}^{\frac{N_{e}}{2}}\Big(\Phi_{I,2n-1}\Phi_{J,2n}-\Phi_{J,2n-1}\P
 mVMC ver1.0以降ではこの表式を使用しています。</p>
 </section>
 <section id="f-ij">
-<span id="pfaffiansingular"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解<a class="headerlink" href="#f-ij" title="この見出しへのパーマリンク">¶</a></h3>
+<span id="pfaffiansingular"></span><h3><span class="math notranslate nohighlight">\(f_{ij}\)</span> の特異値分解<a class="headerlink" href="#f-ij" title="Link to this heading">¶</a></h3>
 <p>行列 <span class="math notranslate nohighlight">\(F\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\uparrow}\)</span>, <span class="math notranslate nohighlight">\(\Phi_{\downarrow}\)</span>,
 <span class="math notranslate nohighlight">\(\Sigma\)</span> を</p>
 <div class="math notranslate nohighlight">
@@ -217,7 +217,7 @@ F=\Phi_{\uparrow}\Sigma\Phi_{\downarrow}^{t}.\end{aligned}\]</div>
 </section>
 </section>
 <section id="power-lanczos">
-<h2>Power-Lanczos法<a class="headerlink" href="#power-lanczos" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>Power-Lanczos法<a class="headerlink" href="#power-lanczos" title="Link to this heading">¶</a></h2>
 <p>Power-Lanczos法では、最適化済みのVMC波動関数 <span class="math notranslate nohighlight">\(|\psi\rangle\)</span> に
 Hamiltonianの多項式を作用させた</p>
 <div class="math notranslate nohighlight">
@@ -241,7 +241,7 @@ mVMCで用いる1st stepと2nd stepの試行波動関数は、それぞれ</p>
 その問題を数値的に安定して解くための実装を分けて説明します。
 最後に、1st stepを適用した後の物理量の計算方法を説明します。</p>
 <section id="st-power-lanczos-step-alpha">
-<h3>1st power-Lanczos stepと <span class="math notranslate nohighlight">\(\alpha\)</span> の決定<a class="headerlink" href="#st-power-lanczos-step-alpha" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>1st power-Lanczos stepと <span class="math notranslate nohighlight">\(\alpha\)</span> の決定<a class="headerlink" href="#st-power-lanczos-step-alpha" title="Link to this heading">¶</a></h3>
 <p>最初に, 変分モンテカルロ法のサンプリングに関して簡単に説明します。
 ここで <span class="math notranslate nohighlight">\(x\)</span> は基底VMC波動関数 <span class="math notranslate nohighlight">\(|\psi\rangle\)</span> からサンプリングする
 配置です。物理量 <span class="math notranslate nohighlight">\(\hat{A}\)</span> の期待値は</p>
@@ -376,7 +376,7 @@ Lanczos計算はエラーとして終了します)。
 <p>から同様に計算できます。</p>
 </section>
 <section id="st-step">
-<h3>グランドカノニカル1st-step精密化と資源上限<a class="headerlink" href="#st-step" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>グランドカノニカル1st-step精密化と資源上限<a class="headerlink" href="#st-step" title="Link to this heading">¶</a></h3>
 <p>対応するグランドカノニカル1st-step安定化推定
 （<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NLanczosEstimatorMode=1</span></code>）では、任意のGMP/MPFR backendが、final chainの
@@ -411,9 +411,9 @@ Hamiltonianを作用させます。通常engineが許すmodelでも、精密化�
 呼出し数、受理数、厳密零数、最大精度を報告し、GEVP失敗と精密化失敗はstderrへ出力します。</p>
 </section>
 <section id="nd-power-lanczos-step">
-<h3>2nd power-Lanczos step<a class="headerlink" href="#nd-power-lanczos-step" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>2nd power-Lanczos step<a class="headerlink" href="#nd-power-lanczos-step" title="Link to this heading">¶</a></h3>
 <section id="alpha-beta">
-<h4>変分原理による <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> の決定<a class="headerlink" href="#alpha-beta" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>変分原理による <span class="math notranslate nohighlight">\(\alpha,\beta\)</span> の決定<a class="headerlink" href="#alpha-beta" title="Link to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">NLanczosStep=2</span></code> では、
 <span class="math notranslate nohighlight">\(|\phi_2\rangle=(1+\alpha\hat H+\beta\hat H^2)|\psi\rangle\)</span>
 の変分エネルギー</p>
@@ -462,7 +462,7 @@ E_2(\boldsymbol{c})
 2から3へ広げて適用したものです。</p>
 </section>
 <section id="id4">
-<h4>数値的安定性のための実装<a class="headerlink" href="#id4" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>数値的安定性のための実装<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h4>
 <p>ここからは上の変分原理を変えるものではなく、同じ行列要素をMonte Carlo
 sampleから安定に評価し、一般化固有値問題を安定に解くための手順です。</p>
 <p>まず、上で定義したlocal estimator <span class="math notranslate nohighlight">\(F(x,\hat A)\)</span> へ
@@ -558,7 +558,7 @@ c_2 &amp;= d_2
 <p>としてcentered basisで評価します。</p>
 </section>
 <section id="id5">
-<h4>計算量<a class="headerlink" href="#id5" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>計算量<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h4>
 <p>2nd stepで新たに必要になるのは、sampleごとのlocal power
 <span class="math notranslate nohighlight">\(F_2(x)\)</span> と <span class="math notranslate nohighlight">\(F_3(x)\)</span> の評価であり、このうち
 <span class="math notranslate nohighlight">\(F_3(x)=\langle x|\hat H^3|\psi\rangle/\langle x|\psi\rangle\)</span>
@@ -621,7 +621,7 @@ F_3(x)={}&amp;V_0^3
 </section>
 </section>
 <section id="st-power-lanczos-step">
-<h3>1st power-Lanczos stepでの物理量の計算<a class="headerlink" href="#st-power-lanczos-step" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>1st power-Lanczos stepでの物理量の計算<a class="headerlink" href="#st-power-lanczos-step" title="Link to this heading">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">NLanczosMode=2</span></code> の場合には、最適化されたパラメータ <span class="math notranslate nohighlight">\(\alpha\)</span> を
 用いて、1st step波動関数 <span class="math notranslate nohighlight">\(|\phi_1\rangle\)</span> に対する物理量
 (一体・二体グリーン関数)を計算します
@@ -657,7 +657,7 @@ A_{LS}(\alpha) =\frac{\langle \phi_1| \hat{A} |\phi_1\rangle}{\langle \phi_1|\ph
 行っています。</p>
 </section>
 <section id="lanczos-sampler">
-<h3>第1Lanczos samplerの成分単位修復<a class="headerlink" href="#lanczos-sampler" title="この見出しへのパーマリンク">¶</a></h3>
+<h3>第1Lanczos samplerの成分単位修復<a class="headerlink" href="#lanczos-sampler" title="Link to this heading">¶</a></h3>
 <p>実数・スピン保存・粒子数固定で、BackFlow、RBM、sampling guideを使わない
 非block版のlegacy第1Lanczosエネルギー測定では、成分単位修復を既定で有効にします。
 対象は <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>, <code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code>,
@@ -685,13 +685,29 @@ A_{LS}(\alpha) =\frac{\langle \phi_1| \hat{A} |\phi_1\rangle}{\langle \phi_1|\ph
 列は0始まりのbin、評価したsample数、非有限値の数、最大絶対drift、
 1e-6・1e-3・1を超えた数、確定accept数、修復発動数、修復成分数です。
 修復発動数と成分数には、その後取り消した仮acceptに対する作業も含みます。
-最後の <code class="docutils literal notranslate"><span class="pre">F</span> <span class="pre">refreshTotal</span></code> 行は全binの修復成分数です。
+各binの行は、そのbinの測定loopが終わった時点で、support検査やBackFlowの
+reject率判定より前に書きます。判定で停止したbinの集計も残ります。
+最後の <code class="docutils literal notranslate"><span class="pre">F</span> <span class="pre">refreshTotal</span></code> 行は全binの修復成分数で、正常終了時だけ書きます。
 driftは通常測定にある直接再計算を使った
 <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">(log(abs(ip_direct))</span> <span class="pre">+</span> <span class="pre">LogProjVal)</span> <span class="pre">-</span> <span class="pre">stored_log_weight</span></code> であり、
 energy誤差の上限ではありません。全proposalのtraceや、診断のための追加の
 全成分再計算は行いません。</p>
+<p>同じ集計は、非FSZ・粒子数固定のBackFlow測定（<code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code>、
+<code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span> <span class="pre">&gt;</span> <span class="pre">0</span></code>、<code class="docutils literal notranslate"><span class="pre">NSplitSize=1</span></code>、実数・複素とも）でも使えます。
+BackFlowの更新経路には成分単位修復を実装していないため、
+<code class="docutils literal notranslate"><span class="pre">MVMC_SAMPLER_REPAIR=1</span></code> は従来どおり入力エラーとし、<code class="docutils literal notranslate"><span class="pre">Q</span></code> 行の確定accept数・
+修復発動数・修復成分数は0のままです。未指定時は第1Lanczos測定
+（<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>）でだけ集計し、<code class="docutils literal notranslate"><span class="pre">MVMC_SAMPLER_DRIFT_LOG=1</span></code> で
+通常のBackFlow測定でも集計します。driftにはBackFlow測定が保存配置から
+再計算する振幅をそのまま使い、追加の行列分解は行いません。固定配置のreplayでは
+保存重みを直接値で上書きするため、driftは0です。各binには
+<code class="docutils literal notranslate"><span class="pre">B</span> <span class="pre">bin</span> <span class="pre">lanczosRejectRebuild</span> <span class="pre">lanczosRejectNonfinite</span></code> を追加し、BackFlowの
+第1Lanczosで数値的な候補再構築の失敗・非有限な局所ベクトルにより除外した
+sample数を記録します。これらは <code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">measure</span></code> の詳細にも
+<code class="docutils literal notranslate"><span class="pre">skip-lanczos-rebuild</span></code>・<code class="docutils literal notranslate"><span class="pre">skip-lanczos-nonfinite</span></code> として入ります。
+FSZ・grand-canonicalのBackFlowと最適化は従来どおりです。</p>
 <section id="zero">
-<h4>zero・異常時のログ<a class="headerlink" href="#zero" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>zero・異常時のログ<a class="headerlink" href="#zero" title="Link to this heading">¶</a></h4>
 <p>従来のdrift・修復集計 <code class="docutils literal notranslate"><span class="pre">Q</span></code> に加え、各binで次の <code class="docutils literal notranslate"><span class="pre">Z</span></code> 行を出します。</p>
 <p><code class="docutils literal notranslate"><span class="pre">Z</span> <span class="pre">bin</span> <span class="pre">proposalZero</span> <span class="pre">ratioUnderflow</span> <span class="pre">ratioNonfinite</span> <span class="pre">currentNonfinite</span> <span class="pre">componentZeroPre</span> <span class="pre">componentZeroPost</span> <span class="pre">measurementZero</span> <span class="pre">repairFailed</span> <span class="pre">measureWeightZero</span> <span class="pre">skipWeight</span> <span class="pre">skipEnergy</span> <span class="pre">measureFactorFailed</span> <span class="pre">detailsTotal</span> <span class="pre">suppressedTotal</span></code></p>
 <p><code class="docutils literal notranslate"><span class="pre">proposalZero</span></code> は計算された提案の射影振幅のlogが負の無限大だった回数です。
@@ -725,7 +741,7 @@ f=sample番号。蓄積・zero寄与・重み/energy/行列分解の既存skip�
 修復失敗時は、rank・bin・step・成分・info・再計算前後値をstderrにも出し、停止します。</p>
 </section>
 <section id="id8">
-<h4>現在状態の異常時復旧<a class="headerlink" href="#id8" title="この見出しへのパーマリンク">¶</a></h4>
+<h4>現在状態の異常時復旧<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h4>
 <p>修復onで、仮accept後のlog振幅がzero・非有限になったときだけ、提案先の全成分を
 1回再計算します。有限に戻れば保存重みと修復の基準・最小履歴を更新して続行します。
 直接再計算でもzeroならhop/exchangeを取り消し、移動前の配置のPfaffianと逆行列を
@@ -757,10 +773,10 @@ NaN・無限大の提案logとは区別します。負の有限log比は同じ�
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">目次</a></h3>
@@ -813,7 +829,7 @@ NaN・無限大の提案logとは区別します。負の有限log比は同じ�
             rel="nofollow">ソースコードを表示</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -821,13 +837,13 @@ NaN・無限大の提案logとは区別します。負の有限log比は同じ�
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -845,7 +861,7 @@ NaN・無限大の提案logとは区別します。負の有限log比は同じ�
     </div>
     <div class="footer" role="contentinfo">
     &#169; 著作権 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

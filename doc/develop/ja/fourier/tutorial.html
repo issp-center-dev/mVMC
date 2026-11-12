@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 
-<html lang="ja">
+<html lang="ja" data-content_root="../">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>チュートリアル &#8212; mVMC 1.4.0 ドキュメント</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2a1275fb"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
-    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-    <script src="../_static/translations.js?v=4dbe4bdc"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/documentation_options.js?v=0868a3b3"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/translations.js?v=4755f45a"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="索引" href="../genindex.html" />
     <link rel="search" title="検索" href="../search.html" />
     <link rel="next" title="ファイルフォーマット" href="format.html" />
     <link rel="prev" title="概要" href="overview.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -44,10 +44,10 @@
           <div class="body" role="main">
             
   <section id="tutorial">
-<span id="id1"></span><h1>チュートリアル<a class="headerlink" href="#tutorial" title="この見出しへのパーマリンク">¶</a></h1>
+<span id="id1"></span><h1>チュートリアル<a class="headerlink" href="#tutorial" title="Link to this heading">¶</a></h1>
 <p>このチュートリアルでは, 正方格子ハバードモデル(8サイト)を例にとり説明する.</p>
 <section id="hphi-vmc-out">
-<h2>HPhi/vmc.out の実行<a class="headerlink" href="#hphi-vmc-out" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>HPhi/vmc.out の実行<a class="headerlink" href="#hphi-vmc-out" title="Link to this heading">¶</a></h2>
 <ul>
 <li><p><span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> の場合</p>
 <p>基底状態および相関関数の計算を行う.
@@ -56,9 +56,9 @@
 <span class="n">a0l</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">a1w</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
 <span class="n">a1l</span> <span class="o">=</span> <span class="mi">2</span>
-<span class="n">model</span><span class="o">=</span><span class="s2">&quot;Hubbard&quot;</span>
-<span class="n">method</span><span class="o">=</span><span class="s2">&quot;CG&quot;</span>
-<span class="n">lattice</span><span class="o">=</span><span class="s2">&quot;square&quot;</span>
+<span class="n">model</span><span class="o">=</span><span class="s2">"Hubbard"</span>
+<span class="n">method</span><span class="o">=</span><span class="s2">"CG"</span>
+<span class="n">lattice</span><span class="o">=</span><span class="s2">"square"</span>
 <span class="n">t</span><span class="o">=</span><span class="mf">1.0</span>
 <span class="n">U</span><span class="o">=</span><span class="mf">8.0</span>
 <span class="n">ncond</span> <span class="o">=</span> <span class="mi">8</span>
@@ -76,8 +76,8 @@
 <span class="n">a0l</span> <span class="o">=</span> <span class="mi">2</span>
 <span class="n">a1w</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
 <span class="n">a1l</span> <span class="o">=</span> <span class="mi">2</span>
-<span class="n">model</span><span class="o">=</span><span class="s2">&quot;Hubbard&quot;</span>
-<span class="n">lattice</span><span class="o">=</span><span class="s2">&quot;square&quot;</span>
+<span class="n">model</span><span class="o">=</span><span class="s2">"Hubbard"</span>
+<span class="n">lattice</span><span class="o">=</span><span class="s2">"square"</span>
 <span class="n">t</span><span class="o">=</span><span class="mf">1.0</span>
 <span class="n">U</span><span class="o">=</span><span class="mf">8.0</span>
 <span class="n">ncond</span> <span class="o">=</span> <span class="mi">8</span>
@@ -108,15 +108,15 @@
 </ul>
 </section>
 <section id="id2">
-<h2>相関関数のフーリエ変換<a class="headerlink" href="#id2" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>相関関数のフーリエ変換<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
 <p>ユーティリティプログラム <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> を使って,
 相関関数をフーリエ変関する.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;4 20</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"4 20</span>
 <span class="s2">G 0 0 0</span>
 <span class="s2">X 0.5 0 0</span>
 <span class="s2">M 0.5 0.5 0</span>
 <span class="s2">G 0 0 0</span>
-<span class="s2">16 16 1&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>geometry.dat
+<span class="s2">16 16 1"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>geometry.dat
 $<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class="w"> </span>geometry.dat
 </pre></div>
 </div>
@@ -133,18 +133,18 @@ $<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class
 </ul>
 </section>
 <section id="id3">
-<h2>相関関数のプロット<a class="headerlink" href="#id3" title="この見出しへのパーマリンク">¶</a></h2>
+<h2>相関関数のプロット<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
 <p>gnuplotを使って,
 相関関数を <span class="math notranslate nohighlight">\(k\)</span> 空間でプロットする.</p>
-<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">load</span><span class="w"> </span><span class="s">&quot;kpath.gp&quot;</span>
-<span class="k">plot</span><span class="w"> </span><span class="s">&quot;output/zvo_corr_eigen0.dat&quot;</span><span class="w"> </span><span class="nb">u</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="mi">12</span><span class="w"> </span><span class="nb">w</span><span class="w"> </span><span class="n">l</span>
+<div class="highlight-gnuplot notranslate"><div class="highlight"><pre><span></span><span class="k">load</span><span class="w"> </span><span class="s">"kpath.gp"</span>
+<span class="k">plot</span><span class="w"> </span><span class="s">"output/zvo_corr_eigen0.dat"</span><span class="w"> </span><span class="nb">u</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="mi">12</span><span class="w"> </span><span class="nb">w</span><span class="w"> </span><span class="n">l</span>
 </pre></div>
 </div>
 <figure class="align-default" id="id4">
 <span id="corplotpng"></span><img alt="../_images/corplot.png" src="../_images/corplot.png" />
 <figcaption>
 <p><span class="caption-text">Figure 1: 相関関数 <span class="math notranslate nohighlight">\(\langle{\bf S}_{\bf k}\cdot{\bf S}_{\bf k}\rangle\)</span> (12列目)を
-プロットした図.</span><a class="headerlink" href="#id4" title="この画像へのパーマリンク">¶</a></p>
+プロットした図.</span><a class="headerlink" href="#id4" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>関連するファイル</p>
@@ -160,10 +160,10 @@ $<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../index.html">
-              <img class="logo" src="../_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="../_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="../index.html">目次</a></h3>
@@ -194,7 +194,7 @@ $<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class
             rel="nofollow">ソースコードを表示</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">クイック検索</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -202,13 +202,13 @@ $<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class
       <input type="submit" value="検索" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>ナビゲーション</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -227,7 +227,7 @@ $<span class="w"> </span>greenr2k<span class="w"> </span>namelist.def<span class
     </div>
     <div class="footer" role="contentinfo">
     &#169; 著作権 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

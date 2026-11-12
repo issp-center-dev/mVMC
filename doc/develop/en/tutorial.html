@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Tutorial &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b308ce55"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=9172181d"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Input files for Standard mode" href="standard.html" />
     <link rel="prev" title="How to use mVMC?" href="start.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,9 +42,9 @@
           <div class="body" role="main">
             
   <section id="tutorial">
-<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this heading">¶</a></h1>
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Link to this heading">¶</a></h1>
 <section id="list-of-sample-files">
-<h2>List of sample files<a class="headerlink" href="#list-of-sample-files" title="Permalink to this heading">¶</a></h2>
+<h2>List of sample files<a class="headerlink" href="#list-of-sample-files" title="Link to this heading">¶</a></h2>
 <p>There are following tutorials in <code class="docutils literal notranslate"><span class="pre">samples/Standard/</span></code>.</p>
 <ul>
 <li><p>The Hubbard model on the two dimensional square lattice</p>
@@ -73,7 +73,7 @@ tutorial of the one dimensional antiferromagnetic Heisenberg chain is
 shown.</p>
 </section>
 <section id="heisenberg-model">
-<h2>Heisenberg model<a class="headerlink" href="#heisenberg-model" title="Permalink to this heading">¶</a></h2>
+<h2>Heisenberg model<a class="headerlink" href="#heisenberg-model" title="Link to this heading">¶</a></h2>
 <p>This tutorial should be performed in</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sample</span><span class="o">/</span><span class="n">Standard</span><span class="o">/</span><span class="n">Spin</span><span class="o">/</span><span class="n">HeisenbergChain</span><span class="o">/.</span>
 </pre></div>
@@ -90,8 +90,8 @@ chain which has a nearest neighbor spin coupling.</p>
 <p>The input file is as follows:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">L</span> <span class="o">=</span> <span class="mi">16</span>
 <span class="n">Lsub</span><span class="o">=</span><span class="mi">4</span>
-<span class="n">model</span> <span class="o">=</span> <span class="s2">&quot;Spin&quot;</span>
-<span class="n">lattice</span> <span class="o">=</span> <span class="s2">&quot;chain lattice&quot;</span>
+<span class="n">model</span> <span class="o">=</span> <span class="s2">"Spin"</span>
+<span class="n">lattice</span> <span class="o">=</span> <span class="s2">"chain lattice"</span>
 <span class="n">J</span> <span class="o">=</span> <span class="mf">1.0</span>
 <span class="mi">2</span><span class="n">Sz</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="n">NMPtrans</span><span class="o">=</span><span class="mi">1</span>
@@ -100,7 +100,7 @@ chain which has a nearest neighbor spin coupling.</p>
 <p>In this tutorial, J and the number of sites are set to 1 (arbitrary
 unit) and 16 respectively.</p>
 <section id="running">
-<h3>Running<a class="headerlink" href="#running" title="Permalink to this heading">¶</a></h3>
+<h3>Running<a class="headerlink" href="#running" title="Link to this heading">¶</a></h3>
 <p>We execute the following command.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mpiexec<span class="w"> </span>-np<span class="w"> </span>number-of-processes<span class="w"> </span>Path/vmcdry.out<span class="w"> </span>-s<span class="w"> </span>StdFace.def
 </pre></div>
@@ -189,19 +189,19 @@ following standard message is outputted in the terminal.</p>
 <span class="o">-----------</span>
 <span class="n">Start</span><span class="p">:</span> <span class="n">Read</span> <span class="o">*</span><span class="k">def</span><span class="w"> </span><span class="nf">files</span><span class="o">.</span>
   <span class="n">Read</span> <span class="n">File</span> <span class="n">namelist</span><span class="o">.</span><span class="k">def</span><span class="w"> </span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;modpara.def&#39;</span> <span class="k">for</span> <span class="n">ModPara</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;locspn.def&#39;</span> <span class="k">for</span> <span class="n">LocSpin</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;trans.def&#39;</span> <span class="k">for</span> <span class="n">Trans</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;coulombintra.def&#39;</span> <span class="k">for</span> <span class="n">CoulombIntra</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;coulombinter.def&#39;</span> <span class="k">for</span> <span class="n">CoulombInter</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;hund.def&#39;</span> <span class="k">for</span> <span class="n">Hund</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;exchange.def&#39;</span> <span class="k">for</span> <span class="n">Exchange</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;gutzwilleridx.def&#39;</span> <span class="k">for</span> <span class="n">Gutzwiller</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;jastrowidx.def&#39;</span> <span class="k">for</span> <span class="n">Jastrow</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;orbitalidx.def&#39;</span> <span class="k">for</span> <span class="n">Orbital</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;qptransidx.def&#39;</span> <span class="k">for</span> <span class="n">TransSym</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;greenone.def&#39;</span> <span class="k">for</span> <span class="n">OneBodyG</span><span class="o">.</span>
-  <span class="n">Read</span> <span class="n">File</span> <span class="s1">&#39;greentwo.def&#39;</span> <span class="k">for</span> <span class="n">TwoBodyG</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'modpara.def'</span> <span class="k">for</span> <span class="n">ModPara</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'locspn.def'</span> <span class="k">for</span> <span class="n">LocSpin</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'trans.def'</span> <span class="k">for</span> <span class="n">Trans</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'coulombintra.def'</span> <span class="k">for</span> <span class="n">CoulombIntra</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'coulombinter.def'</span> <span class="k">for</span> <span class="n">CoulombInter</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'hund.def'</span> <span class="k">for</span> <span class="n">Hund</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'exchange.def'</span> <span class="k">for</span> <span class="n">Exchange</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'gutzwilleridx.def'</span> <span class="k">for</span> <span class="n">Gutzwiller</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'jastrowidx.def'</span> <span class="k">for</span> <span class="n">Jastrow</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'orbitalidx.def'</span> <span class="k">for</span> <span class="n">Orbital</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'qptransidx.def'</span> <span class="k">for</span> <span class="n">TransSym</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'greenone.def'</span> <span class="k">for</span> <span class="n">OneBodyG</span><span class="o">.</span>
+  <span class="n">Read</span> <span class="n">File</span> <span class="s1">'greentwo.def'</span> <span class="k">for</span> <span class="n">TwoBodyG</span><span class="o">.</span>
 <span class="n">End</span>  <span class="p">:</span> <span class="n">Read</span> <span class="o">*</span><span class="k">def</span><span class="w"> </span><span class="nf">files</span><span class="o">.</span>
 <span class="n">Start</span><span class="p">:</span> <span class="n">Read</span> <span class="n">parameters</span> <span class="kn">from</span><span class="w"> </span><span class="o">*</span><span class="k">def</span><span class="w"> </span><span class="nf">files</span><span class="o">.</span>
 <span class="n">End</span>  <span class="p">:</span> <span class="n">Read</span> <span class="n">parameters</span> <span class="kn">from</span><span class="w"> </span><span class="o">*</span><span class="k">def</span><span class="w"> </span><span class="nf">files</span><span class="o">.</span>
@@ -259,13 +259,13 @@ bins</p>
 <p>By seeing these informations, the conversion of the calculation can be
 judged. By using gnuplot, we can check the evolution of
 <span class="math notranslate nohighlight">\(\langle H \rangle\)</span> as follows:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gnuplot</span><span class="o">&gt;</span> <span class="n">plot</span> <span class="s2">&quot;zvo_out_001.dat&quot;</span> <span class="n">u</span> <span class="mi">1</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gnuplot</span><span class="o">&gt;</span> <span class="n">plot</span> <span class="s2">"zvo_out_001.dat"</span> <span class="n">u</span> <span class="mi">1</span>
 </pre></div>
 </div>
 <p>The details of these outputted files are shown in <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">Output files</span></a>.</p>
 </section>
 <section id="output-results">
-<h3>Output results<a class="headerlink" href="#output-results" title="Permalink to this heading">¶</a></h3>
+<h3>Output results<a class="headerlink" href="#output-results" title="Link to this heading">¶</a></h3>
 <p>After finishing calculation normally, the files for the energy, the
 deviation, the optimized variational parameters and the time of
 execution for each calculation steps are outputted in <code class="docutils literal notranslate"><span class="pre">output/</span></code>
@@ -280,7 +280,7 @@ directory. In the following, the outputted files are shown</p>
 <p>The details of these outputted files are shown in <a class="reference internal" href="output.html#outputfile"><span class="std std-ref">Output files</span></a>.</p>
 </section>
 <section id="calculation-of-green-functions">
-<h3>Calculation of Green functions<a class="headerlink" href="#calculation-of-green-functions" title="Permalink to this heading">¶</a></h3>
+<h3>Calculation of Green functions<a class="headerlink" href="#calculation-of-green-functions" title="Link to this heading">¶</a></h3>
 <p>After changing the value of <code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code> from 0 to 1 in
 <code class="docutils literal notranslate"><span class="pre">modpara.def</span></code> file, we execute the following command. When we add
 <code class="docutils literal notranslate"><span class="pre">&quot;zqp_opt.dat&quot;</span></code> after <code class="docutils literal notranslate"><span class="pre">&quot;namelist.dat&quot;</span></code> as a command-line argument as
@@ -299,7 +299,7 @@ optimized variational parameters.</p>
 </section>
 </section>
 <section id="input-files-for-expert-mode">
-<h2>Input files for Expert mode<a class="headerlink" href="#input-files-for-expert-mode" title="Permalink to this heading">¶</a></h2>
+<h2>Input files for Expert mode<a class="headerlink" href="#input-files-for-expert-mode" title="Link to this heading">¶</a></h2>
 <p>In mVMC, the calculation is done by reading input files categorized by
 the following six parts.</p>
 <ol class="arabic simple">
@@ -321,7 +321,7 @@ be outputted.</p></li>
 input files. The details for each files are shown in <a class="reference internal" href="expert.html#howtoexpert"><span class="std std-ref">Input files for Expert mode</span></a>.</p>
 </section>
 <section id="fourier-transformation-of-correlation-functions">
-<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Permalink to this heading">¶</a></h2>
+<h2>Fourier transformation of correlation functions<a class="headerlink" href="#fourier-transformation-of-correlation-functions" title="Link to this heading">¶</a></h2>
 <p>This package has a utility which performs the Fourier transformation of
 the correlation function and plots that function.
 For more details, please see <a class="reference internal" href="fourier/index.html#fourier"><span class="std std-ref">HPhi/mVMC Fourier-Transformation utility</span></a>.</p>
@@ -333,10 +333,10 @@ For more details, please see <a class="reference internal" href="fourier/index.h
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">Table of Contents</a></h3>
@@ -373,7 +373,7 @@ For more details, please see <a class="reference internal" href="fourier/index.h
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -381,13 +381,13 @@ For more details, please see <a class="reference internal" href="fourier/index.h
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -405,7 +405,7 @@ For more details, please see <a class="reference internal" href="fourier/index.h
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>

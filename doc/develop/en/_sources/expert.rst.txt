@@ -2012,7 +2012,8 @@ Use rules
    evaluated with the BackFlow two-body Green function in both the normal
    ``Orbital`` / ``OrbitalAntiParallel`` format and ``OrbitalGeneral`` /
    FSZ. ``NBodyInterAll`` is only needed for terms of order three or
-   higher. BackFlow with ``reweight=1`` is rejected.
+   higher. FSZ BackFlow with ``reweight=1`` is rejected; non-FSZ BackFlow
+   applies the measurement reweighting factor like the no-BackFlow path.
 
 CoulombIntra file (coulombintra.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3278,8 +3279,9 @@ Inputs outside this range are rejected.
 -  RBM, Twist, and ``NQPOptTrans>1`` are not supported. Periodic and
    anti-periodic (negative ``NMPTrans``, ``APFlag=1``) translation
    patterns are supported.
-   ``reweight=1`` is rejected for every BackFlow calculation, including
-   BF-FSZ and BackFlow N-body inputs. Single Lanczos Step is available only with
+   ``reweight=1`` is accepted for non-FSZ BackFlow (including BackFlow N-body
+   inputs) and applies the same reweighting factor as the no-BackFlow
+   measurement; it is still rejected for BF-FSZ. Single Lanczos Step is available only with
    ``NVMCCalMode=1`` and ``NLanczosMode=1``; its Hamiltonian is limited
    to ``Transfer`` and diagonal number-operator interactions.
    Spin-changing ``Transfer`` with ``OrbitalGeneral`` / FSZ additionally
@@ -3374,9 +3376,11 @@ BackFlow N-body support matrix
      - Rejected
      - No real BackFlow N-body measurement or local-energy kernel.
    * - ``reweight=1``
-     - Rejected
-     - Rejected
-     - Reweighting is outside the supported BackFlow contract.
+     - Accepted (non-FSZ)
+     - Accepted (non-FSZ)
+     - Non-FSZ BackFlow applies the measurement reweighting factor to every
+       accumulated quantity, as the no-BackFlow measurement does. FSZ BackFlow
+       still rejects ``reweight=1``.
    * - ``NLanczosMode>0``
      - Rejected
      - Rejected
@@ -5040,7 +5044,9 @@ Use rules
 
 -  This output is supported for physical-quantity calculations with or
    without BackFlow. BackFlow N-body measurement requires complex
-   variational parameters, ``NLanczosMode=0``, and ``reweight=0``.
+   variational parameters and ``NLanczosMode=0``. FSZ BackFlow also
+   requires ``reweight=0``; non-FSZ BackFlow accepts ``reweight=1`` and
+   applies the measurement reweighting factor to ``NBodyG``.
    No real BackFlow N-body kernel or Lanczos-corrected ``ls_NBodyG``
    output is implemented.
 

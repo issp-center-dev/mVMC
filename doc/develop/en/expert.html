@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>Input files for Expert mode &#8212; mVMC 1.4.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=89b800e6" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b308ce55"></script>
-    <script src="_static/doctools.js?v=888ff710"></script>
-    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/documentation_options.js?v=9172181d"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Output files" href="output.html" />
     <link rel="prev" title="Input files for Standard mode" href="standard.html" /> 
   </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -42,7 +42,7 @@
           <div class="body" role="main">
             
   <section id="input-files-for-expert-mode">
-<span id="howtoexpert"></span><h1>Input files for Expert mode<a class="headerlink" href="#input-files-for-expert-mode" title="Permalink to this heading">¶</a></h1>
+<span id="howtoexpert"></span><h1>Input files for Expert mode<a class="headerlink" href="#input-files-for-expert-mode" title="Link to this heading">¶</a></h1>
 <p>In this section, detailed input files (*.def) are explained. Input
 files are categorized by the following six parts. The files that are
 listed in parentheses correspond to the file made by vmcdry.out.</p>
@@ -238,7 +238,7 @@ output.</p>
 </li>
 </ol>
 <section id="list-file-for-input-files-namelist-def">
-<span id="inputfilelist"></span><h2>List file for Input files (namelist.def)<a class="headerlink" href="#list-file-for-input-files-namelist-def" title="Permalink to this heading">¶</a></h2>
+<span id="inputfilelist"></span><h2>List file for Input files (namelist.def)<a class="headerlink" href="#list-file-for-input-files-namelist-def" title="Link to this heading">¶</a></h2>
 <p>This file determines input filenames correlated with keywords. An
 example of the file format is shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ModPara</span>  <span class="n">modpara</span><span class="o">.</span><span class="k">def</span>
@@ -258,11 +258,11 @@ example of the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="file-format">
-<h3>File format<a class="headerlink" href="#file-format" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#file-format" title="Link to this heading">¶</a></h3>
 <p>[string01] [string02]</p>
 </section>
 <section id="parameters">
-<h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type</p>
@@ -276,7 +276,7 @@ keywords.</p>
 </ul>
 </section>
 <section id="user-rules">
-<h3>User rules<a class="headerlink" href="#user-rules" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#user-rules" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>After setting keywords at [string 01], half-width state is needed for
 writing a filename. You can set the filename freely.</p></li>
@@ -444,7 +444,7 @@ and “TransSym”.</p></li>
 </section>
 </section>
 <section id="modpara-file-modpara-def">
-<h2>ModPara file (modpara.def)<a class="headerlink" href="#modpara-file-modpara-def" title="Permalink to this heading">¶</a></h2>
+<h2>ModPara file (modpara.def)<a class="headerlink" href="#modpara-file-modpara-def" title="Link to this heading">¶</a></h2>
 <p>This file determines parameters for calculation. An example of the
 file format is shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
@@ -486,7 +486,7 @@ file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id1">
-<h3>File format<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Lines 1 - 5: Header</p></li>
 <li><p>Line 6: [string01] [string02]</p></li>
@@ -496,7 +496,7 @@ file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id2">
-<h3>Parameters<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -531,7 +531,7 @@ parameters are named as <strong>xxx_opt.dat</strong>, where <strong>xxx</strong>
 </ul>
 </section>
 <section id="id3">
-<h3>User rules<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>From Line 9: After setting keywords at [string 01], a half-width
 blank is needed for setting a parameter.</p></li>
@@ -540,7 +540,7 @@ not read and skipped.</p></li>
 </ul>
 </section>
 <section id="keywords-and-parameters">
-<h3>Keywords and parameters<a class="headerlink" href="#keywords-and-parameters" title="Permalink to this heading">¶</a></h3>
+<h3>Keywords and parameters<a class="headerlink" href="#keywords-and-parameters" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">NVMCCalMode</span></code></p>
 <p><strong>Type :</strong> int-type (default value: 0)</p>
@@ -1378,7 +1378,7 @@ Typical settings for SR-CG in <code class="docutils literal notranslate"><span c
 </section>
 </section>
 <section id="updateweight-file-updateweight-def">
-<h2>UpdateWeight file (updateweight.def)<a class="headerlink" href="#updateweight-file-updateweight-def" title="Permalink to this heading">¶</a></h2>
+<h2>UpdateWeight file (updateweight.def)<a class="headerlink" href="#updateweight-file-updateweight-def" title="Link to this heading">¶</a></h2>
 <p>This optional file sets relative, unnormalized probabilities for the
 local-update kernels of <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=2</span></code>. It is enabled by adding
 <code class="docutils literal notranslate"><span class="pre">InUpdateWeight</span> <span class="pre">updateweight.def</span></code> to <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code>. Omitting the file
@@ -1421,7 +1421,7 @@ the reverse move. When this file is active, pair-spin-flip proposal and
 acceptance counters are appended to <code class="docutils literal notranslate"><span class="pre">zvo_time</span></code>.</p>
 </section>
 <section id="locspin-file-locspn-def">
-<h2>LocSpin file (locspn.def)<a class="headerlink" href="#locspin-file-locspn-def" title="Permalink to this heading">¶</a></h2>
+<h2>LocSpin file (locspn.def)<a class="headerlink" href="#locspin-file-locspn-def" title="Link to this heading">¶</a></h2>
 <p>This file determines sites with localized spins. An example of the
 file format is shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">================================</span>
@@ -1444,7 +1444,7 @@ file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id4">
-<h3>File format<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -1453,7 +1453,7 @@ file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id5">
-<h3>Parameters<a class="headerlink" href="#id5" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1478,7 +1478,7 @@ state, 1: localized spin state with <span class="math notranslate nohighlight">\
 </ul>
 </section>
 <section id="use-rules">
-<h3>Use rules<a class="headerlink" href="#use-rules" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#use-rules" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -1493,7 +1493,7 @@ different from the total number of sites.</p></li>
 </section>
 </section>
 <section id="trans-file-trans-def">
-<h2>Trans file (trans.def)<a class="headerlink" href="#trans-file-trans-def" title="Permalink to this heading">¶</a></h2>
+<h2>Trans file (trans.def)<a class="headerlink" href="#trans-file-trans-def" title="Link to this heading">¶</a></h2>
 <p>The Hamiltonian for general one-body interactions</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
@@ -1525,7 +1525,7 @@ NTransfer      24
 </pre></div>
 </div>
 <section id="id6">
-<h3>File format<a class="headerlink" href="#id6" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -1534,7 +1534,7 @@ NTransfer      24
 </ul>
 </section>
 <section id="id7">
-<h3>Parameters<a class="headerlink" href="#id7" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1570,7 +1570,7 @@ integrals.</p>
 </ul>
 </section>
 <section id="id8">
-<h3>Use rules<a class="headerlink" href="#id8" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>Blank line is not allowed.</p></li>
@@ -1587,7 +1587,7 @@ satisfied,
 </section>
 </section>
 <section id="interall-file">
-<h2>InterAll file<a class="headerlink" href="#interall-file" title="Permalink to this heading">¶</a></h2>
+<h2>InterAll file<a class="headerlink" href="#interall-file" title="Link to this heading">¶</a></h2>
 <p>The Hamiltonian for general two-body interactions</p>
 <div class="math notranslate nohighlight">
 \[\begin{aligned}
@@ -1625,7 +1625,7 @@ format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id9">
-<h3>File format<a class="headerlink" href="#id9" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -1635,7 +1635,7 @@ format is shown as follows.</p>
 </ul>
 </section>
 <section id="id10">
-<h3>Parameters<a class="headerlink" href="#id10" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1673,7 +1673,7 @@ body interactions.</p>
 </ul>
 </section>
 <section id="id11">
-<h3>Use rules<a class="headerlink" href="#id11" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>Since Hamiltonian must be Hermitian, the following relation must be
@@ -1692,7 +1692,7 @@ nonzero coefficient that changes <span class="math notranslate nohighlight">\(S^
 </section>
 </section>
 <section id="independent-lanczos-operator-files-lstrans-def-lsinterall-def">
-<h2>Independent Lanczos operator files (lstrans.def, lsinterall.def)<a class="headerlink" href="#independent-lanczos-operator-files-lstrans-def-lsinterall-def" title="Permalink to this heading">¶</a></h2>
+<h2>Independent Lanczos operator files (lstrans.def, lsinterall.def)<a class="headerlink" href="#independent-lanczos-operator-files-lstrans-def-lsinterall-def" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">LsTrans</span></code> and <code class="docutils literal notranslate"><span class="pre">LsInterAll</span></code> define an operator <span class="math notranslate nohighlight">\(H'\)</span> that is
 independent of the physical Hamiltonian. Their file formats and sign
 conventions are exactly those of <code class="docutils literal notranslate"><span class="pre">Trans</span></code> and <code class="docutils literal notranslate"><span class="pre">InterAll</span></code>: an <code class="docutils literal notranslate"><span class="pre">LsTrans</span></code>
@@ -1703,7 +1703,7 @@ number and <span class="math notranslate nohighlight">\(S_z\)</span>. mVMC check
 the input generator is responsible for Hermitian closure.</p>
 </section>
 <section id="nbodyinterall-file-nbodyinterall-def">
-<h2>NBodyInterAll file (nbodyinterall.def)<a class="headerlink" href="#nbodyinterall-file-nbodyinterall-def" title="Permalink to this heading">¶</a></h2>
+<h2>NBodyInterAll file (nbodyinterall.def)<a class="headerlink" href="#nbodyinterall-file-nbodyinterall-def" title="Link to this heading">¶</a></h2>
 <p>This file adds variable-order <span class="math notranslate nohighlight">\(N\)</span>-body interaction terms to the
 Hamiltonian:</p>
 <div class="math notranslate nohighlight">
@@ -1726,7 +1726,7 @@ term required by the intended Hamiltonian.</p>
 </pre></div>
 </div>
 <section id="id12">
-<h3>File format<a class="headerlink" href="#id12" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -1736,7 +1736,7 @@ term required by the intended Hamiltonian.</p>
 </ul>
 </section>
 <section id="id13">
-<h3>Parameters<a class="headerlink" href="#id13" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1774,7 +1774,7 @@ coefficient.</p>
 </ul>
 </section>
 <section id="id14">
-<h3>Use rules<a class="headerlink" href="#id14" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>Each term line must contain exactly <span class="math notranslate nohighlight">\(1 + 4N + 2\)</span> fields.</p></li>
@@ -1806,12 +1806,13 @@ full BackFlow Slater/Pfaffian construction per surviving term.</p></li>
 evaluated with the BackFlow two-body Green function in both the normal
 <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> format and <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> /
 FSZ. <code class="docutils literal notranslate"><span class="pre">NBodyInterAll</span></code> is only needed for terms of order three or
-higher. BackFlow with <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected.</p></li>
+higher. FSZ BackFlow with <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected; non-FSZ BackFlow
+applies the measurement reweighting factor like the no-BackFlow path.</p></li>
 </ul>
 </section>
 </section>
 <section id="coulombintra-file-coulombintra-def">
-<h2>CoulombIntra file (coulombintra.def)<a class="headerlink" href="#coulombintra-file-coulombintra-def" title="Permalink to this heading">¶</a></h2>
+<h2>CoulombIntra file (coulombintra.def)<a class="headerlink" href="#coulombintra-file-coulombintra-def" title="Link to this heading">¶</a></h2>
 <p>The Hamiltonian for the coulombintra interactions</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_U =\sum_{i}U_i n_ {i \uparrow}n_{i \downarrow}\]</div>
@@ -1831,7 +1832,7 @@ the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id15">
-<h3>File format<a class="headerlink" href="#id15" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -1840,7 +1841,7 @@ the file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id16">
-<h3>Parameters<a class="headerlink" href="#id16" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1864,7 +1865,7 @@ interactions.</p>
 </ul>
 </section>
 <section id="id17">
-<h3>Use rules<a class="headerlink" href="#id17" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id17" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -1876,7 +1877,7 @@ range from the defined values.</p></li>
 </section>
 </section>
 <section id="coulombinter-file-coulombinter-def">
-<h2>CoulombInter file (coulombinter.def)<a class="headerlink" href="#coulombinter-file-coulombinter-def" title="Permalink to this heading">¶</a></h2>
+<h2>CoulombInter file (coulombinter.def)<a class="headerlink" href="#coulombinter-file-coulombinter-def" title="Link to this heading">¶</a></h2>
 <p>The Hamiltonian for the coulombinter interactions</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_V = \sum_{i,j}V_{ij} n_ {i} n_{j}\]</div>
@@ -1896,7 +1897,7 @@ of the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id18">
-<h3>File format<a class="headerlink" href="#id18" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id18" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -1905,7 +1906,7 @@ of the file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id19">
-<h3>Parameters<a class="headerlink" href="#id19" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id19" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1929,7 +1930,7 @@ interactions.</p>
 </ul>
 </section>
 <section id="id20">
-<h3>Use rules<a class="headerlink" href="#id20" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id20" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -1941,7 +1942,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="hund-file-hund-def">
-<h2>Hund file (hund.def)<a class="headerlink" href="#hund-file-hund-def" title="Permalink to this heading">¶</a></h2>
+<h2>Hund file (hund.def)<a class="headerlink" href="#hund-file-hund-def" title="Link to this heading">¶</a></h2>
 <p>The Hamiltonian for Hund couplings</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_H =-\sum_{i,j}J_{ij}^{\rm Hund} (n_{i\uparrow}n_{j\uparrow}+n_{i\downarrow}n_{j\downarrow})\]</div>
@@ -1962,7 +1963,7 @@ follows.</p>
 </pre></div>
 </div>
 <section id="id21">
-<h3>File format<a class="headerlink" href="#id21" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id21" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -1971,7 +1972,7 @@ follows.</p>
 </ul>
 </section>
 <section id="id22">
-<h3>Parameters<a class="headerlink" href="#id22" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id22" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -1994,7 +1995,7 @@ can freely give a name of the keyword.</p>
 </ul>
 </section>
 <section id="id23">
-<h3>Use rules<a class="headerlink" href="#id23" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id23" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2006,7 +2007,7 @@ file.</p></li>
 </section>
 </section>
 <section id="pairhop-file">
-<h2>PairHop file<a class="headerlink" href="#pairhop-file" title="Permalink to this heading">¶</a></h2>
+<h2>PairHop file<a class="headerlink" href="#pairhop-file" title="Link to this heading">¶</a></h2>
 <p>The Hamiltonian for PairHop couplings</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_P=\sum_{i,j}J_{ij}^{\rm Pair} (c_ {i \uparrow}^{\dagger}c_{j\uparrow}c_{i \downarrow}^{\dagger}c_{j  \downarrow}
@@ -2028,7 +2029,7 @@ follows.</p>
 </pre></div>
 </div>
 <section id="id24">
-<h3>File format<a class="headerlink" href="#id24" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id24" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2037,7 +2038,7 @@ follows.</p>
 </ul>
 </section>
 <section id="id25">
-<h3>Parameters<a class="headerlink" href="#id25" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id25" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2061,7 +2062,7 @@ couplings.</p>
 </ul>
 </section>
 <section id="id26">
-<h3>Use rules<a class="headerlink" href="#id26" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id26" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2073,7 +2074,7 @@ file.</p></li>
 </section>
 </section>
 <section id="exchange-file-exchange-def">
-<h2>Exchange file (exchange.def)<a class="headerlink" href="#exchange-file-exchange-def" title="Permalink to this heading">¶</a></h2>
+<h2>Exchange file (exchange.def)<a class="headerlink" href="#exchange-file-exchange-def" title="Link to this heading">¶</a></h2>
 <p>The Hamiltonian for exchange couplings</p>
 <div class="math notranslate nohighlight">
 \[{\cal H}_E  =\sum_{i,j}J_{ij}^{\rm Ex}
@@ -2096,7 +2097,7 @@ An example of the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id27">
-<h3>File format<a class="headerlink" href="#id27" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id27" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -2105,7 +2106,7 @@ An example of the file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id28">
-<h3>Parameters<a class="headerlink" href="#id28" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id28" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2129,7 +2130,7 @@ couplings.</p>
 </ul>
 </section>
 <section id="id29">
-<h3>Use rules<a class="headerlink" href="#id29" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id29" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2141,7 +2142,7 @@ file.</p></li>
 </section>
 </section>
 <section id="gutzwiller-file-gutzwiller-def">
-<h2>Gutzwiller file (gutzwiller.def)<a class="headerlink" href="#gutzwiller-file-gutzwiller-def" title="Permalink to this heading">¶</a></h2>
+<h2>Gutzwiller file (gutzwiller.def)<a class="headerlink" href="#gutzwiller-file-gutzwiller-def" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of Gutzwiller factors</p>
 <div class="math notranslate nohighlight">
 \[{\cal P}_G=\exp\left[ \sum_i g_i n_{i\uparrow} n_{i\downarrow} \right].\]</div>
@@ -2166,7 +2167,7 @@ specified. An example of the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id30">
-<h3>File format<a class="headerlink" href="#id30" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id30" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the whole number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_g\)</span>, respectively.</p>
 <ul class="simple">
@@ -2180,7 +2181,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_g\)</sp
 </ul>
 </section>
 <section id="id31">
-<h3>Parameters<a class="headerlink" href="#id31" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id31" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2227,7 +2228,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id32">
-<h3>User rules<a class="headerlink" href="#id32" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id32" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when components of variational parameters
@@ -2241,7 +2242,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="jastrow-file-jastrow-def">
-<h2>Jastrow file (jastrow.def)<a class="headerlink" href="#jastrow-file-jastrow-def" title="Permalink to this heading">¶</a></h2>
+<h2>Jastrow file (jastrow.def)<a class="headerlink" href="#jastrow-file-jastrow-def" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of Jastrow factors</p>
 <div class="math notranslate nohighlight">
 \[{\cal P}_J=\exp\left[\frac{1}{2} \sum_{i\neq j} v_{ij} (n_i-1)(n_j-1)\right]\]</div>
@@ -2265,7 +2266,7 @@ follows.</p>
 </pre></div>
 </div>
 <section id="id33">
-<h3>File format<a class="headerlink" href="#id33" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id33" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_j\)</span>, respectively.</p>
 <ul class="simple">
@@ -2279,7 +2280,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_j\)</sp
 </ul>
 </section>
 <section id="id34">
-<h3>Parameters<a class="headerlink" href="#id34" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id34" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2326,7 +2327,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id35">
-<h3>User rules<a class="headerlink" href="#id35" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id35" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2338,7 +2339,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="spin-jastrow-file-spinjastrow-def">
-<h2>Spin Jastrow file (spinjastrow.def)<a class="headerlink" href="#spin-jastrow-file-spinjastrow-def" title="Permalink to this heading">¶</a></h2>
+<h2>Spin Jastrow file (spinjastrow.def)<a class="headerlink" href="#spin-jastrow-file-spinjastrow-def" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of spin Jastrow factors</p>
 <div class="math notranslate nohighlight">
 \[{\cal P}_{SJ}=\exp\left[\sum_{i&lt;j} v^s_{ij} m_i m_j\right],
@@ -2363,7 +2364,7 @@ as follows.</p>
 </pre></div>
 </div>
 <section id="id36">
-<h3>File format<a class="headerlink" href="#id36" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id36" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{sj}\)</span>, respectively.</p>
 <ul class="simple">
@@ -2377,7 +2378,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{sj}\)<
 </ul>
 </section>
 <section id="id37">
-<h3>Parameters<a class="headerlink" href="#id37" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id37" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -2425,7 +2426,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id38">
-<h3>User rules<a class="headerlink" href="#id38" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id38" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -2441,7 +2442,7 @@ for each pair of sites, and they must have the same parameter index.</p></li>
 </section>
 </section>
 <section id="backflow-files-rangebf-def-bf-def">
-<h2>BackFlow files (rangebf.def, bf.def)<a class="headerlink" href="#backflow-files-rangebf-def-bf-def" title="Permalink to this heading">¶</a></h2>
+<h2>BackFlow files (rangebf.def, bf.def)<a class="headerlink" href="#backflow-files-rangebf-def-bf-def" title="Link to this heading">¶</a></h2>
 <p>The BackFlow correlation replaces the pair orbital <span class="math notranslate nohighlight">\(f_{ij}\)</span> by a
 configuration-dependent effective pair orbital <span class="math notranslate nohighlight">\(f^b_{ij}\)</span>.
 In Expert mode, BackFlow is enabled by specifying both <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and
@@ -2456,7 +2457,7 @@ center site. <code class="docutils literal notranslate"><span class="pre">BF</sp
 for the neighbor pairs. This is an Expert-mode input. Standard mode and
 StdFace do not generate these files.</p>
 <section id="wave-function-form">
-<h3>Wave function form<a class="headerlink" href="#wave-function-form" title="Permalink to this heading">¶</a></h3>
+<h3>Wave function form<a class="headerlink" href="#wave-function-form" title="Link to this heading">¶</a></h3>
 <p>The BackFlow pair-product wave function follows the lattice BackFlow
 extension by Ido et al. [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.92.245106">Ido2015</a>]. For lattice BackFlow correlations
 in Slater determinants, see also Tocchio et al. [<a class="reference external" href="https://doi.org/10.1103/PhysRevB.78.041101">Tocchio2008</a>],
@@ -2556,7 +2557,7 @@ the transformed configuration and transformed bonds even for arbitrary
 original orbitals; it does not assume that additional orbital symmetry.</p>
 </section>
 <section id="number-of-parameters">
-<h3>Number of parameters<a class="headerlink" href="#number-of-parameters" title="Permalink to this heading">¶</a></h3>
+<h3>Number of parameters<a class="headerlink" href="#number-of-parameters" title="Link to this heading">¶</a></h3>
 <p>The number of BackFlow variational parameters is determined from
 <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> and <code class="docutils literal notranslate"><span class="pre">NzBF</span></code> in <code class="docutils literal notranslate"><span class="pre">rangebf.def</span></code> and <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> in
 <code class="docutils literal notranslate"><span class="pre">bf.def</span></code> as</p>
@@ -2578,7 +2579,7 @@ no-BackFlow limit. If no initial-parameter file is supplied, mVMC uses
 this identity initialization.</p>
 </section>
 <section id="bfrange-file-rangebf-def">
-<h3>BFRange file (rangebf.def)<a class="headerlink" href="#bfrange-file-rangebf-def" title="Permalink to this heading">¶</a></h3>
+<h3>BFRange file (rangebf.def)<a class="headerlink" href="#bfrange-file-rangebf-def" title="Link to this heading">¶</a></h3>
 <p>The following example is a four-site periodic chain where each site uses
 itself and its two nearest neighbors as the BackFlow range. In this
 example, <code class="docutils literal notranslate"><span class="pre">Nrange=3</span></code> and <code class="docutils literal notranslate"><span class="pre">NzBF=2</span></code>.
@@ -2613,7 +2614,7 @@ with existing inputs.</p>
 </div>
 </section>
 <section id="id39">
-<h3>File format<a class="headerlink" href="#id39" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id39" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Lines 1-5: Common header. Line 2 must be <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> [int01] [int02].</p></li>
 <li><p>Lines 6-10: Additional BackFlow header. These lines are skipped when
@@ -2624,7 +2625,7 @@ line 7 also contains <code class="docutils literal notranslate"><span class="pre
 </ul>
 </section>
 <section id="id40">
-<h3>Parameters<a class="headerlink" href="#id40" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id40" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ int01 ]</p>
 <p><strong>Type :</strong> int-type (1 or larger)</p>
@@ -2655,7 +2656,7 @@ each center site. The center site itself must be included.</p>
 </ul>
 </section>
 <section id="id41">
-<h3>User rules<a class="headerlink" href="#id41" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id41" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Exactly <code class="docutils literal notranslate"><span class="pre">Nrange</span></code> rows must be specified for each center site
 [int03].</p></li>
@@ -2700,7 +2701,7 @@ binary, source/submodule revisions, inputs and parameter hashes to reproduce
 those results, and reoptimize for the seam-phase definition.</p>
 </section>
 <section id="bf-file-bf-def">
-<h3>BF file (bf.def)<a class="headerlink" href="#bf-file-bf-def" title="Permalink to this heading">¶</a></h3>
+<h3>BF file (bf.def)<a class="headerlink" href="#bf-file-bf-def" title="Link to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">BF</span></code> file assigns BackFlow groups to the neighbor-pair
 combinations defined by <code class="docutils literal notranslate"><span class="pre">BFRange</span></code>. The current implementation supports
 only <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx==1</span></code>, so the group index [int06] must always be 0.
@@ -2759,7 +2760,7 @@ BackFlow group indices for the neighbor-pair combinations are implicitly
 0. The legacy full form shown above remains accepted.</p>
 </section>
 <section id="id42">
-<h3>File format<a class="headerlink" href="#id42" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id42" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Lines 1-5: Common header. Line 2 must be <code class="docutils literal notranslate"><span class="pre">NBackFlowIdx</span></code> [int01].</p></li>
 <li><p>Lines 6-10: Additional BackFlow header. These lines are skipped when
@@ -2774,7 +2775,7 @@ line 7 also contains <code class="docutils literal notranslate"><span class="pre
 </ul>
 </section>
 <section id="id43">
-<h3>Parameters<a class="headerlink" href="#id43" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id43" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ int01 ]</p>
 <p><strong>Type :</strong> int-type</p>
@@ -2813,7 +2814,7 @@ specified by [int07] (0: fixed, 1: optimized). The imaginary part of
 </ul>
 </section>
 <section id="id44">
-<h3>User rules<a class="headerlink" href="#id44" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id44" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Both <code class="docutils literal notranslate"><span class="pre">BFRange</span></code> and <code class="docutils literal notranslate"><span class="pre">BF</span></code> must be specified in <code class="docutils literal notranslate"><span class="pre">namelist.def</span></code>.</p></li>
 <li><p>In the legacy full form, the site rows in <code class="docutils literal notranslate"><span class="pre">BF</span></code> must contain every
@@ -2831,7 +2832,7 @@ file is used, the imaginary part of <code class="docutils literal notranslate"><
 </ul>
 </section>
 <section id="limitations">
-<h3>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h3>
+<h3>Limitations<a class="headerlink" href="#limitations" title="Link to this heading">¶</a></h3>
 <p>BackFlow is currently available only under the following conditions.
 Inputs outside this range are rejected.</p>
 <ul class="simple">
@@ -2855,8 +2856,9 @@ supported.</p></li>
 <li><p>RBM, Twist, and <code class="docutils literal notranslate"><span class="pre">NQPOptTrans&gt;1</span></code> are not supported. Periodic and
 anti-periodic (negative <code class="docutils literal notranslate"><span class="pre">NMPTrans</span></code>, <code class="docutils literal notranslate"><span class="pre">APFlag=1</span></code>) translation
 patterns are supported.
-<code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is rejected for every BackFlow calculation, including
-BF-FSZ and BackFlow N-body inputs. Single Lanczos Step is available only with
+<code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> is accepted for non-FSZ BackFlow (including BackFlow N-body
+inputs) and applies the same reweighting factor as the no-BackFlow
+measurement; it is still rejected for BF-FSZ. Single Lanczos Step is available only with
 <code class="docutils literal notranslate"><span class="pre">NVMCCalMode=1</span></code> and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code>; its Hamiltonian is limited
 to <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> and diagonal number-operator interactions.
 Spin-changing <code class="docutils literal notranslate"><span class="pre">Transfer</span></code> with <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code> / FSZ additionally
@@ -2918,7 +2920,7 @@ input files.</p></li>
 </ul>
 </section>
 <section id="backflow-n-body-support-matrix">
-<h3>BackFlow N-body support matrix<a class="headerlink" href="#backflow-n-body-support-matrix" title="Permalink to this heading">¶</a></h3>
+<h3>BackFlow N-body support matrix<a class="headerlink" href="#backflow-n-body-support-matrix" title="Link to this heading">¶</a></h3>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 28.0%" />
@@ -2958,9 +2960,11 @@ input files.</p></li>
 <td><p>No real BackFlow N-body measurement or local-energy kernel.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reweight=1</span></code></p></td>
-<td><p>Rejected</p></td>
-<td><p>Rejected</p></td>
-<td><p>Reweighting is outside the supported BackFlow contract.</p></td>
+<td><p>Accepted (non-FSZ)</p></td>
+<td><p>Accepted (non-FSZ)</p></td>
+<td><p>Non-FSZ BackFlow applies the measurement reweighting factor to every
+accumulated quantity, as the no-BackFlow measurement does. FSZ BackFlow
+still rejects <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;0</span></code></p></td>
 <td><p>Rejected</p></td>
@@ -2972,7 +2976,7 @@ input files.</p></li>
 </section>
 </section>
 <section id="dh2-file">
-<h2>DH2 file<a class="headerlink" href="#dh2-file" title="Permalink to this heading">¶</a></h2>
+<h2>DH2 file<a class="headerlink" href="#dh2-file" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of 2-site doublon-holon
 correlation factors</p>
 <div class="math notranslate nohighlight">
@@ -2999,7 +3003,7 @@ format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id45">
-<h3>File format<a class="headerlink" href="#id45" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id45" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh2}\)</span>, respectively.</p>
 <ul class="simple">
@@ -3014,7 +3018,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh
 </ul>
 </section>
 <section id="id46">
-<h3>Parameters<a class="headerlink" href="#id46" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id46" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3070,7 +3074,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id47">
-<h3>User rules<a class="headerlink" href="#id47" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id47" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -3082,7 +3086,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="dh4-file">
-<h2>DH4 file<a class="headerlink" href="#dh4-file" title="Permalink to this heading">¶</a></h2>
+<h2>DH4 file<a class="headerlink" href="#dh4-file" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of 4-site doublon-holon
 correlation factors</p>
 <div class="math notranslate nohighlight">
@@ -3109,7 +3113,7 @@ format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id48">
-<h3>File format<a class="headerlink" href="#id48" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id48" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh4}\)</span>, respectively.</p>
 <ul class="simple">
@@ -3124,7 +3128,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm dh
 </ul>
 </section>
 <section id="id49">
-<h3>Parameters<a class="headerlink" href="#id49" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id49" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3181,7 +3185,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id50">
-<h3>User rules<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id50" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when components of variational parameters
@@ -3195,7 +3199,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="generalrbm-physlayer-file">
-<h2>GeneralRBM_PhysLayer file<a class="headerlink" href="#generalrbm-physlayer-file" title="Permalink to this heading">¶</a></h2>
+<h2>GeneralRBM_PhysLayer file<a class="headerlink" href="#generalrbm-physlayer-file" title="Link to this heading">¶</a></h2>
 <p>In the general RBM correlation factors,</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
@@ -3217,7 +3221,7 @@ follows.</p>
 </pre></div>
 </div>
 <section id="id51">
-<h3>File format<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id51" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>, respectively.</p>
 <ul class="simple">
@@ -3231,7 +3235,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 </ul>
 </section>
 <section id="id52">
-<h3>Parameters<a class="headerlink" href="#id52" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id52" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3283,7 +3287,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id53">
-<h3>User rules<a class="headerlink" href="#id53" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id53" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
 <li><p>Both <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> are accepted.  If every active
@@ -3304,7 +3308,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="generalrbm-hiddenlayer-file">
-<h2>GeneralRBM_HiddenLayer file<a class="headerlink" href="#generalrbm-hiddenlayer-file" title="Permalink to this heading">¶</a></h2>
+<h2>GeneralRBM_HiddenLayer file<a class="headerlink" href="#generalrbm-hiddenlayer-file" title="Link to this heading">¶</a></h2>
 <p>In the general RBM correlation factors,</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
@@ -3327,7 +3331,7 @@ follows.</p>
 </pre></div>
 </div>
 <section id="id54">
-<h3>File format<a class="headerlink" href="#id54" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id54" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of neurons as <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>, respectively.</p>
 <ul class="simple">
@@ -3341,7 +3345,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 </ul>
 </section>
 <section id="id55">
-<h3>Parameters<a class="headerlink" href="#id55" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id55" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3388,7 +3392,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id56">
-<h3>User rules<a class="headerlink" href="#id56" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id56" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
 <li><p>Both <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> are accepted.  For the
@@ -3404,7 +3408,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="generalrbm-physhidden-file">
-<h2>GeneralRBM_PhysHidden file<a class="headerlink" href="#generalrbm-physhidden-file" title="Permalink to this heading">¶</a></h2>
+<h2>GeneralRBM_PhysHidden file<a class="headerlink" href="#generalrbm-physhidden-file" title="Link to this heading">¶</a></h2>
 <p>In the general RBM correlation factors,</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
@@ -3430,7 +3434,7 @@ follows.</p>
 </pre></div>
 </div>
 <section id="id57">
-<h3>File format<a class="headerlink" href="#id57" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id57" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span>, the total number of neurons as <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</span>.</p>
 <ul class="simple">
@@ -3444,7 +3448,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 </ul>
 </section>
 <section id="id58">
-<h3>Parameters<a class="headerlink" href="#id58" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id58" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3501,7 +3505,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id59">
-<h3>User rules<a class="headerlink" href="#id59" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id59" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>This function is a beta version. Please use it carefully. The file format and the implementation may be changed in the future release.</p></li>
 <li><p>Both <code class="docutils literal notranslate"><span class="pre">ComplexType=0</span></code> and <code class="docutils literal notranslate"><span class="pre">ComplexType=1</span></code> are accepted.  For the
@@ -3517,7 +3521,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="orbital-orbitalantiparallel-file-orbitalidx-def">
-<h2>Orbital/OrbitalAntiParallel file (orbitalidx.def)<a class="headerlink" href="#orbital-orbitalantiparallel-file-orbitalidx-def" title="Permalink to this heading">¶</a></h2>
+<h2>Orbital/OrbitalAntiParallel file (orbitalidx.def)<a class="headerlink" href="#orbital-orbitalantiparallel-file-orbitalidx-def" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of pair orbitals</p>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s}
@@ -3544,7 +3548,7 @@ are indicated. An example of the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id60">
-<h3>File format<a class="headerlink" href="#id60" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id60" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively.</p>
 <ul class="simple">
@@ -3558,7 +3562,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}
 </ul>
 </section>
 <section id="id61">
-<h3>Parameters<a class="headerlink" href="#id61" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id61" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3612,7 +3616,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id62">
-<h3>User rules<a class="headerlink" href="#id62" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id62" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -3647,7 +3651,7 @@ inside the blocks are errors.</p></li>
 </section>
 </section>
 <section id="orbitalparallel-file">
-<h2>OrbitalParallel file<a class="headerlink" href="#orbitalparallel-file" title="Permalink to this heading">¶</a></h2>
+<h2>OrbitalParallel file<a class="headerlink" href="#orbitalparallel-file" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of pair orbitals</p>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma}
@@ -3677,7 +3681,7 @@ shown as follows.</p>
 </pre></div>
 </div>
 <section id="id63">
-<h3>File format<a class="headerlink" href="#id63" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id63" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively.</p>
 <ul class="simple">
@@ -3691,7 +3695,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}
 </ul>
 </section>
 <section id="id64">
-<h3>Parameters<a class="headerlink" href="#id64" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id64" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3745,7 +3749,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id65">
-<h3>User rules<a class="headerlink" href="#id65" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id65" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -3757,7 +3761,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="orbitalgeneral-file">
-<h2>OrbitalGeneral file<a class="headerlink" href="#orbitalgeneral-file" title="Permalink to this heading">¶</a></h2>
+<h2>OrbitalGeneral file<a class="headerlink" href="#orbitalgeneral-file" title="Link to this heading">¶</a></h2>
 <p>This file sets the calculation conditions of pair orbitals</p>
 <div class="math notranslate nohighlight">
 \[|\phi_{\rm pair} \rangle = \left[\sum_{i, j=1}^{N_s} \sum_{\sigma_1, \sigma_2}
@@ -3787,7 +3791,7 @@ example of the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id66">
-<h3>File format<a class="headerlink" href="#id66" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id66" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 variational parameters as <span class="math notranslate nohighlight">\(N_{\rm o}\)</span>, respectively. A total
 number of variational parameters <span class="math notranslate nohighlight">\(N_p\)</span> is given by <span class="math notranslate nohighlight">\(N_s^2\)</span>,
@@ -3804,7 +3808,7 @@ unconserved system, respectively.</p>
 </ul>
 </section>
 <section id="id67">
-<h3>Parameters<a class="headerlink" href="#id67" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id67" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3864,7 +3868,7 @@ optimize, 1: optimize).</p>
 </ul>
 </section>
 <section id="id68">
-<h3>User rules<a class="headerlink" href="#id68" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id68" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -3889,7 +3893,7 @@ reader (five or six columns) is unchanged.</p></li>
 </section>
 </section>
 <section id="transsym-file-qptransidx-def">
-<h2>TransSym file (qptransidx.def)<a class="headerlink" href="#transsym-file-qptransidx-def" title="Permalink to this heading">¶</a></h2>
+<h2>TransSym file (qptransidx.def)<a class="headerlink" href="#transsym-file-qptransidx-def" title="Link to this heading">¶</a></h2>
 <p>This file sets the weight and corresponding site numbers of momentum
 projection
 <span class="math notranslate nohighlight">\({\cal L}_K=\frac{1}{N_s}\sum_{{\boldsymbol R}}e^{i {\boldsymbol K} \cdot{\boldsymbol R} } \hat{T}_{\boldsymbol R}\)</span>
@@ -3915,7 +3919,7 @@ not done. An example of the file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id69">
-<h3>File format<a class="headerlink" href="#id69" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id69" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of sites as <span class="math notranslate nohighlight">\(N_s\)</span> and
 projection patterns as <span class="math notranslate nohighlight">\(N_{\rm TS}\)</span>, respectively.</p>
 <ul class="simple">
@@ -3928,7 +3932,7 @@ projection patterns as <span class="math notranslate nohighlight">\(N_{\rm TS}\)
 </ul>
 </section>
 <section id="id70">
-<h3>Parameters<a class="headerlink" href="#id70" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id70" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -3984,7 +3988,7 @@ be omitted when the mode of the anti-periodic condition is off.</p>
 </ul>
 </section>
 <section id="id71">
-<h3>User rules<a class="headerlink" href="#id71" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id71" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -3996,7 +4000,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="files-to-set-initial-values-of-variational-parameters">
-<span id="inputparam"></span><h2>Files to set initial values of variational parameters<a class="headerlink" href="#files-to-set-initial-values-of-variational-parameters" title="Permalink to this heading">¶</a></h2>
+<span id="inputparam"></span><h2>Files to set initial values of variational parameters<a class="headerlink" href="#files-to-set-initial-values-of-variational-parameters" title="Link to this heading">¶</a></h2>
 <p>This file sets the initial values of variational parameters. The kinds
 of variational parameters are specified by setting the following
 keywords in <code class="docutils literal notranslate"><span class="pre">List</span></code> file (namelist.def):
@@ -4019,7 +4023,7 @@ Jastrow parameters, for example <code class="docutils literal notranslate"><span
 </pre></div>
 </div>
 <section id="id72">
-<h3>File format<a class="headerlink" href="#id72" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id72" title="Link to this heading">¶</a></h3>
 <p>In the following, we define the total number of variational parameters
 as <span class="math notranslate nohighlight">\(N_v\)</span>.</p>
 <ul class="simple">
@@ -4030,7 +4034,7 @@ as <span class="math notranslate nohighlight">\(N_v\)</span>.</p>
 </ul>
 </section>
 <section id="id73">
-<h3>Parameters<a class="headerlink" href="#id73" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id73" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -4060,7 +4064,7 @@ indicated by [int01].</p>
 </ul>
 </section>
 <section id="id74">
-<h3>User rules<a class="headerlink" href="#id74" title="Permalink to this heading">¶</a></h3>
+<h3>User rules<a class="headerlink" href="#id74" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -4070,7 +4074,7 @@ this file.</p></li>
 </section>
 </section>
 <section id="onebodyg-file-greenone-def">
-<h2>OneBodyG file (greenone.def)<a class="headerlink" href="#onebodyg-file-greenone-def" title="Permalink to this heading">¶</a></h2>
+<h2>OneBodyG file (greenone.def)<a class="headerlink" href="#onebodyg-file-greenone-def" title="Link to this heading">¶</a></h2>
 <p>This file determines the target components to calculate and output
 one-body Green’s function
 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}\rangle\)</span>. An example
@@ -4107,7 +4111,7 @@ of file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id75">
-<h3>File format<a class="headerlink" href="#id75" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id75" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -4116,7 +4120,7 @@ of file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id76">
-<h3>Parameters<a class="headerlink" href="#id76" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id76" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -4142,7 +4146,7 @@ functions.</p>
 </ul>
 </section>
 <section id="id77">
-<h3>Use rules<a class="headerlink" href="#id77" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id77" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -4155,7 +4159,7 @@ range from the defined values.</p></li>
 </section>
 </section>
 <section id="twobodyg-file-greentwo-def">
-<h2>TwoBodyG file (greentwo.def)<a class="headerlink" href="#twobodyg-file-greentwo-def" title="Permalink to this heading">¶</a></h2>
+<h2>TwoBodyG file (greentwo.def)<a class="headerlink" href="#twobodyg-file-greentwo-def" title="Link to this heading">¶</a></h2>
 <p>This file determines the target components to calculate and output
 two-body Green’s function
 <span class="math notranslate nohighlight">\(\langle c_{i\sigma_1}^{\dagger}c_{j\sigma_2}c_{k\sigma_3}^{\dagger}c_{l\sigma_4}\rangle\)</span>.
@@ -4195,7 +4199,7 @@ An example of file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id78">
-<h3>File format<a class="headerlink" href="#id78" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id78" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -4205,7 +4209,7 @@ An example of file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id79">
-<h3>Parameters<a class="headerlink" href="#id79" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id79" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -4237,7 +4241,7 @@ functions.</p>
 </ul>
 </section>
 <section id="id80">
-<h3>Use rules<a class="headerlink" href="#id80" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id80" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
@@ -4250,7 +4254,7 @@ range from the defined values.</p></li>
 </section>
 </section>
 <section id="nbodyg-file-nbodyg-def">
-<h2>NBodyG file (nbodyg.def)<a class="headerlink" href="#nbodyg-file-nbodyg-def" title="Permalink to this heading">¶</a></h2>
+<h2>NBodyG file (nbodyg.def)<a class="headerlink" href="#nbodyg-file-nbodyg-def" title="Link to this heading">¶</a></h2>
 <p>This file determines the target components to calculate and output
 <span class="math notranslate nohighlight">\(N\)</span>-body correlation functions
 <span class="math notranslate nohighlight">\(\langle \prod_{a=1}^{N} c_{i_a\sigma_a}^{\dagger} c_{j_a\tau_a} \rangle\)</span>.
@@ -4266,7 +4270,7 @@ An example of file format is shown as follows.</p>
 </pre></div>
 </div>
 <section id="id81">
-<h3>File format<a class="headerlink" href="#id81" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id81" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -4276,7 +4280,7 @@ An example of file format is shown as follows.</p>
 </ul>
 </section>
 <section id="id82">
-<h3>Parameters<a class="headerlink" href="#id82" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id82" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -4309,7 +4313,7 @@ function. It must be positive.</p>
 </ul>
 </section>
 <section id="id83">
-<h3>Use rules<a class="headerlink" href="#id83" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id83" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is different from the total
@@ -4323,7 +4327,9 @@ in the latter, terms that change <span class="math notranslate nohighlight">\(S^
 zero.</p></li>
 <li><p>This output is supported for physical-quantity calculations with or
 without BackFlow. BackFlow N-body measurement requires complex
-variational parameters, <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>, and <code class="docutils literal notranslate"><span class="pre">reweight=0</span></code>.
+variational parameters and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>. FSZ BackFlow also
+requires <code class="docutils literal notranslate"><span class="pre">reweight=0</span></code>; non-FSZ BackFlow accepts <code class="docutils literal notranslate"><span class="pre">reweight=1</span></code> and
+applies the measurement reweighting factor to <code class="docutils literal notranslate"><span class="pre">NBodyG</span></code>.
 No real BackFlow N-body kernel or Lanczos-corrected <code class="docutils literal notranslate"><span class="pre">ls_NBodyG</span></code>
 output is implemented.</p></li>
 <li><p>With normal <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> / <code class="docutils literal notranslate"><span class="pre">OrbitalAntiParallel</span></code> BackFlow, every
@@ -4341,7 +4347,7 @@ component.</p></li>
 </section>
 </section>
 <section id="anomalousterm-and-anomalousg-files">
-<h2>AnomalousTerm and AnomalousG files<a class="headerlink" href="#anomalousterm-and-anomalousg-files" title="Permalink to this heading">¶</a></h2>
+<h2>AnomalousTerm and AnomalousG files<a class="headerlink" href="#anomalousterm-and-anomalousg-files" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">AnomalousTerm</span></code> adds pair-creation and pair-annihilation terms to the
 grand-canonical Hamiltonian. <code class="docutils literal notranslate"><span class="pre">AnomalousG</span></code> selects the corresponding
 expectation values in a physical-quantity calculation. The following
@@ -4369,7 +4375,7 @@ Hermitian complex pair and four measurement rows form a complete example.</p>
 </pre></div>
 </div>
 <section id="id84">
-<h3>File format<a class="headerlink" href="#id84" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id84" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>The count is <code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span> <span class="pre">N</span></code> or <code class="docutils literal notranslate"><span class="pre">NAnomalousG</span> <span class="pre">N</span></code> on line 2.
 <code class="docutils literal notranslate"><span class="pre">N</span></code> must be an integer from 0 through <code class="docutils literal notranslate"><span class="pre">INT_MAX</span></code> and must equal the
@@ -4389,7 +4395,7 @@ is forbidden.</p></li>
 </ul>
 </section>
 <section id="hermiticity-and-mode-restrictions">
-<h3>Hermiticity and mode restrictions<a class="headerlink" href="#hermiticity-and-mode-restrictions" title="Permalink to this heading">¶</a></h3>
+<h3>Hermiticity and mode restrictions<a class="headerlink" href="#hermiticity-and-mode-restrictions" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">NAnomalousTerm</span></code> must be even. Each adjacent pair must reverse the
 indices, flip <code class="docutils literal notranslate"><span class="pre">type</span></code>, and complex-conjugate the coefficient. The
@@ -4413,7 +4419,7 @@ average to zero.</p></li>
 </section>
 </section>
 <section id="twist-file-twist-def">
-<h2>Twist file (twist.def)<a class="headerlink" href="#twist-file-twist-def" title="Permalink to this heading">¶</a></h2>
+<h2>Twist file (twist.def)<a class="headerlink" href="#twist-file-twist-def" title="Link to this heading">¶</a></h2>
 <p>This file sets the target components to calculate and output the
 Twist operator
 <span class="math notranslate nohighlight">\(P^{(\alpha)} = \langle \exp ( i 2\pi \sum_{i\sigma} \sum_{\mu=x,y,z} c^{(\alpha)\mu }_{i\sigma } \mu_{i} n_{i\sigma} ) \rangle\)</span>.
@@ -4442,7 +4448,7 @@ idx_site_s_x_y_z
 </pre></div>
 </div>
 <section id="id85">
-<h3>File format<a class="headerlink" href="#id85" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id85" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01]</p></li>
@@ -4452,7 +4458,7 @@ idx_site_s_x_y_z
 </ul>
 </section>
 <section id="id86">
-<h3>Parameters<a class="headerlink" href="#id86" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id86" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -4487,7 +4493,7 @@ An integer giving a spin index,
 </ul>
 </section>
 <section id="id87">
-<h3>Use rules<a class="headerlink" href="#id87" title="Permalink to this heading">¶</a></h3>
+<h3>Use rules<a class="headerlink" href="#id87" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>All the combinations of sites and spins must be specified to designate each Twist operator.</p></li>
@@ -4495,7 +4501,7 @@ An integer giving a spin index,
 </section>
 </section>
 <section id="lattice-file-lattice-def">
-<h2>Lattice file (lattice.def)<a class="headerlink" href="#lattice-file-lattice-def" title="Permalink to this heading">¶</a></h2>
+<h2>Lattice file (lattice.def)<a class="headerlink" href="#lattice-file-lattice-def" title="Link to this heading">¶</a></h2>
 <p>This file defines the position operator <span class="math notranslate nohighlight">\(\mu_i\)</span> corresponding to site number <span class="math notranslate nohighlight">\(i\)</span> and the orbital number in the unit cell.
 An example of file format is shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------
@@ -4513,7 +4519,7 @@ i_x_y_z_orb
 </pre></div>
 </div>
 <section id="id88">
-<h3>File format<a class="headerlink" href="#id88" title="Permalink to this heading">¶</a></h3>
+<h3>File format<a class="headerlink" href="#id88" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Line 1: Header</p></li>
 <li><p>Line 2: [string01] [int01] [int02]  [int03]  [int04]</p></li>
@@ -4522,7 +4528,7 @@ i_x_y_z_orb
 </ul>
 </section>
 <section id="id89">
-<h3>Parameters<a class="headerlink" href="#id89" title="Permalink to this heading">¶</a></h3>
+<h3>Parameters<a class="headerlink" href="#id89" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[ string01 ]</p>
 <p><strong>Type :</strong> string-type (blank parameter not allowed)</p>
@@ -4561,7 +4567,7 @@ An integer giving a site index (0 <span class="math notranslate nohighlight">\(\
 </ul>
 </section>
 <section id="usage-rules">
-<h3>Usage rules<a class="headerlink" href="#usage-rules" title="Permalink to this heading">¶</a></h3>
+<h3>Usage rules<a class="headerlink" href="#usage-rules" title="Link to this heading">¶</a></h3>
 <p>The rules for using this file are as follows:</p>
 <ul class="simple">
 <li><p>Headers cannot be omitted.</p></li>
@@ -4587,10 +4593,10 @@ indices are rejected as input errors.</p></li>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="index.html">
-              <img class="logo" src="_static/mVMC.png" alt="Logo"/>
+              <img class="logo" src="_static/mVMC.png" alt="Logo of mVMC"/>
             </a></p>
   <div>
     <h3><a href="index.html">Table of Contents</a></h3>
@@ -4815,7 +4821,7 @@ indices are rejected as input errors.</p></li>
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
@@ -4823,13 +4829,13 @@ indices are rejected as input errors.</p></li>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -4847,7 +4853,7 @@ indices are rejected as input errors.</p></li>
     </div>
     <div class="footer" role="contentinfo">
     &#169; Copyright 2017, mVMC team.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
     </div>
   </body>
 </html>
