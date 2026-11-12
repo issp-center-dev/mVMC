@@ -5397,7 +5397,11 @@ int GetInfoOptTrans(FILE *fp, int **Array, double *ArrayPara,
                              NArray, defname) != 0) {
     return 1;
   }
-  for (i = 0; i < NArray; i++) ArrayOpt[_fidx + i] = 1;
+  /* OptFlag holds (re, im) per parameter; the OptTrans weights are real. */
+  for (i = 0; i < NArray; i++) {
+    ArrayOpt[2 * (_fidx + i)] = 1;
+    ArrayOpt[2 * (_fidx + i) + 1] = 0;
+  }
   *iOptCount += NArray;
   return 0;
 }
