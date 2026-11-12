@@ -1671,6 +1671,11 @@ add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode1 mpi_nsplit2_mode1)
 add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode1 mpi_nsplit1_mode1)
 add_gc_ap_test(GC_AP_MPI_NSplit2_CalMode0 mpi_nsplit2_mode0)
 add_gc_ap_test(GC_AP_MPI_NSplit1_CalMode0 mpi_nsplit1_mode0)
+# The two-rank halves of the cases above are separate tests, so that a build
+# without MPI disables them instead of starting two serial runs via mpiexec.
+add_gc_ap_test(GC_AP_Lattice_4x2_AP_P_mpi lattice_4x2_mpi)
+add_gc_ap_test(GC_AP_Lattice_4x4_AP_AP_mpi lattice_4x4_mpi)
+add_gc_ap_test(GC_AP_AuditWriteFailure_mpi audit_write_failure_mpi)
 
 function(add_gc_mp_test name)
     add_test(NAME ${name}

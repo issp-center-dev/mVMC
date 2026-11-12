@@ -737,7 +737,7 @@ def stdface_inputs(rootdir, workdir, lattice):
     return stddir
 
 
-def lattice_case(rootdir, lengths, boundaries):
+def lattice_model(lengths, boundaries):
     lattice = oracle.Lattice(lengths, boundaries)
     table, keys = oracle.orbital_geometry(lattice)
     classes, nclass = oracle.jastrow_classes(lattice)
@@ -754,10 +754,38 @@ def lattice_case(rootdir, lengths, boundaries):
                                        for number in range(nclass)),
                          hopping=1.0 + 0.0j, mu=0.4, coulomb_intra=4.0,
                          coulomb_inter=0.0)
-    name = "GC_AP_Lattice_{}".format(lattice.label())
+    return model, keys, "GC_AP_Lattice_{}".format(lattice.label())
+
+
+def lattice_fixture(rootdir, name, model):
     workdir = prepare_work(rootdir, name)
     write_ap_fixture(workdir, model, samples=200, seed=271,
-                     init_nelec=lattice.nsite, iterations=1, measure=False)
+                     init_nelec=model.lattice.nsite, iterations=1,
+                     measure=False)
+    return workdir
+
+
+def lattice_run(rootdir, workdir, name, model, keys, procs):
+    """Production read-back and a short run on procs processes."""
+    env = audit_env()
+    env["MVMC_GC_STATE_DUMP"] = "gc_state.dat"
+    run_binary(rootdir, workdir, procs=procs, extra_env=env)
+    check_audit(workdir, model.lattice, model.table, -1, len(keys))
+    # A launcher that starts procs serial copies of vmc.out also exits with
+    # status 0; the per-rank dumps are what shows that the ranks were real.
+    for rank in range(procs):
+        if not os.path.exists(os.path.join(
+                workdir, "gc_state.dat.rank{}".format(rank))):
+            raise AssertionError("{}: rank {} did not run".format(name, rank))
+    gc, output = read_physical(workdir)
+    if not all(math.isfinite(value) for value in gc + output):
+        raise AssertionError("{}: non-finite output".format(name))
+
+
+def lattice_case(rootdir, lengths, boundaries):
+    model, keys, name = lattice_model(lengths, boundaries)
+    lattice, table, parameters = model.lattice, model.table, model.parameters
+    workdir = lattice_fixture(rootdir, name, model)
 
     # Orbital signs: geometry vs file vs StdFace (one parameter per pair).
     parsed, nparameter = oracle.parse_orbital_general(
@@ -797,20 +825,7 @@ def lattice_case(rootdir, lengths, boundaries):
         raise AssertionError("{}: orbitals are not translation covariant"
                              .format(name))
 
-    # Production read-back and a short serial/MPI run.
-    env = audit_env()
-    env["MVMC_GC_STATE_DUMP"] = "gc_state.dat"
-    run_binary(rootdir, workdir, extra_env=env)
-    check_audit(workdir, lattice, table, -1, len(keys))
-    parallel = prepare_work(rootdir, name + "_mpi")
-    write_ap_fixture(parallel, model, samples=200, seed=271,
-                     init_nelec=lattice.nsite, iterations=1, measure=False)
-    run_binary(rootdir, parallel, procs=2, extra_env=env)
-    check_audit(parallel, lattice, table, -1, len(keys))
-    for directory in (workdir, parallel):
-        gc, output = read_physical(directory)
-        if not all(math.isfinite(value) for value in gc + output):
-            raise AssertionError("{}: non-finite output".format(name))
+    lattice_run(rootdir, workdir, name, model, keys, 1)
     print("{} inventory passed: pairs={} params={} negative={} "
           "seam_bonds={} zero_pairs={}".format(
               name, len(table), len(keys), oracle.negative_sign_count(table),
@@ -818,6 +833,14 @@ def lattice_case(rootdir, lengths, boundaries):
                   lattice, 1.0 + 0.0j).values() if value.real < 0) // 2,
               sum(1 for index, unused in table.values()
                   if keys[index] == ("zero",))))
+
+
+def lattice_mpi_case(rootdir, lengths, boundaries):
+    model, keys, name = lattice_model(lengths, boundaries)
+    name += "_mpi"
+    lattice_run(rootdir, lattice_fixture(rootdir, name, model), name, model,
+                keys, 2)
+    print("{} two-rank run passed".format(name))
 
 
 def stdface_example_case(rootdir):
@@ -987,7 +1010,7 @@ def run_expect_failure(rootdir, workdir, procs, extra_env):
     return process.returncode, process.stdout
 
 
-def audit_write_failure_case(rootdir):
+def audit_write_failure_case(rootdir, procs):
     """An audit that cannot be opened or written stops every rank."""
     model = oracle.ring_model()
     targets = [("missing_parent", os.path.join("no_such_dir", "gc_audit.dat"),
@@ -999,25 +1022,24 @@ def audit_write_failure_case(rootdir):
         print("note: /dev/full is unavailable; the write-error branch is not "
               "exercised on this platform")
     for name, path, message in targets:
-        for procs in (1, 2):
-            workdir = prepare_work(rootdir, "GC_AP_AuditFailure_{}_np{}".format(
-                name, procs))
-            write_ap_fixture(workdir, model, samples=50, iterations=1,
-                             measure=False)
-            returncode, output = run_expect_failure(
-                rootdir, workdir, procs, {"MVMC_GC_INPUT_AUDIT": path})
-            if returncode == 0 or message not in output:
-                raise AssertionError("audit {} np={} did not stop: rc={}\n{}"
-                                     .format(name, procs, returncode,
-                                             output[-2000:]))
-            print("audit {} np={} stopped: rc={}".format(name, procs,
-                                                         returncode))
+        workdir = prepare_work(rootdir, "GC_AP_AuditFailure_{}_np{}".format(
+            name, procs))
+        write_ap_fixture(workdir, model, samples=50, iterations=1,
+                         measure=False)
+        returncode, output = run_expect_failure(
+            rootdir, workdir, procs, {"MVMC_GC_INPUT_AUDIT": path})
+        if returncode == 0 or message not in output:
+            raise AssertionError("audit {} np={} did not stop: rc={}\n{}"
+                                 .format(name, procs, returncode,
+                                         output[-2000:]))
+        print("audit {} np={} stopped: rc={}".format(name, procs, returncode))
 
 
 CASES = {
     "stdface_example": stdface_example_case,
     "comparator_guard": comparator_guard_case,
-    "audit_write_failure": audit_write_failure_case,
+    "audit_write_failure": lambda root: audit_write_failure_case(root, 1),
+    "audit_write_failure_mpi": lambda root: audit_write_failure_case(root, 2),
     "legacy_parser": legacy_parser_case,
     "identity_wiring": identity_wiring_case,
     "audit": audit_case,
@@ -1034,6 +1056,10 @@ CASES = {
                                              (oracle.AP, oracle.P)),
     "lattice_4x4": lambda root: lattice_case(root, (4, 4),
                                              (oracle.AP, oracle.AP)),
+    "lattice_4x2_mpi": lambda root: lattice_mpi_case(root, (4, 2),
+                                                     (oracle.AP, oracle.P)),
+    "lattice_4x4_mpi": lambda root: lattice_mpi_case(root, (4, 4),
+                                                     (oracle.AP, oracle.AP)),
 }
 
 
