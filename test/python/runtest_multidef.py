@@ -38,7 +38,8 @@ def run(binary, directory, arguments, ranks, launcher, log_name):
 
 def check_failure(result, diagnostic):
     code, output = result
-    if code == 0 or diagnostic not in output:
+    diagnostics = (diagnostic,) if isinstance(diagnostic, str) else diagnostic
+    if code == 0 or not any(text in output for text in diagnostics):
         raise AssertionError("expected failure containing {!r}, got {}:\n{}".format(
             diagnostic, code, output))
     bad = ("Segmentation fault", "Floating point exception", "AddressSanitizer",
@@ -106,9 +107,11 @@ def main():
         for number in (0, -1, -2147483648, args.ranks + 1, 2147483647):
             case("count_{}".format(number), lambda d, n=number: invalid(
                 d, n, None, "N must be between 1 and MPI size"))
+        # macOS strtol() reports EINVAL for "x"; glibc reaches the no-digit check.
         for number, message in (("2147483648", "Numerical result out of range"),
                                 ("9999999999999999999999999999", "strtol()"),
-                                ("x", "No digits were found")):
+                                ("x", ("No digits were found",
+                                       "strtol(): Invalid argument"))):
             case("parse_" + number, lambda d, n=number, m=message: invalid(d, n, None, m))
         case("missing_list", lambda d: invalid(d, 1, None, "DirListFile"))
         case("empty_list", lambda d: invalid(d, 1, " \n\t", "incomplete"))
@@ -139,7 +142,7 @@ def main():
             name = ("a" * 120 + "/" + "b" * 134 if long_name
                     else "group_{}".format(index))
             names.append(name)
-            # Distinct later seeds detect an incorrect directory assignment.
+            # Give each directory distinct input for its independent-run comparison.
             seed = 2468 + 17 * index
             fixture(directory / name, seed, split)
             reference = directory / "reference_{}".format(index)
