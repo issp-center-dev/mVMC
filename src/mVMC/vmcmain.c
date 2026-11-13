@@ -32,6 +32,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "power_lanczos_stabilized.h"
 #include "power_lanczos_independent.h"
 #include "near_zero_guide.h"
+#include <ctype.h>
 
 // #define _DEBUG
 // #define _DEBUG_DUMP_SROPTO_STORE
@@ -1765,10 +1766,10 @@ void printVersionRank0() {
    and change current working directory */
 void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MPI_Comm *comm_child1) {
   char dirName[D_FileNameMax];
-  char *dirNameList;
+  char *dirNameList = NULL;
   FILE *fp;
   int i;
-  int info=0;
+  int info=0, anyError=0;
 
   int rank, size;
   int group1, group2, rank1;
@@ -1778,9 +1779,9 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
   MPI_Comm_rank(comm_parent, &rank);
   MPI_Comm_size(comm_parent, &size);
 
-  /* check MPI size */
-  if(size<nMultiDef) {
-    if(rank==0) fprintf(stderr,"error: -m: N should be smaller than MPI size.\n");
+  /* Validate before division, communicator splitting, or allocation. */
+  if(nMultiDef<=0 || size<nMultiDef) {
+    if(rank==0) fprintf(stderr,"error: -m: N must be between 1 and MPI size (%d).\n",size);
     MPI_Finalize();
     exit(EXIT_FAILURE);
   } else if(size%nMultiDef!=0) {
@@ -1790,7 +1791,7 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
   /* split MPI communicator */
   div = size / nMultiDef;
   mod = size % nMultiDef;
-  threshold = (div+1)*mod;
+  threshold = mod ? (div+1)*mod : 0;
   if(rank < threshold) {
     group1 = rank / (div+1);
   } else {
@@ -1803,25 +1804,62 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
 
   /* read fileDirList (only at rank=0 process) */
   if(rank==0) {
-    dirNameList = (char*)malloc(nMultiDef*(D_FileNameMax)*sizeof(char));
-    if( (fp=fopen(fileDirList, "r")) != NULL ) {
-      for(i=0;i<nMultiDef;i++) {
-        if(fscanf(fp, "%s\n", (dirNameList + i*D_FileNameMax) )!=1) {
-          fprintf(stderr,"error: %s is incomplete.\n",fileDirList);
-          info=1;
-          break;
-        }
-      }
-      fclose(fp);
-    } else {
-      fprintf(stderr,"error: DirListFile does not exist.\n");
+    if((size_t)nMultiDef > SIZE_MAX / D_FileNameMax) {
+      fprintf(stderr,"error: -m: directory list size overflows size_t.\n");
       info=1;
+    } else {
+      dirNameList = calloc((size_t)nMultiDef, D_FileNameMax);
+      if(dirNameList == NULL) {
+        fprintf(stderr,"error: -m: cannot allocate directory list.\n");
+        info=1;
+      }
+    }
+    if(info==0) {
+      if( (fp=fopen(fileDirList, "r")) != NULL ) {
+        for(i=0;i<nMultiDef;i++) {
+          char *name = dirNameList + (size_t)i*D_FileNameMax;
+          size_t length=0;
+          int ch;
+          /* Keep the whitespace-separated format, with room for the NUL. */
+          do {
+            ch=fgetc(fp);
+          } while(ch!=EOF && isspace((unsigned char)ch));
+          if(ch==EOF) {
+            fprintf(stderr,"error: %s is incomplete or unreadable.\n",fileDirList);
+            info=1;
+            break;
+          }
+          while(ch!=EOF && !isspace((unsigned char)ch)) {
+            if(length==D_FileNameMax-1) {
+              fprintf(stderr,"error: -m: directory name is too long (maximum %d bytes).\n",
+                      D_FileNameMax-1);
+              info=1;
+              break;
+            }
+            name[length++]=(char)ch;
+            ch=fgetc(fp);
+          }
+          if(info!=0) break;
+          if(ferror(fp)) {
+            fprintf(stderr,"error: cannot read DirListFile.\n");
+            info=1;
+            break;
+          }
+        }
+        fclose(fp);
+      } else {
+        fprintf(stderr,"error: DirListFile does not exist or cannot be opened.\n");
+        info=1;
+      }
     }
   }
 
-  /* error handle */
+  /* Every rank must know the read/allocation result before any scatter. */
+  MPI_Bcast(&info,1,MPI_INT,0,comm_parent);
   if(info!=0) {
-    MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+    free(dirNameList);
+    MPI_Abort(comm_parent,EXIT_FAILURE);
+    exit(EXIT_FAILURE);
   }
 
   if(group2==0) { /* rank1==0 */
@@ -1837,10 +1875,17 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
       /* error handle */
       fprintf(stderr,"error: chdir(): %s: ",dirName);
       perror("");
-      MPI_Abort(MPI_COMM_WORLD,EXIT_FAILURE);
+      info=1;
     }
   }
+  free(dirNameList);
 
+  /* A failure on any group root must stop all groups before input reading. */
+  MPI_Allreduce(&info,&anyError,1,MPI_INT,MPI_MAX,comm_parent);
   MPI_Comm_free(&comm_child2);
+  if(anyError!=0) {
+    MPI_Abort(comm_parent,EXIT_FAILURE);
+    exit(EXIT_FAILURE);
+  }
   return;
 }
