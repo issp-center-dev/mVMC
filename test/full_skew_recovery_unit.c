@@ -1,8 +1,11 @@
 /* Exercise the production matrix wrappers. The spies delegate to the actual
- * PFAPACK/ltl2inv routines except in explicitly labelled error-contract tests. */
+ * PFAPACK/ltl2inv routines except in explicitly labelled error-contract tests.
+ * Run one OpenMP thread per rank: the spy counters and mixed-QP checks require
+ * serial execution. main enforces this even when launched outside CTest. */
 #include <complex.h>
 #include <float.h>
 #include <math.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,8 +14,6 @@
 #else
 typedef int MPI_Comm;
 #endif
-extern int omp_get_thread_num(void);
-extern int omp_get_max_threads(void);
 #include "global.h"
 #include "blas_externs.h"
 
@@ -83,10 +84,10 @@ static double complex direct_pf(const double complex *a,int n) {
   return sum;
 }
 /* Analytic block/tridiagonal Pfaffians, with an optional odd permutation. */
-static double complex make_matrix(double complex *a,int n,int kind,int cx,double scale) {
+static double complex make_matrix(double complex *a,int n,int kind,int cx,double scale,double complex phase) {
   double complex expected=1;
   for(int i=0;i<n;i+=2) {
-    double complex v=scale*(1.5+(i/2)%3)*(cx?1+0.25*I:1);
+    double complex v=scale*(1.5+(i/2)%3)*phase;
     if(kind==3 && i==0) v=0;
     if(kind==4 && i==2*(n/4)) v=0;
     if(kind==5 && i==n-2) v=0;
@@ -108,7 +109,7 @@ static int rebuild(int cx,int fsz,int *idx,int *spn,int start,int end) {
   return cx ? (fsz?CalculateMAll_fsz(idx,spn,start,end):CalculateMAll_fcmp(idx,start,end))
             : (fsz?CalculateMAll_fsz_real(idx,spn,start,end):CalculateMAll_real(idx,start,end));
 }
-static void run_case(int n,int kind,int cx,int fsz,double scale,int expect_ok) {
+static void run_case_phase(int n,int kind,int cx,int fsz,double scale,int expect_ok,double complex phase) {
   const int start=2+2*rank_id, end=start+2, nsq=n*n;
   int *idx=allocate(n,sizeof(*idx)), *spn=allocate(n,sizeof(*spn));
   double complex *a=allocate(nsq,sizeof(*a));
@@ -120,7 +121,7 @@ static void run_case(int n,int kind,int cx,int fsz,double scale,int expect_ok) {
   InvM=allocate(3*nsq,sizeof(*InvM));InvM_real=allocate(3*nsq,sizeof(*InvM_real));
   PfM=allocate(3,sizeof(*PfM));PfM_real=allocate(3,sizeof(*PfM_real));
   for(int i=0;i<n;i++) {idx[i]=(i+1)%Nsite;spn[i]=fsz?i%2:i/Ne;}
-  double complex expected=make_matrix(a,n,kind>=7?0:kind,cx,scale);
+  double complex expected=make_matrix(a,n,kind>=7?0:kind,cx,scale,phase);
   if(n<=8 && fabs(scale)<1e10) {
     double complex oracle=direct_pf(a,n);
     CHECK(cabs(oracle-expected)<=1e-12*fmax(1,cabs(expected)),"independent Pfaffian oracle");
@@ -191,12 +192,16 @@ static void run_case(int n,int kind,int cx,int fsz,double scale,int expect_ok) {
   CHECK(rebuild(cx,fsz,idx,spn,start,start)==0,"empty QP slice succeeds");
   free(a);free(idx);free(spn);free(SlaterElm);free(SlaterElm_real);free(InvM);free(InvM_real);free(PfM);free(PfM_real);
 }
+static void run_case(int n,int kind,int cx,int fsz,double scale,int expect_ok) {
+  run_case_phase(n,kind,cx,fsz,scale,expect_ok,cx?1+0.25*I:1);
+}
 int main(int argc,char **argv) {
 #ifdef _mpi_use
   MPI_Init(&argc,&argv);MPI_Comm_rank(MPI_COMM_WORLD,&rank_id);MPI_Comm_size(MPI_COMM_WORLD,&rank_count);
 #endif
   snapshot=argc>1 && strcmp(argv[1],"--normal-snapshot")==0;
-  NThread=omp_get_max_threads();initializeWorkSpaceAll();
+  omp_set_dynamic(0);omp_set_num_threads(1);
+  NThread=1;initializeWorkSpaceAll();
   const int sizes[]={2,4,6,8,130};
   for(int cx=0;cx<2;cx++) for(int fsz=0;fsz<2;fsz++) {
     for(size_t s=0;s<sizeof(sizes)/sizeof(sizes[0]);s++) {
@@ -212,6 +217,16 @@ int main(int argc,char **argv) {
         run_case(4,0,cx,fsz,1,fault==7);
       fault=0;
     }
+  }
+  if(!snapshot) {
+    const double complex phases[]={1,I};
+    const int kinds[]={0,3,4,5};
+    /* A nonzero complex pivot may have either component zero. True zero pairs
+     * must still be rejected at the beginning, middle, and end. */
+    for(int fsz=0;fsz<2;fsz++) for(int phase=0;phase<2;phase++)
+      for(size_t s=0;s<sizeof(sizes)/sizeof(sizes[0]);s++)
+        for(size_t k=0;k<sizeof(kinds)/sizeof(kinds[0]);k++)
+          run_case_phase(sizes[s],kinds[k],1,fsz,1,kinds[k]==0,phases[phase]);
   }
   FreeWorkSpaceAll();
   int total=failures;

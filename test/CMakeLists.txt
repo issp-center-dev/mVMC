@@ -717,7 +717,7 @@ if(MPI_FOUND)
 endif()
 add_test(NAME FullSkewRecovery_Unit COMMAND full_skew_recovery_unit)
 set_tests_properties(FullSkewRecovery_Unit PROPERTIES
-    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1"
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
     TIMEOUT 120)
 if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
     foreach(np 2 4)
@@ -726,7 +726,7 @@ if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
                 ${MPIEXEC_PREFLAGS} $<TARGET_FILE:full_skew_recovery_unit>
                 ${MPIEXEC_POSTFLAGS})
         set_tests_properties(FullSkewRecovery_Unit_np${np}_mpi PROPERTIES
-            ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;OMPI_MCA_rmaps_base_oversubscribe=1"
+            ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;OMPI_MCA_rmaps_base_oversubscribe=1"
             PROCESSORS ${np} TIMEOUT 120)
     endforeach()
 endif()
