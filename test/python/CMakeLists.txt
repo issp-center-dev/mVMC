@@ -197,6 +197,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nbodyinterall_invalid.py DESTINATI
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_update_weight.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_version.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_varbin.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_multidef.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_git_hash.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_real_rbm.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_output_dir.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -2880,6 +2881,22 @@ if(MPI_FOUND)
     set_tests_properties(Varbin_Output_mpi PROPERTIES
         ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
         PROCESSORS 2 TIMEOUT 300)
+endif()
+
+# MultiDef rejects invalid initialization collectively and preserves each group.
+add_test(NAME MultiDef_Initialization
+    COMMAND ${PYTHON_EXECUTABLE} runtest_multidef.py $<TARGET_FILE:vmc.out>)
+set_tests_properties(MultiDef_Initialization PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1" TIMEOUT 300)
+if(MPI_FOUND)
+    foreach(multidef_ranks 1 2 4)
+        add_test(NAME MultiDef_Initialization_${multidef_ranks}_mpi
+            COMMAND ${PYTHON_EXECUTABLE} runtest_multidef.py $<TARGET_FILE:vmc.out>
+                    --mpi --ranks ${multidef_ranks})
+        set_tests_properties(MultiDef_Initialization_${multidef_ranks}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;MVMC_MPIEXEC=${MPIEXEC_EXECUTABLE};MVMC_MPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+            PROCESSORS ${multidef_ranks} LABELS requires_mpi TIMEOUT 600)
+    endforeach()
 endif()
 
 # "vmc.out -v" and "vmcdry.out -v"
