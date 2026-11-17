@@ -76,9 +76,10 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
   }
 
 #ifdef _pf_block_update
-  // TODO: Compute from qpStart to qpEnd to support loop splitting.
-  void *pfOrbital[NQPFull];
-  void *pfUpdator[NQPFull];
+  /* PfM and InvM use local QP indices; SlaterElm uses global indices. */
+  const int qpNum = qpEnd - qpStart;
+  void *pfOrbital[qpNum > 0 ? qpNum : 1];
+  void *pfUpdator[qpNum > 0 ? qpNum : 1];
   // TODO: Make it input parameter.
   if (NExUpdatePath == 0)
     NBlockUpdateSize = 4;
@@ -86,13 +87,13 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
     NBlockUpdateSize = 20;
 
   // Initialize with free spin configuration.
-  updated_tdi_v_init_d(NQPFull, Nsite, Nsite2, Nsize,
-                       SlaterElm_real, Nsite2*Nsite2,
+  updated_tdi_v_init_d(qpNum, Nsite, Nsite2, Nsize,
+                       SlaterElm_real + (size_t)qpStart*Nsite2*Nsite2, Nsite2*Nsite2,
                        InvM_real, Nsize*Nsize,
                        TmpEleIdx, TmpEleSpn,
                        NBlockUpdateSize,
                        pfUpdator, pfOrbital);
-  updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+  updated_tdi_v_get_pfa_d(qpNum, PfM_real, pfUpdator);
 #else
   CalculateMAll_fsz_real(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
 #endif
@@ -108,14 +109,14 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
 
 #ifdef _pf_block_update
     // Clear and reinitialize.
-    updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
-    updated_tdi_v_init_d(NQPFull, Nsite, Nsite2, Nsize,
-                         SlaterElm_real, Nsite2*Nsite2,
+    updated_tdi_v_free_d(qpNum, pfUpdator, pfOrbital);
+    updated_tdi_v_init_d(qpNum, Nsite, Nsite2, Nsize,
+                         SlaterElm_real + (size_t)qpStart*Nsite2*Nsite2, Nsite2*Nsite2,
                          InvM_real, Nsize*Nsize,
                          TmpEleIdx, TmpEleSpn,
                          NBlockUpdateSize,
                          pfUpdator, pfOrbital);
-    updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+    updated_tdi_v_get_pfa_d(qpNum, PfM_real, pfUpdator);
 #else
     CalculateMAll_fsz_real(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
 #endif
@@ -212,8 +213,8 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
 
         StartTimer(61);
 #ifdef _pf_block_update
-        updated_tdi_v_push_d(NQPFull, rj+t*Nsite, mi, 1, pfUpdator);
-        updated_tdi_v_get_pfa_d(NQPFull, pfMNew, pfUpdator);
+        updated_tdi_v_push_d(qpNum, rj+t*Nsite, mi, 1, pfUpdator);
+        updated_tdi_v_get_pfa_d(qpNum, pfMNew, pfUpdator);
 #else
         CalculateNewPfM2_fsz_real(mi,t,pfMNew,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz: s->t 
 #endif
@@ -234,7 +235,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           StartTimer(63);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
-          updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+          updated_tdi_v_get_pfa_d(qpNum, PfM_real, pfUpdator);
 #else
           // UpdateMAll will change SlaterElm, InvM (including PfM)
           UpdateMAll_fsz_real(mi,t,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz : s->t
@@ -251,7 +252,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           }
         } else { /* reject */ //(ri,s) <- (rj,t)
 #ifdef _pf_block_update
-          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_d(qpNum, 0, pfUpdator);
 #endif
           revertEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
@@ -283,11 +284,11 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
         StartTimer(66);
 
 #ifdef _pf_block_update
-        updated_tdi_v_push_pair_d(NQPFull,
+        updated_tdi_v_push_pair_d(qpNum,
                                   rj+s*Nsite, mi,
                                   ri+t*Nsite, mj,
                                   1, pfUpdator);
-        updated_tdi_v_get_pfa_d(NQPFull, pfMNew, pfUpdator);
+        updated_tdi_v_get_pfa_d(qpNum, pfMNew, pfUpdator);
 #else
         CalculateNewPfMTwo2_fsz_real(mi, s, mj, t, pfMNew, TmpEleIdx,TmpEleSpn, qpStart, qpEnd);
 #endif
@@ -308,7 +309,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           StartTimer(68);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
-          updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+          updated_tdi_v_get_pfa_d(qpNum, PfM_real, pfUpdator);
 #else
           UpdateMAllTwo_fsz_real(mi, s, mj, t, ri, s, rj, t,
                                  TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
@@ -321,8 +322,8 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           Counter[3]++;
         } else { /* reject */
 #ifdef _pf_block_update
-          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
-          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_d(qpNum, 0, pfUpdator);
+          updated_tdi_v_pop_d(qpNum, 0, pfUpdator);
 #endif
           revertEleConfig_fsz(mj,rj,ri,t,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
           revertEleConfig_fsz(mi,ri,rj,s,s,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
@@ -345,11 +346,11 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
         UpdateProjCnt_fsz(rj,rj,s,t,projCntNew,projCntNew,TmpEleNum);
 
 #ifdef _pf_block_update
-        updated_tdi_v_push_pair_d(NQPFull,
+        updated_tdi_v_push_pair_d(qpNum,
                                   ri+t*Nsite, mi,
                                   rj+t*Nsite, mj,
                                   1, pfUpdator);
-        updated_tdi_v_get_pfa_d(NQPFull, pfMNew, pfUpdator);
+        updated_tdi_v_get_pfa_d(qpNum, pfMNew, pfUpdator);
 #else
         CalculateNewPfMTwo2_fsz_real(mi, t, mj, t, pfMNew,
                                      TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
@@ -361,7 +362,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
 
         if(w > genrand_real2()) {
 #ifdef _pf_block_update
-          updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+          updated_tdi_v_get_pfa_d(qpNum, PfM_real, pfUpdator);
 #else
           UpdateMAllTwo_fsz_real(mi, t, mj, t, ri, s, rj, s,
                                  TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
@@ -372,8 +373,8 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           Counter[7]++;
         } else {
 #ifdef _pf_block_update
-          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
-          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_d(qpNum, 0, pfUpdator);
+          updated_tdi_v_pop_d(qpNum, 0, pfUpdator);
 #endif
           revertEleConfig_fsz(mj,rj,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
           revertEleConfig_fsz(mi,ri,ri,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
@@ -400,8 +401,8 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
 
         StartTimer(601);
 #ifdef _pf_block_update
-        updated_tdi_v_push_d(NQPFull, rj+t*Nsite, mi, 1, pfUpdator);
-        updated_tdi_v_get_pfa_d(NQPFull, pfMNew, pfUpdator);
+        updated_tdi_v_push_d(qpNum, rj+t*Nsite, mi, 1, pfUpdator);
+        updated_tdi_v_get_pfa_d(qpNum, pfMNew, pfUpdator);
 #else
         CalculateNewPfM2_fsz_real(mi,t,pfMNew,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz: s->t 
 #endif
@@ -422,7 +423,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           StartTimer(603);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
-          updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+          updated_tdi_v_get_pfa_d(qpNum, PfM_real, pfUpdator);
 #else
           // UpdateMAll will change SlaterElm, InvM (including PfM)
           UpdateMAll_fsz_real(mi,t,TmpEleIdx,TmpEleSpn,qpStart,qpEnd); // fsz : s->t
@@ -435,7 +436,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
           Counter[5]++;
         } else { /* reject */ //(ri,s) <- (rj,t)
 #ifdef _pf_block_update
-          updated_tdi_v_pop_d(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_d(qpNum, 0, pfUpdator);
 #endif
           revertEleConfig_fsz(mi,ri,rj,s,t,TmpEleIdx,TmpEleCfg,TmpEleNum,TmpEleSpn);
         }
@@ -447,14 +448,14 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
         StartTimer(34);
 #ifdef _pf_block_update
         // Clear and reinitialize.
-        updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
-        updated_tdi_v_init_d(NQPFull, Nsite, Nsite2, Nsize,
-                             SlaterElm_real, Nsite2*Nsite2,
+        updated_tdi_v_free_d(qpNum, pfUpdator, pfOrbital);
+        updated_tdi_v_init_d(qpNum, Nsite, Nsite2, Nsize,
+                             SlaterElm_real + (size_t)qpStart*Nsite2*Nsite2, Nsite2*Nsite2,
                              InvM_real, Nsize*Nsize,
                              TmpEleIdx, TmpEleSpn,
                              NBlockUpdateSize,
                              pfUpdator, pfOrbital);
-        updated_tdi_v_get_pfa_d(NQPFull, PfM_real, pfUpdator);
+        updated_tdi_v_get_pfa_d(qpNum, PfM_real, pfUpdator);
 #else
         CalculateMAll_fsz_real(TmpEleIdx,TmpEleSpn,qpStart,qpEnd);
 #endif
@@ -491,7 +492,7 @@ void VMCMakeSample_fsz_real(MPI_Comm comm) {
 
 #ifdef _pf_block_update
   // Free-up updator space.
-  updated_tdi_v_free_d(NQPFull, pfUpdator, pfOrbital);
+  updated_tdi_v_free_d(qpNum, pfUpdator, pfOrbital);
 #endif
 
   return;
