@@ -703,6 +703,34 @@ if(MPI_FOUND)
         PROCESSORS 4)
 endif()
 
+# Full-mode SKTRF may report zero separators in an invertible matrix.
+add_executable(full_skew_recovery_unit full_skew_recovery_unit.c)
+target_include_directories(full_skew_recovery_unit PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/mVMC/include)
+target_link_libraries(full_skew_recovery_unit pfapack ltl2inv
+    ${LAPACK_LIBRARIES} m)
+if(Require_BLIS)
+    target_link_libraries(full_skew_recovery_unit blis pthread)
+endif()
+if(MPI_FOUND)
+    target_link_libraries(full_skew_recovery_unit ${MPI_C_LIBRARIES})
+endif()
+add_test(NAME FullSkewRecovery_Unit COMMAND full_skew_recovery_unit)
+set_tests_properties(FullSkewRecovery_Unit PROPERTIES
+    ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1"
+    TIMEOUT 120)
+if(MPI_FOUND AND MPIEXEC_EXECUTABLE)
+    foreach(np 2 4)
+        add_test(NAME FullSkewRecovery_Unit_np${np}_mpi
+            COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${np}
+                ${MPIEXEC_PREFLAGS} $<TARGET_FILE:full_skew_recovery_unit>
+                ${MPIEXEC_POSTFLAGS})
+        set_tests_properties(FullSkewRecovery_Unit_np${np}_mpi PROPERTIES
+            ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1;OMPI_MCA_rmaps_base_oversubscribe=1"
+            PROCESSORS ${np} TIMEOUT 120)
+    endforeach()
+endif()
+
 add_executable(classic_pfaffian_legacy_ab_unit
     classic_pfaffian_legacy_ab_unit.c
     classic_pfaffian_legacy_matrix_tu.c

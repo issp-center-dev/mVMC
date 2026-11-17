@@ -35,6 +35,81 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 #define D_PfLimit 1.0e-100
 
+/* Full skew factorization can report a zero separator even for an
+ * invertible matrix. For UPLO=U, only T(0,1), T(2,3), ... are divisors
+ * in utu2inv. Inspect all of them: INFO records only the first zero and
+ * its parity cannot rule out a later zero paired pivot. */
+static int fullSkewPairedPivotsReal(const double *a, int n, int lda) {
+  if(n <= 0 || n % 2 != 0) return 0;
+  for(int i=0; i<n; i+=2) {
+    const double pivot = a[i+(size_t)(i+1)*lda];
+    if(!isfinite(pivot) || pivot == 0.0) return 0;
+  }
+  return 1;
+}
+
+static int fullSkewPairedPivotsComplex(const double complex *a, int n, int lda) {
+  if(n <= 0 || n % 2 != 0) return 0;
+  for(int i=0; i<n; i+=2) {
+    const double complex pivot = a[i+(size_t)(i+1)*lda];
+    if(!isfinite(creal(pivot)) || !isfinite(cimag(pivot)) ||
+       (creal(pivot) == 0.0 && cimag(pivot) == 0.0)) return 0;
+  }
+  return 1;
+}
+
+/* Preserve the INFO=0 arithmetic and publication order. On recovery,
+ * publish PfM only after the inverse is finite as well. Failure leaves
+ * the matrix workspace overwritten, as in the original implementation. */
+static int fullSkewPfaffianInverseReal(int n, double *a, int lda,
+    int *ipiv, double *work, double *buf, double *pfOut, int failure) {
+  int info=0, nsq=n*n, one=1;
+  double pfaff, minus_one=-1.0;
+  M_DSKTRF("U", "N", &n, a, &lda, ipiv, buf, &nsq, &info);
+  if(info < 0) return info;
+  if(info > 0 && !fullSkewPairedPivotsReal(a,n,lda)) return info;
+
+  utu2pfa_d(n,a,lda,ipiv,&pfaff);
+  if(!isfinite(pfaff)) return failure;
+  if(info == 0) *pfOut = pfaff;
+  utu2inv_d(n,a,lda,ipiv,work,buf,lda);
+  /* mVMC stores the inverse as row-major: transpose the skew inverse. */
+  M_DSCAL(&nsq,&minus_one,a,&one);
+  if(info > 0) {
+    for(int i=0; i<nsq; ++i) if(!isfinite(a[i])) return failure;
+    *pfOut = pfaff;
+  }
+  return 0;
+}
+
+static int fullSkewPfaffianInverseComplex(int n, double complex *a, int lda,
+    int *ipiv, double complex *work, double complex *buf,
+    double complex *pfOut, int failure) {
+  int info=0, nsq=n*n, one=1;
+  double complex pfaff, minus_one=-1.0;
+  M_ZSKTRF("U", "N", &n, a, &lda, ipiv, buf, &nsq, &info);
+  if(info < 0) return info;
+  if(info > 0 && !fullSkewPairedPivotsComplex(a,n,lda)) return info;
+
+  utu2pfa_z(n,a,lda,ipiv,&pfaff);
+  if(info == 0) {
+    /* Keep the historical normal-path check unchanged. */
+    if(!isfinite(creal(pfaff) + cimag(pfaff))) return failure;
+    *pfOut = pfaff;
+  } else if(!isfinite(creal(pfaff)) || !isfinite(cimag(pfaff))) {
+    return failure;
+  }
+  utu2inv_z(n,a,lda,ipiv,work,buf,lda);
+  M_ZSCAL(&nsq,&minus_one,a,&one);
+  if(info > 0) {
+    for(int i=0; i<nsq; ++i) {
+      if(!isfinite(creal(a[i])) || !isfinite(cimag(a[i]))) return failure;
+    }
+    *pfOut = pfaff;
+  }
+  return 0;
+}
+
 int getLWork() {
   char uplo='U', mthd='P';
   int n,lda,lwork,info=0;
@@ -134,9 +209,8 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   int msi,msj;
   int rsi,rsj;
 
-  int m,n,nsq,one,lda,info=0;
+  int n,lda;
   //int nspn = 2*Ne+2*Nsite+2*Nsite+NProj; this is useful?
-  double complex pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -147,10 +221,7 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
   double complex *invM = InvM + qpidx*Nsize*Nsize;
   double complex *invM_i, *invM_i2;
 
-  m=n=lda=Nsize;
-  nsq=n*n;
-  one=1;
-  minus_one=-1.0;
+  n=lda=Nsize;
 
   /* store invM */
   /* Note that invM is column-major and skew-symmetric. */
@@ -167,20 +238,8 @@ int calculateMAll_child_fsz(const int *eleIdx,const int *eleSpn, const int qpSta
     }
   }
 
-  M_ZSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
-  if(info!=0) return info;
-
-  utu2pfa_z(n, invM, lda, iwork, &pfaff);
-  if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
-  PfM[qpidx] = pfaff;
-
-  /* Calculate inverse. */
-  utu2inv_z(n, invM, lda, iwork, work, bufM, lda);
-
-  /* InvM -> InvM(T) -> -InvM */
-  M_ZSCAL(&nsq, &minus_one, invM, &one);
-
-  return info;
+  return fullSkewPfaffianInverseComplex(n, invM, lda, iwork, work,
+      bufM, &PfM[qpidx], qpidx+1);
 }
 
 /* Calculate PfM and InvM from qpidx=qpStart to qpEnd */
@@ -232,9 +291,8 @@ int calculateMAll_child_fsz_real(const int *eleIdx,const int *eleSpn, const int 
   int msi,msj;
   int rsi,rsj;
 
-  int m,n,lda,one,nsq,info=0;
+  int n,lda;
   //int nspn = 2*Ne+2*Nsite+2*Nsite+NProj; this is useful?
-  double pfaff,minus_one;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -245,10 +303,7 @@ int calculateMAll_child_fsz_real(const int *eleIdx,const int *eleSpn, const int 
   double *invM = InvM_real + qpidx*Nsize*Nsize;
   double *invM_i, *invM_i2;
 
-  m=n=lda=Nsize;
-  nsq=n*n;
-  one=1;
-  minus_one=-1.0;
+  n=lda=Nsize;
 
   /* store invM */
   /* Note that invM is column-major and skew-symmetric. */
@@ -266,20 +321,8 @@ int calculateMAll_child_fsz_real(const int *eleIdx,const int *eleSpn, const int 
   }
 
   /* Calculate Pf M */
-  M_DSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
-  if(info!=0) return info;
-
-  utu2pfa_d(n, invM, lda, iwork, &pfaff);
-  if(!isfinite(pfaff)) return qpidx+1;
-  PfM_real[qpidx] = pfaff;
-
-  /* Calculate inverse. */
-  utu2inv_d(n, invM, lda, iwork, work, bufM, lda);
-
-  /* InvM -> InvM(T) -> -InvM */
-  M_DSCAL(&nsq, &minus_one, invM, &one);
-
-  return info;
+  return fullSkewPfaffianInverseReal(n, invM, lda, iwork, work,
+      bufM, &PfM_real[qpidx], qpidx+1);
 }
 
 
@@ -341,8 +384,7 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   int msi,msj;
   int rsi,rsj;
 
-  int m,n,nsq,lda,one,info=0;
-  double complex pfaff,minus_one;
+  int n,lda;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -353,10 +395,7 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   double complex *invM = InvM + qpidx*Nsize*Nsize;
   double complex *invM_i, *invM_i2;
 
-  m=n=lda=Nsize;
-  nsq=n*n;
-  one=1;
-  minus_one=-1.0;
+  n=lda=Nsize;
 
   /* store invM */
   /* Note that invM is column-major and skew-symmetric. */
@@ -374,21 +413,8 @@ int calculateMAll_child_fcmp(const int *eleIdx, const int qpStart, const int qpE
   }
 
   /* Calculate Pf M */
-  M_ZSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
-  if(info!=0) return info;
-
-  utu2pfa_z(n, invM, lda, iwork, &pfaff);
-  if(!isfinite(creal(pfaff) + cimag(pfaff))) return qpidx+1;
-  PfM[qpidx] = pfaff;
-
-  /* Calculate inverse. */
-  utu2inv_z(n, invM, lda, iwork, work, bufM, lda);
-
-  /* mVMC's handling InvM as row-major,
-   * i.e. InvM needs a transpose, InvM -> -InvM according antisymmetric properties. */
-  M_ZSCAL(&nsq, &minus_one, invM, &one);
-
-  return info;
+  return fullSkewPfaffianInverseComplex(n, invM, lda, iwork, work,
+      bufM, &PfM[qpidx], qpidx+1);
 }
 
 int CalculateMAll_BF_fsz(const int *eleIdx, const int *eleSpn, const int qpStart, const int qpEnd) {
@@ -826,9 +852,7 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   int msi,msj;
   int rsi,rsj;
 
-  char uplo='U', mthd='P';
-  int m,n,nsq,one,lda,info=0;
-  double pfaff,minus_one;
+  int n,lda;
 
   /* optimization for Kei */
   const int nsize = Nsize;
@@ -839,10 +863,7 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   double *invM = InvM_real + qpidx*Nsize*Nsize;
   double *invM_i, *invM_i2;
 
-  m=n=lda=Nsize;
-  nsq=n*n;
-  one=1;
-  minus_one=-1.0;
+  n=lda=Nsize;
 
   /* store invM */
   /* Note that invM is column-major and skew-symmetric. */
@@ -861,21 +882,8 @@ int calculateMAll_child_real(const int *eleIdx, const int qpStart, const int qpE
   }
 
   /* calculate Pf M */
-  M_DSKTRF("U", "N", &n, invM, &lda, iwork, bufM, &nsq, &info);
-  if(info!=0) return info;
-
-  utu2pfa_d(n, invM, lda, iwork, &pfaff);
-  if(!isfinite(pfaff)) return qpidx+1;
-  PfM_real[qpidx] = pfaff;
-
-  /* Compute inverse */
-  utu2inv_d(n, invM, lda, iwork, work, bufM, lda);
-
-  // InvM -> InvM' = -InvM
-  // TODO: Include this in ltl2inv
-  M_DSCAL(&nsq, &minus_one, invM, &one);
-
-  return info;
+  return fullSkewPfaffianInverseReal(n, invM, lda, iwork, work,
+      bufM, &PfM_real[qpidx], qpidx+1);
 }
 
 
