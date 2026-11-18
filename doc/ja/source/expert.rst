@@ -1080,15 +1080,15 @@ ModParaファイル (modpara.def)
    :math:`q_\varepsilon(x)=|J(x)|^2\max(P(x)^2,\varepsilon A(x)^2)`
    に置き換える実験的機能です。:math:`P=\sum_q a_q` は量子数射影の成分和、
    :math:`A=\sum_q |a_q|` です。0では従来どおり
-   :math:`|\psi|^2`でsamplingします。正の値では採否比を
-   :math:`q_\varepsilon`で評価し、測定時に各sampleへ
-   :math:`|\psi|^2/q_\varepsilon=P^2/\max(P^2,\varepsilon A^2)`を掛けます。
+   :math:`|\psi|^2` でsamplingします。正の値では採否比を
+   :math:`q_\varepsilon` で評価し、測定時に各sampleへ
+   :math:`|\psi|^2/q_\varepsilon=P^2/\max(P^2,\varepsilon A^2)` を掛けます。
    実変分パラメータで、BackFlow、RBM、reweight、グランドカノニカルを
-   使わない場合だけ指定できます。:math:`P=0`のsampleはguide分布の訪問数に
+   使わない場合だけ指定できます。:math:`P=0` のsampleはguide分布の訪問数に
    含め、重み0として局所量の評価から除外し、件数を
    ``xxx_nzguide_yyy.dat`` に記録します。この件数または数値guardによる
    中止件数が非零のbinはLanczos momentの解析に使用できません。
-   :math:`\varepsilon`の推奨値は定めていません。
+   :math:`\varepsilon` の推奨値は定めていません。
 
 -  ``NDataIdxStart``
 
@@ -1250,11 +1250,11 @@ ModParaファイル (modpara.def)
    反平行スピンの ``Orbital`` 入力が必要です。現状では ``LocSpin``、
    ``BackFlow``、RBM、``OrbitalGeneral``/FSZ入力には対応していません。
 
-   ``InUpdateWeight``を指定しない場合、``NExUpdatePath=2``の従来selectorは
+   ``InUpdateWeight`` を指定しない場合、``NExUpdatePath=2`` の従来selectorは
    変更されません。固定 :math:`S_z` または非FSZ計算ではEXCHANGEのみ、
-   ``OrbitalGeneral``かつ``2Sz=-1``ではEXCHANGEとLOCALSPINFLIPを等確率で
+   ``OrbitalGeneral`` かつ ``2Sz=-1`` ではEXCHANGEとLOCALSPINFLIPを等確率で
    選びます。重み付きselectorとPAIRSPINFLIPについては後述の
-   ``updateweight.def``を参照してください。
+   ``updateweight.def`` を参照してください。
 
 -  ``RndSeed``
 
@@ -1379,9 +1379,9 @@ ModParaファイル (modpara.def)
 UpdateWeight指定ファイル(updateweight.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``NExUpdatePath=2``で用いるローカル更新kernelの相対重みを指定する任意入力です。
-``namelist.def``へ``InUpdateWeight updateweight.def``を追加すると有効になります。
-ファイルを指定しない場合、従来のselector、乱数消費順、``zvo_time``の列構成を
+``NExUpdatePath=2`` で用いるローカル更新kernelの相対重みを指定する任意入力です。
+``namelist.def`` へ ``InUpdateWeight updateweight.def`` を追加すると有効になります。
+ファイルを指定しない場合、従来のselector、乱数消費順、``zvo_time`` の列構成を
 そのまま維持します。
 
 ::
@@ -1400,23 +1400,23 @@ UpdateWeight指定ファイル(updateweight.def)
 正でない重み合計、またはpath 2以外での使用はエラー終了します。重みは内部で正規化し、
 入力読込時に表示します。
 
-``LocalSpinFlip``には``OrbitalGeneral``と``2Sz=-1``が必要です。
+``LocalSpinFlip`` には ``OrbitalGeneral`` と ``2Sz=-1`` が必要です。
 この重みを0にすると、up-spin数のparityを意図的に保存します。宣言した固定parity
 sectorだけをsampleする場合には正しい設定です。target分布が両parity sectorに
-nonzero weightを持つ場合、``LocalSpinFlip``の正の重みは必要条件であり、実際に
+nonzero weightを持つ場合、``LocalSpinFlip`` の正の重みは必要条件であり、実際に
 acceptされたlocal-spin-flipも確認する必要があります。proposal重みが正であること
 だけではergodicityを保証しません。
 
 このファイルを有効にすると、正の重みを持つkernelが1個だけでもkernel選択ごとに
 乱数を1個消費します。したがって、選ばれるkernel列が同じでもweighted runの乱数列は
-legacy runと一致しません。乱数消費順の互換性を保証するのは``InUpdateWeight``を
+legacy runと一致しません。乱数消費順の互換性を保証するのは ``InUpdateWeight`` を
 省略した場合だけです。
 
-``PairSpinFlip``は、初期spinが同じ2個の異なる局在spinを同時に反転します。さらに
-``Ncond=0``、``NLocalSpin=Nsite``、全siteで``LocSpin=1``を要求します。初期spinが
+``PairSpinFlip`` は、初期spinが同じ2個の異なる局在spinを同時に反転します。さらに
+``Ncond=0``、``NLocalSpin=Nsite``、全siteで ``LocSpin=1`` を要求します。初期spinが
 逆向きのpairは棄却proposalとして数え、現在stateに応じた重みの再正規化は行いません。
 これによりproposal確率をstate非依存かつ逆更新と対称に保ちます。このファイルが
-有効な場合、PAIRSPINFLIPのproposal数とacceptanceを``zvo_time``末尾へ追記します。
+有効な場合、PAIRSPINFLIPのproposal数とacceptanceを ``zvo_time`` 末尾へ追記します。
 
 LocSpin指定ファイル(locspn.def)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2863,7 +2863,7 @@ BackFlow 用の追加ヘッダです。7 行目の ``Nrange`` 行は読み飛ば
    この相互性を仮定しているため、非対称な ``BFRange`` は入力時に
    ``BFRange must be mutual`` というエラーで拒否されます。
 
-第 4 列 [int06] は結合の境界位相 :math:`\phi(i,j)`（整数 +1 または -1）です。
+第 4 列 [int06] は結合の境界位相 :math:`\phi(i,j)` （整数 +1 または -1）です。
 AP 入力（``NMPTrans`` が負）では全行に必須です。PBC は全行 3 列（位相を +1 と解釈）、
 または全行 4 列・位相全 +1 を受理します。上の例は互換 PBC 形式です。
 4 サイト AP 鎖では ``0 3 1`` と ``3 0 1`` の行に -1、その他の行に +1 を追加します。
@@ -3035,9 +3035,9 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 
 -  ``NBackFlowIdx==1`` のみ。複数 BackFlow group は未対応です。
 
--  ローカル更新は、通常の ``Orbital`` / ``OrbitalAntiParallel``（非 FSZ）では
-   ``NExUpdatePath==0``（hopping）または ``NExUpdatePath==1``（hopping + exchange）、
-   ``OrbitalGeneral``（FSZ）では ``NExUpdatePath==0`` のみ。
+-  ローカル更新は、通常の ``Orbital`` / ``OrbitalAntiParallel`` （非 FSZ）では
+   ``NExUpdatePath==0`` （hopping）または ``NExUpdatePath==1`` （hopping + exchange）、
+   ``OrbitalGeneral`` （FSZ）では ``NExUpdatePath==0`` のみ。
    t-J 用更新経路、Kondo update、doublon-only update、``NExUpdatePath>=2`` の
    pure-spin / weighted local update との併用は未対応です。
 
@@ -3093,7 +3093,7 @@ BackFlow は現時点では以下の範囲でのみ使用できます。範囲�
 -  ``Orbital`` / ``OrbitalAntiParallel`` の通常形式では、Hamiltonian は
    ``Trans``、number-operator 型の相互作用（``CoulombIntra``,
    ``CoulombInter``, ``Hund``）、および二体項 ``PairHop``、``Exchange``、
-   ``InterAll``（スピンを保存する因子対）を使用できます。二体項は
+   ``InterAll`` （スピンを保存する因子対）を使用できます。二体項は
    BackFlow 用の二体 Green 関数で評価され、局所エネルギーのループは
    項について OpenMP 並列化されています。
 
@@ -3426,7 +3426,7 @@ RBM因子
 
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
-のうち、 :math:`\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] ` の設定を行います。指定するパラメータはサイト番号 :math:`i`、スピン番号 :math:`\sigma`、および :math:`a_{i \sigma}` の変分パラメータの番号です。以下にファイル例を記載します。
+のうち、 :math:`\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right]` の設定を行います。指定するパラメータはサイト番号 :math:`i`、スピン番号 :math:`\sigma`、および :math:`a_{i \sigma}` の変分パラメータの番号です。以下にファイル例を記載します。
 
 ::
 

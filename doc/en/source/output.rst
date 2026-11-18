@@ -7,7 +7,7 @@ Output files
 
 The list of output files are shown in Table [Table:Output], where \*\*\*
 and xxx are the header indicated by
-``CParaFileHead``,``CDataFileHead`` in ``ModPara`` file, respectively.
+``CParaFileHead``, ``CDataFileHead`` in ``ModPara`` file, respectively.
 yyy is a number given by
 ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp``,
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in

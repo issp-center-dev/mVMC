@@ -3490,7 +3490,7 @@ Parameters
    **Type :** int-type (blank parameter not allowed)
 
    **Description :** An integer giving kinds of variational parameters.
-   The value is :math:`(2n+s)\times` [int01]:math:`+t`, where
+   The value is :math:`(2n+s)\times` [int01] :math:`+t`, where
    :math:`n`, :math:`s` and :math:`t` are given by the following
    relation:
 
@@ -3627,7 +3627,7 @@ Parameters
    **Type :** int-type (blank parameter not allowed)
 
    **Description :** An integer giving kinds of variational parameters.
-   The value is :math:`(2n+s)\times` [int01]:math:`+t`, where
+   The value is :math:`(2n+s)\times` [int01] :math:`+t`, where
    :math:`n`, :math:`s` and :math:`t` are given by the following
    relation:
 
@@ -3672,7 +3672,7 @@ In the general RBM correlation factors,
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 
-this file sets the calculation conditions of  :math:`\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] ` .
+this file sets the calculation conditions of  :math:`\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right]` .
 A site index :math:`i`, a spin index :math:`\sigma` and the variational parameters
 :math:`a_{i \sigma}` are specified. An example of the file format is shown as
 follows.
@@ -3811,7 +3811,7 @@ In the general RBM correlation factors,
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 
-this file sets the calculation conditions of :math:`b_k` in :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
+this file sets the calculation conditions of :math:`b_k` in :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]`.
 A hidden neuron index :math:`k` and the variational parameters
 :math:`h_{k}` are specified. An example of the file format is shown as
 follows.
@@ -3845,7 +3845,7 @@ variational parameters as :math:`N_{v}`, respectively.
 
 -  Lines 4 - 5: Header
 
--  Lines 6 - (5+:math:`N_{\rm neuronGeneral}`): [int03] [int04]
+-  Lines 6 - (5+ :math:`N_{\rm neuronGeneral}`): [int03] [int04]
 
 -  Lines (6+ :math:`N_{\rm neuronGeneral}` ) -
    (5+ :math:`N_{\rm neuronGeneral}` + :math:`N_v`): [int05] [int06]
@@ -3939,7 +3939,7 @@ In the general RBM correlation factors,
    {\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]
 
 
-this file sets the calculation conditions of :math:`W_{i\sigma k}` in :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
+this file sets the calculation conditions of :math:`W_{i\sigma k}` in :math:`\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]`.
 A site index :math:`i`, a spin index :math:`\sigma`, a hidden neuron index :math:`k` and the variational parameters
 :math:`W_{i\sigma k}` are specified. An example of the file format is shown as
 follows.
@@ -3976,7 +3976,7 @@ variational parameters as :math:`N_{v}`.
 
 -  Lines 4 - 5: Header
 
--  Lines 6 - (5+:math:`2 N_s N_{\rm neuronGeneral}`): [int03] [int04] [int05] [int06]
+-  Lines 6 - (5+ :math:`2 N_s N_{\rm neuronGeneral}`): [int03] [int04] [int05] [int06]
 
 -  Lines (6+ :math:`2 N_s N_{\rm neuronGeneral}` ) -
    (5+ :math:`2 N_s N_{\rm neuronGeneral}` + :math:`N_v`): [int07] [int08]
@@ -4245,7 +4245,7 @@ This file sets the calculation conditions of pair orbitals
 Site numbers :math:`i, j`, the spin index :math:`\sigma` and the
 variational parameters :math:`f_{i\sigma j\sigma}` are indicated. The
 indexes of :math:`f_{i\sigma j\sigma}` must satisfy the condition
-:math:`i < j `, where :math:`\sigma = 0` or :math:`1` and process will
+:math:`i < j`, where :math:`\sigma = 0` or :math:`1` and process will
 terminate when the condition is broken. An example of the file format is
 shown as follows.
 

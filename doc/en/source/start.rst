@@ -125,7 +125,7 @@ We can compile mVMC as
    make
 
 Here, we set a path to mVMC as ``$PathTomvmc`` and to a build directory
-as `` $HOME/build/mvmc``. After compilation, ``src`` directory is
+as ``$HOME/build/mvmc``. After compilation, ``src`` directory is
 constructed below a ``$HOME/build/mvmc`` directory and we obtain an
 executable ``vmc.out`` in ``src/`` directory.
 
