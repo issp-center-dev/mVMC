@@ -1114,8 +1114,8 @@ Keywords and parameters
    seed and all eight alternative seeds checked.
 
    Finite-S final sampling can frequently propose configurations where
-   :math:`\Phi` vanishes. For example, if H conserves N, both HΨ and
-   :math:`\Phi` vanish outside the particle-number support of Ψ. Ordinary
+   :math:`\Phi` vanishes. For example, if H conserves N, both :math:`H\Psi` and
+   :math:`\Phi` vanish outside the particle-number support of :math:`\Psi`. Ordinary
    binary64 evaluation need not certify those zeros, so backend-free runs
    cannot be relied on to complete. The supplied sample invoked refinement
    9088 times, including 4882 exact-zero outcomes, in a validation run;
