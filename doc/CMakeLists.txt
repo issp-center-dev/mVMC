@@ -1,3 +1,6 @@
+set(SPHINX_OPTS "" CACHE STRING
+  "Extra sphinx-build options as a semicolon-separated list, e.g. -W;--keep-going")
+
 add_subdirectory(en/source)
 add_subdirectory(ja/source)
 add_subdirectory(tutorial/ja/source)

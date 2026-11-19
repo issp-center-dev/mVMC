@@ -17,6 +17,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf.py ${CMAKE_CURRENT_BINARY_DIR})
 add_custom_target(doc-en-html ALL
   COMMAND
     ${SPHINX_EXECUTABLE}
+    ${SPHINX_OPTS}
     -b html
     -d ${SPHINX_CACHE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -26,12 +27,18 @@ add_custom_target(doc-en-html ALL
 add_custom_target(doc-en-pdf ALL
   COMMAND
     ${SPHINX_EXECUTABLE}
+    ${SPHINX_OPTS}
     -b latex
     -d ${SPHINX_CACHE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${SPHINX_PDF_DIR} 
-   COMMAND
-    cd pdf && make
+    ${SPHINX_PDF_DIR}
+  # Without these options LaTeX stops at the first error and waits for
+  # keyboard input. Not batchmode: the error must still reach the console.
+  COMMAND
+    ${CMAKE_COMMAND} -E env
+    "LATEXOPTS=-interaction=nonstopmode -halt-on-error"
+    make -C ${SPHINX_PDF_DIR}
+  VERBATIM
   )
 
 add_custom_target(doc-en DEPENDS doc-en-html doc-en-pdf)
