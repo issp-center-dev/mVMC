@@ -717,7 +717,7 @@ FSZ・grand-canonicalのBackFlowと最適化は従来どおりです。</p>
 <code class="docutils literal notranslate"><span class="pre">currentNonfinite</span></code> は修復・再計算時の観測回数で、異なる配置の数ではありません。
 測定skipの集計は既存の失敗分岐を記録するもので、新しいsample除外を導入しません。
 行列分解失敗でskipしたsampleは <code class="docutils literal notranslate"><span class="pre">measureFactorFailed</span></code> に数え、<code class="docutils literal notranslate"><span class="pre">Q</span></code> には含めません。</p>
-<p>異常詳細 <code class="docutils literal notranslate"><span class="pre">E</span></code> は、各rank・run全体で4種類に各4件、<a href="#id6"><span class="problematic" id="id7">**</span></a>最大16件**です。
+<p>異常詳細 <code class="docutils literal notranslate"><span class="pre">E</span></code> は、各rank・run全体で4種類に各4件、 <strong>最大16件</strong> です。
 <code class="docutils literal notranslate"><span class="pre">detailsTotal</span></code> と <code class="docutils literal notranslate"><span class="pre">suppressedTotal</span></code> は累計、他の <code class="docutils literal notranslate"><span class="pre">Z</span></code> 列はbinごとにリセットします。
 詳細を抑制した後も件数は集計し続けます。</p>
 <p><code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">bin</span> <span class="pre">out</span> <span class="pre">in</span> <span class="pre">move</span> <span class="pre">kind</span> <span class="pre">qp</span> <span class="pre">mask</span> <span class="pre">a</span> <span class="pre">b</span> <span class="pre">c</span> <span class="pre">d</span> <span class="pre">e</span> <span class="pre">f</span> <span class="pre">info</span> <span class="pre">action</span></code></p>
@@ -740,8 +740,8 @@ f=sample番号。蓄積・zero寄与・重み/energy/行列分解の既存skip�
 このログがonの場合、既存の測定失敗のstderr反復は、上限付き詳細と全件カウンタへ集約します。
 修復失敗時は、rank・bin・step・成分・info・再計算前後値をstderrにも出し、停止します。</p>
 </section>
-<section id="id8">
-<h4>現在状態の異常時復旧<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h4>
+<section id="id6">
+<h4>現在状態の異常時復旧<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h4>
 <p>修復onで、仮accept後のlog振幅がzero・非有限になったときだけ、提案先の全成分を
 1回再計算します。有限に戻れば保存重みと修復の基準・最小履歴を更新して続行します。
 直接再計算でもzeroならhop/exchangeを取り消し、移動前の配置のPfaffianと逆行列を
@@ -802,7 +802,7 @@ NaN・無限大の提案logとは区別します。負の有限log比は同じ�
 <li><a class="reference internal" href="#st-power-lanczos-step">1st power-Lanczos stepでの物理量の計算</a></li>
 <li><a class="reference internal" href="#lanczos-sampler">第1Lanczos samplerの成分単位修復</a><ul>
 <li><a class="reference internal" href="#zero">zero・異常時のログ</a></li>
-<li><a class="reference internal" href="#id8">現在状態の異常時復旧</a></li>
+<li><a class="reference internal" href="#id6">現在状態の異常時復旧</a></li>
 </ul>
 </li>
 </ul>

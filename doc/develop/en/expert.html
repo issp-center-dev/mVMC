@@ -1065,8 +1065,8 @@ or <code class="docutils literal notranslate"><span class="pre">OFF</span></code
 final warm-up with <code class="docutils literal notranslate"><span class="pre">numeric_zero</span></code>; this was observed with the supplied
 seed and all eight alternative seeds checked.</p>
 <p>Finite-S final sampling can frequently propose configurations where
-<span class="math notranslate nohighlight">\(\Phi\)</span> vanishes. For example, if H conserves N, both HΨ and
-<span class="math notranslate nohighlight">\(\Phi\)</span> vanish outside the particle-number support of Ψ. Ordinary
+<span class="math notranslate nohighlight">\(\Phi\)</span> vanishes. For example, if H conserves N, both <span class="math notranslate nohighlight">\(H\Psi\)</span> and
+<span class="math notranslate nohighlight">\(\Phi\)</span> vanish outside the particle-number support of <span class="math notranslate nohighlight">\(\Psi\)</span>. Ordinary
 binary64 evaluation need not certify those zeros, so backend-free runs
 cannot be relied on to complete. The supplied sample invoked refinement
 9088 times, including 4882 exact-zero outcomes, in a validation run;
@@ -3054,7 +3054,7 @@ variational parameters (0: double, 1: complex).</p>
 <li><p>[ int07 ]</p>
 <p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
 <p><strong>Description :</strong> An integer giving kinds of variational parameters.
-The value is <span class="math notranslate nohighlight">\((2n+s)\times\)</span> [int01]:math:<cite>+t</cite>, where
+The value is <span class="math notranslate nohighlight">\((2n+s)\times\)</span> [int01] <span class="math notranslate nohighlight">\(+t\)</span>, where
 <span class="math notranslate nohighlight">\(n\)</span>, <span class="math notranslate nohighlight">\(s\)</span> and <span class="math notranslate nohighlight">\(t\)</span> are given by the following
 relation:</p>
 <ul class="simple">
@@ -3165,7 +3165,7 @@ variational parameters (0: double, 1: complex).</p>
 <li><p>[ int09 ]</p>
 <p><strong>Type :</strong> int-type (blank parameter not allowed)</p>
 <p><strong>Description :</strong> An integer giving kinds of variational parameters.
-The value is <span class="math notranslate nohighlight">\((2n+s)\times\)</span> [int01]:math:<cite>+t</cite>, where
+The value is <span class="math notranslate nohighlight">\((2n+s)\times\)</span> [int01] <span class="math notranslate nohighlight">\(+t\)</span>, where
 <span class="math notranslate nohighlight">\(n\)</span>, <span class="math notranslate nohighlight">\(s\)</span> and <span class="math notranslate nohighlight">\(t\)</span> are given by the following
 relation:</p>
 <ul class="simple">
@@ -3203,8 +3203,8 @@ this file.</p></li>
 <p>In the general RBM correlation factors,</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
-<p>this file sets the calculation conditions of  <span class="math notranslate nohighlight">\(\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] ` .
-A site index :math:`i\)</span>, a spin index <span class="math notranslate nohighlight">\(\sigma\)</span> and the variational parameters
+<p>this file sets the calculation conditions of  <span class="math notranslate nohighlight">\(\exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right]\)</span> .
+A site index <span class="math notranslate nohighlight">\(i\)</span>, a spin index <span class="math notranslate nohighlight">\(\sigma\)</span> and the variational parameters
 <span class="math notranslate nohighlight">\(a_{i \sigma}\)</span> are specified. An example of the file format is shown as
 follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
@@ -3312,8 +3312,8 @@ this file.</p></li>
 <p>In the general RBM correlation factors,</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
-<p>this file sets the calculation conditions of <span class="math notranslate nohighlight">\(b_k\)</span> in <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
-A hidden neuron index :math:`k\)</span> and the variational parameters
+<p>this file sets the calculation conditions of <span class="math notranslate nohighlight">\(b_k\)</span> in <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\)</span>.
+A hidden neuron index <span class="math notranslate nohighlight">\(k\)</span> and the variational parameters
 <span class="math notranslate nohighlight">\(h_{k}\)</span> are specified. An example of the file format is shown as
 follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
@@ -3339,7 +3339,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 <li><p>Line 2: [string01] [int01]</p></li>
 <li><p>Line 3: [string02] [int02]</p></li>
 <li><p>Lines 4 - 5: Header</p></li>
-<li><p>Lines 6 - (5+:math:<cite>N_{rm neuronGeneral}</cite>): [int03] [int04]</p></li>
+<li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span>): [int03] [int04]</p></li>
 <li><p>Lines (6+ <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> ) -
 (5+ <span class="math notranslate nohighlight">\(N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int05] [int06]</p></li>
 </ul>
@@ -3412,8 +3412,8 @@ this file.</p></li>
 <p>In the general RBM correlation factors,</p>
 <div class="math notranslate nohighlight">
 \[{\cal N}_{\rm General RBM}= \exp \left[ \sum_i a_{i\sigma} n_{i\sigma} \right] \prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\]</div>
-<p>this file sets the calculation conditions of <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span> in <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right] `.
-A site index :math:`i\)</span>, a spin index <span class="math notranslate nohighlight">\(\sigma\)</span>, a hidden neuron index <span class="math notranslate nohighlight">\(k\)</span> and the variational parameters
+<p>this file sets the calculation conditions of <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span> in <span class="math notranslate nohighlight">\(\prod_k^{N_{\rm neuronGeneral}} \cosh \left[ b_k + \sum_{i\sigma} W_{i\sigma k} n_{i\sigma} \right]\)</span>.
+A site index <span class="math notranslate nohighlight">\(i\)</span>, a spin index <span class="math notranslate nohighlight">\(\sigma\)</span>, a hidden neuron index <span class="math notranslate nohighlight">\(k\)</span> and the variational parameters
 <span class="math notranslate nohighlight">\(W_{i\sigma k}\)</span> are specified. An example of the file format is shown as
 follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--------------------</span>
@@ -3442,7 +3442,7 @@ variational parameters as <span class="math notranslate nohighlight">\(N_{v}\)</
 <li><p>Line 2: [string01] [int01]</p></li>
 <li><p>Line 3: [string02] [int02]</p></li>
 <li><p>Lines 4 - 5: Header</p></li>
-<li><p>Lines 6 - (5+:math:<cite>2 N_s N_{rm neuronGeneral}</cite>): [int03] [int04] [int05] [int06]</p></li>
+<li><p>Lines 6 - (5+ <span class="math notranslate nohighlight">\(2 N_s N_{\rm neuronGeneral}\)</span>): [int03] [int04] [int05] [int06]</p></li>
 <li><p>Lines (6+ <span class="math notranslate nohighlight">\(2 N_s N_{\rm neuronGeneral}\)</span> ) -
 (5+ <span class="math notranslate nohighlight">\(2 N_s N_{\rm neuronGeneral}\)</span> + <span class="math notranslate nohighlight">\(N_v\)</span>): [int07] [int08]</p></li>
 </ul>
@@ -3659,7 +3659,7 @@ f_{i\sigma j\sigma}c_{i\sigma}^{\dagger}c_{j\sigma}^{\dagger} \right]^{N/2}|0 \r
 <p>Site numbers <span class="math notranslate nohighlight">\(i, j\)</span>, the spin index <span class="math notranslate nohighlight">\(\sigma\)</span> and the
 variational parameters <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span> are indicated. The
 indexes of <span class="math notranslate nohighlight">\(f_{i\sigma j\sigma}\)</span> must satisfy the condition
-<span class="math notranslate nohighlight">\(i &lt; j `, where :math:\)</span>sigma = 0` or <span class="math notranslate nohighlight">\(1\)</span> and process will
+<span class="math notranslate nohighlight">\(i &lt; j\)</span>, where <span class="math notranslate nohighlight">\(\sigma = 0\)</span> or <span class="math notranslate nohighlight">\(1\)</span> and process will
 terminate when the condition is broken. An example of the file format is
 shown as follows.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">====================================</span>

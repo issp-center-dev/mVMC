@@ -126,7 +126,7 @@
 変分最適化ではSR stepごとに1行、物理量計算ではbinごとに1行を書きます。
 ファイル名には <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> と <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> を適用しません。同じ
 directoryで別runを開始すると、以前の <code class="docutils literal notranslate"><span class="pre">zvo_gc.dat</span></code> は置き換えられます。
-<a href="#id2"><span class="problematic" id="id3">``</span></a>NLanczosMode=1``（grand-canonical samplingによる1 stepのLanczos）では
+<code class="docutils literal notranslate"><span class="pre">NLanczosMode=1</span></code> （grand-canonical samplingによる1 stepのLanczos）では
 このfileを出力しません。</p>
 </section>
 <section id="opt-dat">
@@ -344,14 +344,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 …
 </pre></div>
 </div>
-<section id="id4">
-<h3>ファイル形式<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<section id="id2">
+<h3>ファイル形式<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id5">
-<h3>パラメータ<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<section id="id3">
+<h3>パラメータ<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span></p>
 <p><strong>形式 :</strong> int型</p>
@@ -395,14 +395,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 …
 </pre></div>
 </div>
-<section id="id6">
-<h3>ファイル形式<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<section id="id4">
+<h3>ファイル形式<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int04 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int06 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int07 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> int08 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id7">
-<h3>パラメータ<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
+<section id="id5">
+<h3>パラメータ<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> int01 <span class="math notranslate nohighlight">\(]\)</span>,
 <span class="math notranslate nohighlight">\([\)</span> int03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> int05 <span class="math notranslate nohighlight">\(]\)</span>,
@@ -446,14 +446,14 @@ xxxには <code class="docutils literal notranslate"><span class="pre">CDataFile
 …
 </pre></div>
 </div>
-<section id="id8">
-<h3>ファイル形式<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
+<section id="id6">
+<h3>ファイル形式<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>[N] [i_1] [sigma_1] [j_1] [tau_1] ... [i_N] [sigma_N] [j_N] [tau_N] [double01] [double02]</p></li>
 </ul>
 </section>
-<section id="id9">
-<h3>パラメータ<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
+<section id="id7">
+<h3>パラメータ<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p>[N]</p>
 <p><strong>形式 :</strong> Int</p>
@@ -513,14 +513,14 @@ MPI reduction後の実部・虚部です。<code class="docutils literal notrans
 …
 </pre></div>
 </div>
-<section id="id10">
-<h3>ファイル形式<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
+<section id="id8">
+<h3>ファイル形式<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>  <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p></li>
 </ul>
 </section>
-<section id="id11">
-<h3>パラメータ<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
+<section id="id9">
+<h3>パラメータ<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p><span class="math notranslate nohighlight">\([\)</span> double01 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double02 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double03 <span class="math notranslate nohighlight">\(]\)</span>, <span class="math notranslate nohighlight">\([\)</span> double04 <span class="math notranslate nohighlight">\(]\)</span></p>
 <p><strong>形式 :</strong> double型</p>
@@ -606,7 +606,7 @@ chainごとのGeyer initial-positive推定器は統計的非効率度
 以前の出力は <code class="docutils literal notranslate"><span class="pre">M/(2*g)</span></code> を用いていたため、有効sample数が修正後の1/2、
 自己相関時間が修正後の2倍でした。この修正はcanonical、grand canonical、独立Hamiltonianの
 各経路に適用され、sampleされた物理量は変わりません。</p>
-<p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1``（1</span> <span class="pre">stepのみ）でも、headerは</span> <span class="pre">``order=1</span></code> の同じ形式で、
+<p><code class="docutils literal notranslate"><span class="pre">NGrandCanonical=1</span></code> （1 stepのみ）でも、headerは <code class="docutils literal notranslate"><span class="pre">order=1</span></code> の同じ形式で、
 data行は同じ11項目です。energyとvarianceは <span class="math notranslate nohighlight">\(-\mu N\)</span> を含む入力
 <span class="math notranslate nohighlight">\(H\)</span> の全粒子数にわたる値で、このfileには粒子数の項目を追加しません。
 最終状態の粒子数統計は別の <code class="docutils literal notranslate"><span class="pre">xxx_gc_pl_number_yyy.dat</span></code> に出力します。最終chainで
@@ -675,7 +675,7 @@ raw高次momentの桁落ちを避けられます。HermiticityおよびHankel恒
 <h2>xxx_ls_support_yyy.dat<a class="headerlink" href="#xxx-ls-support-yyy-dat" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">NLanczosMode&gt;0</span></code> のとき、<code class="docutils literal notranslate"><span class="pre">NLanczosStep=1</span></code> と <code class="docutils literal notranslate"><span class="pre">2</span></code> の両方で出力する
 version付き3行の診断ファイルです。1行目には <code class="docutils literal notranslate"><span class="pre">step</span></code>、<code class="docutils literal notranslate"><span class="pre">mode</span></code>
-（<code class="docutils literal notranslate"><span class="pre">strict</span></code> または <code class="docutils literal notranslate"><span class="pre">experimental</span></code>）、<code class="docutils literal notranslate"><span class="pre">result``（``pass</span></code>、
+（<code class="docutils literal notranslate"><span class="pre">strict</span></code> または <code class="docutils literal notranslate"><span class="pre">experimental</span></code>）、<code class="docutils literal notranslate"><span class="pre">result</span></code> （<code class="docutils literal notranslate"><span class="pre">pass</span></code>、
 <code class="docutils literal notranslate"><span class="pre">mismatch</span></code>、<code class="docutils literal notranslate"><span class="pre">inconclusive</span></code>、<code class="docutils literal notranslate"><span class="pre">invalid</span></code>）、<code class="docutils literal notranslate"><span class="pre">quality</span></code>、および
 <code class="docutils literal notranslate"><span class="pre">scope=necessary-not-sufficient</span></code> を記録します。experimental modeで監査に
 失敗した場合、<code class="docutils literal notranslate"><span class="pre">quality=biased-diagnostic-only</span></code> となります。</p>
@@ -684,10 +684,10 @@ effective sample数、<code class="docutils literal notranslate"><span class="pr
 difference、block standard error、scoreに続き、<code class="docutils literal notranslate"><span class="pre">M03</span></code>・<code class="docutils literal notranslate"><span class="pre">M12</span></code> に対する
 同じfieldを出力します。1st stepの3次anchor fieldはNaNです。
 <code class="docutils literal notranslate"><span class="pre">M02</span></code>/<code class="docutils literal notranslate"><span class="pre">M11</span></code> と <code class="docutils literal notranslate"><span class="pre">M03</span></code>/<code class="docutils literal notranslate"><span class="pre">M12</span></code> はsolverのmoment表とは独立に蓄積します。
-<code class="docutils literal notranslate"><span class="pre">inconclusive``には、有効sampleが32未満の場合、およびrelative</span> <span class="pre">differenceが</span>
-<span class="pre">0.5以上でscoreが4.5未満の未解決な大差を含みます。reweighting</span> <span class="pre">weightが厳密に</span>
-<span class="pre">0のsampleは有効sampleに数えません。</span>
-<span class="pre">strict</span> <span class="pre">modeで</span> <span class="pre">``pass</span></code> 以外となった場合、このfileをflushした後、Lanczos結果を
+<code class="docutils literal notranslate"><span class="pre">inconclusive</span></code> には、有効sampleが32未満の場合、およびrelative differenceが
+0.5以上でscoreが4.5未満の未解決な大差を含みます。reweighting weightが厳密に
+0のsampleは有効sampleに数えません。
+strict modeで <code class="docutils literal notranslate"><span class="pre">pass</span></code> 以外となった場合、このfileをflushした後、Lanczos結果を
 出力する前に計算を停止します。</p>
 </section>
 <section id="xxx-ls-cisajs-yyy-dat">
@@ -735,24 +735,24 @@ TwoBodyG指定ファイルで指定された二体グリーン関数 <span class
 <li><a class="reference internal" href="#xxx-calctimer-dat">xxx_CalcTimer.dat</a></li>
 <li><a class="reference internal" href="#xxx-time-zzz-dat">xxx_time_zzz.dat</a></li>
 <li><a class="reference internal" href="#xxx-cisajs-yyy-dat">xxx_cisajs_yyy.dat</a><ul>
+<li><a class="reference internal" href="#id2">ファイル形式</a></li>
+<li><a class="reference internal" href="#id3">パラメータ</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id4">ファイル形式</a></li>
 <li><a class="reference internal" href="#id5">パラメータ</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#xxx-cisajscktalt-yyy-dat">xxx_cisajscktalt_yyy.dat</a><ul>
+<li><a class="reference internal" href="#xxx-nbodyg-yyy-dat">xxx_NBodyG_yyy.dat</a><ul>
 <li><a class="reference internal" href="#id6">ファイル形式</a></li>
 <li><a class="reference internal" href="#id7">パラメータ</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#xxx-nbodyg-yyy-dat">xxx_NBodyG_yyy.dat</a><ul>
-<li><a class="reference internal" href="#id8">ファイル形式</a></li>
-<li><a class="reference internal" href="#id9">パラメータ</a></li>
-</ul>
-</li>
 <li><a class="reference internal" href="#xxx-anomalousg-yyy-dat">xxx_anomalousg_yyy.dat</a></li>
 <li><a class="reference internal" href="#xxx-twist-yyy-dat">xxx_twist_yyy.dat</a><ul>
-<li><a class="reference internal" href="#id10">ファイル形式</a></li>
-<li><a class="reference internal" href="#id11">パラメータ</a></li>
+<li><a class="reference internal" href="#id8">ファイル形式</a></li>
+<li><a class="reference internal" href="#id9">パラメータ</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#xxx-ls-out-yyy-dat">xxx_ls_out_yyy.dat</a></li>

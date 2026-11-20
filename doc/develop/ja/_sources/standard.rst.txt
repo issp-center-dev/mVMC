@@ -568,7 +568,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 -  ``NSPGaussLeg``
 
    **形式 :** int型
-   (1以上、デフォルト値は:math:`S_z` 保存系で ``2Sz=0`` の時は ``8``)
+   (1以上、デフォルト値は :math:`S_z` 保存系で ``2Sz=0`` の時は ``8``)
 
    **説明 :**
    スピン量子数射影の :math:`\beta` 積分( :math:`S^y` 回転)のGauss-Legendre求積法の分点数。
@@ -732,7 +732,7 @@ Figs. :num:`latticepng` , :num:`honeycombpng` , :num:`kagomepng`
 -  ``OutputMode``
 
    **形式 :** ``"none"``, ``"correlation"``, ``"full"`` のいずれか
-   (デフォルトは``correlation``)
+   (デフォルトは ``correlation``)
 
    **説明 :** 計算を行う相関関数を指定します。
    ``"none"`` の場合は相関関数を計算しません。

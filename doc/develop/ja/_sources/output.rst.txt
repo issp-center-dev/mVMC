@@ -63,7 +63,7 @@ Grand-canonical粒子数出力 (zvo\_gc.dat)
 変分最適化ではSR stepごとに1行、物理量計算ではbinごとに1行を書きます。
 ファイル名には ``CDataFileHead`` と ``NDataIdxStart`` を適用しません。同じ
 directoryで別runを開始すると、以前の ``zvo_gc.dat`` は置き換えられます。
-``NLanczosMode=1``（grand-canonical samplingによる1 stepのLanczos）では
+``NLanczosMode=1`` （grand-canonical samplingによる1 stepのLanczos）では
 このfileを出力しません。
 
 変分パラメータ出力ファイル(\*\*\*\_opt.dat)
@@ -585,7 +585,7 @@ chainごとのGeyer initial-positive推定器は統計的非効率度
 自己相関時間が修正後の2倍でした。この修正はcanonical、grand canonical、独立Hamiltonianの
 各経路に適用され、sampleされた物理量は変わりません。
 
-``NGrandCanonical=1``（1 stepのみ）でも、headerは ``order=1`` の同じ形式で、
+``NGrandCanonical=1`` （1 stepのみ）でも、headerは ``order=1`` の同じ形式で、
 data行は同じ11項目です。energyとvarianceは :math:`-\mu N` を含む入力
 :math:`H` の全粒子数にわたる値で、このfileには粒子数の項目を追加しません。
 最終状態の粒子数統計は別の ``xxx_gc_pl_number_yyy.dat`` に出力します。最終chainで
@@ -664,7 +664,7 @@ xxx\_ls\_support\_yyy.dat
 
 ``NLanczosMode>0`` のとき、``NLanczosStep=1`` と ``2`` の両方で出力する
 version付き3行の診断ファイルです。1行目には ``step``、``mode``
-（``strict`` または ``experimental``）、``result``（``pass``、
+（``strict`` または ``experimental``）、``result`` （``pass``、
 ``mismatch``、``inconclusive``、``invalid``）、``quality``、および
 ``scope=necessary-not-sufficient`` を記録します。experimental modeで監査に
 失敗した場合、``quality=biased-diagnostic-only`` となります。
@@ -674,7 +674,7 @@ effective sample数、``M02``・``M11`` とその差の実部・虚部、relativ
 difference、block standard error、scoreに続き、``M03``・``M12`` に対する
 同じfieldを出力します。1st stepの3次anchor fieldはNaNです。
 ``M02``/``M11`` と ``M03``/``M12`` はsolverのmoment表とは独立に蓄積します。
-``inconclusive``には、有効sampleが32未満の場合、およびrelative differenceが
+``inconclusive`` には、有効sampleが32未満の場合、およびrelative differenceが
 0.5以上でscoreが4.5未満の未解決な大差を含みます。reweighting weightが厳密に
 0のsampleは有効sampleに数えません。
 strict modeで ``pass`` 以外となった場合、このfileをflushした後、Lanczos結果を
