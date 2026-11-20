@@ -153,7 +153,7 @@ html_logo = '../../figs/mVMC.png'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -218,6 +218,12 @@ latex_elements = {
 #'preamble': '\usepackage{pxjahyper}',
 #    'babel': '\\usepackage[english]{babel}',
 #    'classoptions': ',dvipdfmx,openany'
+
+# Let pdflatex typeset Greek letters written directly in the text.
+# Not switching to xelatex/lualatex: that changes the fonts of the whole PDF
+# and turns unsupported characters into silently missing glyphs.
+# Symbols in formulas should still be written with the math role.
+    'fontenc': r'\usepackage[LGR,T1]{fontenc}',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

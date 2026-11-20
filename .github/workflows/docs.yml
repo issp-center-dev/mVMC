@@ -1,0 +1,96 @@
+name: docs
+
+# deploy_docs.yml publishes the HTML manuals only after a merge, and never
+# builds the PDF manuals. This workflow builds both for every change to the
+# documentation so that broken markup is caught in the pull request.
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    paths:
+      - 'doc/**'
+      - 'src/mVMC/include/version.h' # read by conf.py
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'doc/**'
+      - 'src/mVMC/include/version.h'
+      - '.github/workflows/docs.yml'
+
+env:
+  # Any Sphinx or docutils warning fails the build.
+  SPHINX_OPTS: "-W;--keep-going"
+
+jobs:
+  html:
+    name: "docs: HTML"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+
+      - name: pip
+        run: pip install sphinx sphinx-numfig sphinxcontrib-spelling
+
+      - name: cmake
+        run: cmake -S . -B build -DDocument=ON -DENABLE_MPI=OFF "-DSPHINX_OPTS=${SPHINX_OPTS}"
+
+      - name: build doc-ja-html
+        run: cmake --build build --target doc-ja-html
+
+      - name: build doc-en-html
+        run: cmake --build build --target doc-en-html
+
+      - name: build tutorial-ja-html
+        run: cmake --build build --target tutorial-ja-html
+
+  pdf:
+    name: "docs: PDF"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+
+      - name: pip
+        run: pip install sphinx sphinx-numfig sphinxcontrib-spelling
+
+      - name: apt (TeX Live)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            latexmk \
+            texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended tex-gyre cm-super \
+            texlive-lang-greek texlive-lang-japanese
+
+      - name: cmake
+        run: cmake -S . -B build -DDocument=ON -DENABLE_MPI=OFF "-DSPHINX_OPTS=${SPHINX_OPTS}"
+
+      - name: build doc-ja-pdf
+        run: cmake --build build --target doc-ja-pdf
+
+      - name: build doc-en-pdf
+        run: cmake --build build --target doc-en-pdf
+
+      - name: build tutorial-ja-pdf
+        run: cmake --build build --target tutorial-ja-pdf
+
+      - name: upload PDFs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: manual-pdf
+          path: |
+            build/doc/ja/source/pdf/*.pdf
+            build/doc/en/source/pdf/*.pdf
+            build/doc/tutorial/ja/source/pdf/*.pdf
+          if-no-files-found: error
