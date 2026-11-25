@@ -2792,6 +2792,9 @@ endforeach(model)
 
 add_test(NAME UHF_InterAll COMMAND ${PYTHON_EXECUTABLE} test_UHF_InterAll.py)
 set_tests_properties(UHF_InterAll PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_input_validation.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+add_test(NAME UHF_InputValidation COMMAND ${PYTHON_EXECUTABLE} test_UHF_input_validation.py)
+set_tests_properties(UHF_InputValidation PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python")
 
 add_subdirectory(data)
 

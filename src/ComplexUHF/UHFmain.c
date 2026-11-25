@@ -113,7 +113,9 @@ int main(int argc, char* argv[]){
     for(i=0;i<X.Bind.Def.IterationMax;i++){
       X.Bind.Def.step=i;
      makeham(&(X.Bind));
-     diag(&(X.Bind));
+     if (diag(&(X.Bind)) != 0) {
+       exit(1);
+     }
      green(&(X.Bind));
      cal_energy(&(X.Bind));
      printf(" %d  %.12lf %.12lf %lf\n",i,X.Bind.Phys.rest,X.Bind.Phys.energy,X.Bind.Phys.num);
@@ -132,13 +134,17 @@ int main(int argc, char* argv[]){
     }else{
       printf("\n!! Hartree-Fock calculation is not finished at %d  step!! \n",i);
       printf("\n!! Green functions at the last step are output (these are not converged )!!! \n");
-      output(&(X.Bind));
+      if (output(&(X.Bind)) != 0) {
+        exit(1);
+      }
       return -1;
     }
     printf("########Finish: Hartree-Fock calculation ###########\n");
 
     printf("\n########Start: Calculation of Physical Quantities ###########\n");
-    output(&(X.Bind));
+    if (output(&(X.Bind)) != 0) {
+      exit(1);
+    }
     printf("########Finish: Calculation of Physical Quantities ###########\n");
 
 

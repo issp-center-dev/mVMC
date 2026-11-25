@@ -74,13 +74,67 @@ int ReadDefFileError(
 	return 1;
 }
 
+int CheckSite(
+        const int iSite,
+        const int iMaxNum
+);
+
 int CheckPairSite(
         const int iSite1,
         const int iSite2,
         const int iMaxNum
 );
 
+int CheckQuadSite(
+        const int iSite1,
+        const int iSite2,
+        const int iSite3,
+        const int iSite4,
+        const int iMaxNum
+);
+
 void SetInitialValue(struct DefineList *X);
+
+/**
+ * @brief Check that a definition file does not hold more records than its header declares.
+ * @retval 0 the record at idx is inside the declared range.
+ * @retval -1 the declared number of records has already been read.
+ */
+static int CheckRecordCount(const int idx, const int iNum, const char *defname) {
+  if (idx >= iNum) {
+    fprintf(stderr, "Error in %s: more records than declared (%d).\n", defname, iNum);
+    return -1;
+  }
+  return 0;
+}
+
+/**
+ * @brief Check that a spin index is 0 or 1.
+ */
+static int CheckSpin(const int iSpin) {
+  if (iSpin != 0 && iSpin != 1) return -1;
+  return 0;
+}
+
+static int ReportFormat(const char *defname, const int row) {
+  fprintf(stderr, "Error in %s: incorrect format at record %d.\n", defname, row);
+  return 1;
+}
+
+static int ReportSite(const char *defname, const int row) {
+  fprintf(stderr, "Error in %s: Site index is incorrect at record %d.\n", defname, row);
+  return 1;
+}
+
+static int ReportSpin(const char *defname, const int row) {
+  fprintf(stderr, "Error in %s: Spin index must be 0 or 1 at record %d.\n", defname, row);
+  return 1;
+}
+
+static int ReportOrbitalIdx(const char *defname, const int row, const int idx, const int iNum) {
+  fprintf(stderr, "Error in %s: orbital index %d is outside [0, %d) at record %d.\n", defname, idx, iNum, row);
+  return 1;
+}
 
 char* ReadBuffInt(FILE *fp, int *iNbuf){
 	char *cerr;
@@ -89,7 +143,12 @@ char* ReadBuffInt(FILE *fp, int *iNbuf){
 	cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
 	if(cerr != NULL) {
 		cerr = fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp);
-		sscanf(ctmp2, "%s %d\n", ctmp, iNbuf); //2
+		if(cerr != NULL) {
+			if (sscanf(ctmp2, "%s %d\n", ctmp, iNbuf) != 2 || *iNbuf < 0) {
+				fprintf(stderr, "Error: the number of records in a header must be a non-negative integer.\n");
+				cerr = NULL;
+			}
+		}
 	}
 	return cerr;
 }
@@ -182,10 +241,10 @@ int ReadDefFileNInt(
         strcpy(defname, cFileNameListFile[iKWidx]);
         if (strcmp(defname, "") == 0) continue;
         fprintf(stdout, "  Read File '%s' for %s.\n", defname, cKWListOfFileNameList[iKWidx]);
+        cerr = ctmp;
         fp = fopen(defname, "r");
         if (fp == NULL) {
-            info = ReadDefFileError(defname);
-            fclose(fp);
+            ReadDefFileError(defname);
             return (-1);
         } else {
             switch (iKWidx) {
@@ -352,16 +411,46 @@ int ReadDefFileNInt(
 		return -1;
 	}
 
+  if (X->Nsite <= 0) {
+    fprintf(stderr, "Error: Nsite (in modpara.def) must be a positive integer.\n");
+    return -1;
+  }
+
   //CalcNCond
-  if(X->Ncond != -1){
-      if(X->iFlgOrbital == 1) {
-          if (X->Ncond % 2 != 0) {
-              fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
-              return -1;
-          } else X->Ne = (X->NLocSpn + X->Ncond) / 2;
-          X->Nsize = 2 * X->Ne;
-      }
-      else X->Nsize = X->NLocSpn + X->Ncond;
+  if (X->Ncond == -1) {
+    /* Ne is the number of electrons per spin, as in mVMC. */
+    if (X->Ne == -1) {
+      fprintf(stderr, "Error: Ne or NCond must be given in modpara.def.\n");
+      return -1;
+    }
+    if (X->Ne < 0) {
+      fprintf(stderr, "Error: Ne (in modpara.def) must be a non-negative integer.\n");
+      return -1;
+    }
+    X->Ncond = 2 * X->Ne - X->NLocSpn;
+    if (X->Ncond < 0) {
+      fprintf(stderr, "Error: 2*Ne must be (2*Ne >= NLocalSpin).\n");
+      return -1;
+    }
+  } else if (X->Ncond < 0) {
+    fprintf(stderr, "Error: NCond (in modpara.def) must be a non-negative integer.\n");
+    return -1;
+  }
+  if (X->iFlgOrbital == 1) {
+    if (X->Ncond % 2 != 0) {
+      fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
+      return -1;
+    }
+    X->Ne = (X->NLocSpn + X->Ncond) / 2;
+    X->Nsize = 2 * X->Ne;
+  } else {
+    X->Nsize = X->NLocSpn + X->Ncond;
+    if (X->Ne == -1) X->Ne = X->Nsize / 2;
+  }
+  if (X->Nsize <= 0 || X->Nsize >= 2 * X->Nsite) {
+    fprintf(stderr, "Error: the number of electrons NLocalSpin+NCond=%d must satisfy 0 < N < 2*Nsite (Nsite=%d).\n",
+            X->Nsize, X->Nsite);
+    return -1;
   }
 
   //CheckGeneral Orbital
@@ -400,10 +489,11 @@ int ReadDefFileIdxPara(
   int iKWidx = 0;
   int i, j;
   int spn_i, spn_j, all_i, all_j;
-  int fij, fijsgn;
+  int fij, fijsgn, fij_org;
   int ndata;
   int idx, Orbitalidx, Orbitalsgn;
   int x0, x1, x2, x3;
+  int ia[8];
   int info, i_spin, j_spin;
   double dReValue;
   double dImValue;
@@ -412,20 +502,10 @@ int ReadDefFileIdxPara(
 
   //Initialize OrbitalIdx
   // -1: not output
-  if(X->iFlgOrbitalGeneral==0) {
-    for (i = 0; i < X->Nsite; i++) {
-      for (j = 0; j < X->Nsite; j++) {
-        X->OrbitalIdx[i][j] = -1;
-        X->OrbitalSgn[i][j] = 0;
-      }
-    }
-  }
-  else{
-    for (i = 0; i < X->Nsite*2; i++) {
-      for (j = 0; j < X->Nsite*2; j++) {
-        X->OrbitalIdx[i][j] = -1;
-        X->OrbitalSgn[i][j] = 0;
-      }
+  for (i = 0; i < X->Nsite*2; i++) {
+    for (j = 0; j < X->Nsite*2; j++) {
+      X->OrbitalIdx[i][j] = -1;
+      X->OrbitalSgn[i][j] = 0;
     }
   }
 
@@ -443,7 +523,11 @@ int ReadDefFileIdxPara(
     /*=======================================================================*/
     for (i = 0; i < IgnoreLinesInDef; i++){
       cerr = fgets(ctmp, sizeof(ctmp) / sizeof(char), fp);
-      if(cerr==NULL) return -1;
+      if(cerr==NULL) {
+        fclose(fp);
+        ReadDefFileError(defname);
+        return -1;
+      }
     }
     idx = 0;
 
@@ -451,11 +535,27 @@ int ReadDefFileIdxPara(
       case KWLocSpin:
         /* Read locspn.def----------------------------------------*/
         while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-          sscanf(ctmp2, "%d %d\n", &(x0), &(x1));
+          if (CheckRecordCount(idx, X->Nsite, defname) != 0) {
+            info = 1;
+            break;
+          }
+          if (sscanf(ctmp2, "%d %d\n", &(x0), &(x1)) != 2) {
+            info = ReportFormat(defname, idx);
+            break;
+          }
+          if (CheckSite(x0, X->Nsite) != 0) {
+            info = ReportSite(defname, idx);
+            break;
+          }
+          if (x1 != 0 && x1 != 1) {
+            fprintf(stderr, "Error in %s: the local-spin flag must be 0 or 1 at record %d.\n", defname, idx);
+            info = 1;
+            break;
+          }
           X->LocSpn[x0] = x1;
           idx++;
         }
-        if (2 * X->Ne < X->NLocSpn) {
+        if (X->Nsize < X->NLocSpn) {
           fprintf(stderr, "Error: 2*Ne must be (2*Ne >= NLocalSpin).\n");
           info = 1;
         }
@@ -468,16 +568,29 @@ int ReadDefFileIdxPara(
         /* transfer.def--------------------------------------*/
         if (X->NTransfer > 0) {
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            if (CheckRecordCount(idx, X->NTransfer, defname) != 0) {
+              info = 1;
+              break;
+            }
             dImValue = 0;
-            sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
-                   &(X->Transfer[idx][0]),
-                   &(X->Transfer[idx][1]),
-                   &(X->Transfer[idx][2]),
-                   &(X->Transfer[idx][3]),
-                   &dReValue,
-                   &dImValue);
+            ndata = sscanf(ctmp2, "%d %d %d %d %lf %lf\n", &x0, &x1, &x2, &x3, &dReValue, &dImValue);
+            if (ndata < 5) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckPairSite(x0, x2, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            if (CheckSpin(x1) != 0 || CheckSpin(x3) != 0) {
+              info = ReportSpin(defname, idx);
+              break;
+            }
+            X->Transfer[idx][0] = x0;
+            X->Transfer[idx][1] = x1;
+            X->Transfer[idx][2] = x2;
+            X->Transfer[idx][3] = x3;
             X->ParaTransfer[idx] = dReValue + dImValue * I;
-            //fprintf(stdout, "Debug: Transfer %d, %d %d %d %lf %lf \n", X->Transfer[idx][0], X->Transfer[idx][1], X->Transfer[idx][2], X->Transfer[idx][3], creal(X->ParaTransfer[idx]), cimag(X->ParaTransfer[idx]));
             idx++;
           }
           if (idx != X->NTransfer) {
@@ -491,11 +604,20 @@ int ReadDefFileIdxPara(
         if (X->NCoulombIntra > 0) {
           idx = 0;
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-            sscanf(ctmp2, "%d %lf\n",
-                   &(X->CoulombIntra[idx][0]),
-                   &(X->ParaCoulombIntra[idx])
-            );
-            //printf("Debug: CoulombIntra: idx = %d, para = %lf \n", X->CoulombIntra[idx][0],X->ParaCoulombIntra[idx]);
+            if (CheckRecordCount(idx, X->NCoulombIntra, defname) != 0) {
+              info = 1;
+              break;
+            }
+            if (sscanf(ctmp2, "%d %lf\n", &x0, &dReValue) != 2) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckSite(x0, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            X->CoulombIntra[idx][0] = x0;
+            X->ParaCoulombIntra[idx] = dReValue;
             idx++;
           }
           if (idx != X->NCoulombIntra) {
@@ -508,13 +630,22 @@ int ReadDefFileIdxPara(
         /*coulombinter.def----------------------------------*/
         if (X->NCoulombInter > 0) {
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
-            sscanf(ctmp2, "%d %d %lf\n",
-                   &(X->CoulombInter[idx][0]),
-                   &(X->CoulombInter[idx][1]),
-                   &(X->ParaCoulombInter[idx])
-            );
+            if (CheckRecordCount(idx, X->NCoulombInter, defname) != 0) {
+              info = 1;
+              break;
+            }
+            if (sscanf(ctmp2, "%d %d %lf\n", &x0, &x1, &dReValue) != 3) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckPairSite(x0, x1, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            X->CoulombInter[idx][0] = x0;
+            X->CoulombInter[idx][1] = x1;
+            X->ParaCoulombInter[idx] = dReValue;
             idx++;
-
           }
           if (idx != X->NCoulombInter) {
             info = ReadDefFileError(defname);
@@ -525,10 +656,22 @@ int ReadDefFileIdxPara(
       case KWHund:
         /*hund.def------------------------------------------*/
         if (X->NHundCoupling > 0) {
-          while (fscanf(fp, "%d %d %lf\n",
-                        &(X->HundCoupling[idx][0]),
-                        &(X->HundCoupling[idx][1]),
-                        &(X->ParaHundCoupling[idx])) != EOF) {
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            if (CheckRecordCount(idx, X->NHundCoupling, defname) != 0) {
+              info = 1;
+              break;
+            }
+            if (sscanf(ctmp2, "%d %d %lf\n", &x0, &x1, &dReValue) != 3) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckPairSite(x0, x1, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            X->HundCoupling[idx][0] = x0;
+            X->HundCoupling[idx][1] = x1;
+            X->ParaHundCoupling[idx] = dReValue;
             idx++;
           }
           if (idx != X->NHundCoupling) {
@@ -540,13 +683,25 @@ int ReadDefFileIdxPara(
       case KWPairHop:
         /*pairhop.def---------------------------------------*/
         if (X->NPairHopping > 0) {
-          while (fscanf(fp, "%d %d %lf\n",
-                        &(X->PairHopping[2*idx][0]),
-                        &(X->PairHopping[2*idx][1]),
-                        &(X->ParaPairHopping[2*idx])) != EOF) {
-            X->PairHopping[2*idx+1][0]=X->PairHopping[2*idx][1];
-            X->PairHopping[2*idx+1][1]=X->PairHopping[2*idx][0];
-            X->ParaPairHopping[2*idx+1]=X->ParaPairHopping[2*idx];
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            if (CheckRecordCount(idx, X->NPairHopping / 2, defname) != 0) {
+              info = 1;
+              break;
+            }
+            if (sscanf(ctmp2, "%d %d %lf\n", &x0, &x1, &dReValue) != 3) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckPairSite(x0, x1, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            X->PairHopping[2*idx][0] = x0;
+            X->PairHopping[2*idx][1] = x1;
+            X->ParaPairHopping[2*idx] = dReValue;
+            X->PairHopping[2*idx+1][0] = x1;
+            X->PairHopping[2*idx+1][1] = x0;
+            X->ParaPairHopping[2*idx+1] = dReValue;
             idx++;
           }
           if (idx != X->NPairHopping/2) {
@@ -558,10 +713,22 @@ int ReadDefFileIdxPara(
       case KWExchange:
         /*exchange.def--------------------------------------*/
         if (X->NExchangeCoupling > 0) {
-          while (fscanf(fp, "%d %d %lf\n",
-                        &(X->ExchangeCoupling[idx][0]),
-                        &(X->ExchangeCoupling[idx][1]),
-                        &(X->ParaExchangeCoupling[idx])) != EOF) {
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            if (CheckRecordCount(idx, X->NExchangeCoupling, defname) != 0) {
+              info = 1;
+              break;
+            }
+            if (sscanf(ctmp2, "%d %d %lf\n", &x0, &x1, &dReValue) != 3) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckPairSite(x0, x1, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            X->ExchangeCoupling[idx][0] = x0;
+            X->ExchangeCoupling[idx][1] = x1;
+            X->ParaExchangeCoupling[idx] = dReValue;
             idx++;
           }
           if (idx != X->NExchangeCoupling) {
@@ -574,17 +741,31 @@ int ReadDefFileIdxPara(
         X->iFlg_Fock = 1;
         /*inteall.def--------------------------------------*/
         if (X->NInterAll > 0) {
-          while (fscanf(fp, "%d %d %d %d %d %d %d %d %lf %lf\n",
-                        &(X->InterAll[idx][0]),
-                        &(X->InterAll[idx][1]),
-                        &(X->InterAll[idx][2]),
-                        &(X->InterAll[idx][3]),
-                        &(X->InterAll[idx][4]),
-                        &(X->InterAll[idx][5]),
-                        &(X->InterAll[idx][6]),
-                        &(X->InterAll[idx][7]),
-                        &dReValue,
-                        &dImValue) != EOF) {
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            if (CheckRecordCount(idx, X->NInterAll, defname) != 0) {
+              info = 1;
+              break;
+            }
+            dImValue = 0;
+            ndata = sscanf(ctmp2, "%d %d %d %d %d %d %d %d %lf %lf\n",
+                           &ia[0], &ia[1], &ia[2], &ia[3], &ia[4], &ia[5], &ia[6], &ia[7],
+                           &dReValue, &dImValue);
+            if (ndata < 9) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckQuadSite(ia[0], ia[2], ia[4], ia[6], X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            if (CheckSpin(ia[1]) != 0 || CheckSpin(ia[3]) != 0 ||
+                CheckSpin(ia[5]) != 0 || CheckSpin(ia[7]) != 0) {
+              info = ReportSpin(defname, idx);
+              break;
+            }
+            for (i = 0; i < 8; i++) {
+              X->InterAll[idx][i] = ia[i];
+            }
             X->ParaInterAll[idx] = dReValue + dImValue * I;
             idx++;
           }
@@ -604,17 +785,23 @@ int ReadDefFileIdxPara(
                    &j,
                    &Orbitalidx,
                    &Orbitalsgn);
-            //printf("Debug: %d %d %d %d %d\n", ndata, i, j, Orbitalidx, Orbitalsgn);
-            X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
+            if (ndata < 3) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
             if (ndata == 3){ //sgn does not exist in input file
               Orbitalsgn = 1;
             }
-            X->OrbitalSgn[i+X->Nsite*0][j+X->Nsite*1]=Orbitalsgn;
             if(CheckPairSite(i, j, X->Nsite) != 0){
-              fprintf(stderr, "Error: Site index is incorrect. \n");
-              info=1;
+              info = ReportSite(defname, idx);
               break;
             }
+            if (Orbitalidx < 0 || Orbitalidx >= X->NOrbitalAP) {
+              info = ReportOrbitalIdx(defname, idx, Orbitalidx, X->NOrbitalAP);
+              break;
+            }
+            X->OrbitalIdx[i+X->Nsite*0][j+X->Nsite*1]=Orbitalidx;
+            X->OrbitalSgn[i+X->Nsite*0][j+X->Nsite*1]=Orbitalsgn;
             idx++;
             if(idx==X->Nsite*X->Nsite) break;
           }
@@ -622,22 +809,27 @@ int ReadDefFileIdxPara(
             info=ReadDefFileError(defname);
           }
         }else{//general orbital
-          //while( fscanf(fp, "%d %d %d %d\n", &i, &j, &fij, &fijsgn) != EOF){
           while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
             ndata = sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &fij, &fijsgn);
+            if (ndata < 3) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
             spn_i = 0;
             spn_j = 1;
-            all_i = i+spn_i*X->Nsite; //fsz
-            all_j = j+spn_j*X->Nsite; //fsz
             if (ndata == 3){ //sgn does not exist in input file
               fijsgn = 1;
             }
-            //printf("Debug: %d %d %d %d %d\n", ndata, i, j, fij, fijsgn);
             if(CheckPairSite(i, j, X->Nsite) != 0){
-              fprintf(stderr, "Error: Site index is incorrect. \n");
-              info=1;
+              info = ReportSite(defname, idx);
               break;
             }
+            if (fij < 0 || fij >= X->NOrbitalAP) {
+              info = ReportOrbitalIdx(defname, idx, fij, X->NOrbitalAP);
+              break;
+            }
+            all_i = i+spn_i*X->Nsite; //fsz
+            all_j = j+spn_j*X->Nsite; //fsz
             idx++;
             X->OrbitalIdx[all_i][all_j]=fij;
             X->OrbitalSgn[all_i][all_j]=fijsgn;
@@ -652,23 +844,26 @@ int ReadDefFileIdxPara(
       case KWOrbitalParallel:
         /*orbitalidxt.def------------------------------------*/
           idx = 0;
-          int fij_org;
-            //while (fscanf(fp, "%d %d %d %d\n", &i, &j, &fij_org, &fijsgn) != EOF) {
             while( fgets(ctmp2, sizeof(ctmp2)/sizeof(char), fp) != NULL){
               ndata = sscanf(ctmp2, "%d %d %d %d\n", &i, &j, &fij_org, &fijsgn);
-              //fprintf(stdout, "Debug: test-1 %d %d %d %d\n", i, j, fij, idx0);
+              if (ndata < 3) {
+                info = ReportFormat(defname, idx);
+                break;
+              }
               if (ndata == 3){ //sgn does not exist in input file
                 fijsgn = 1;
               }
-              //printf("Debug: %d %d %d %d %d\n", ndata, i, j, fij_org, fijsgn);
+              if (CheckPairSite(i, j, X->Nsite) != 0) {
+                info = ReportSite(defname, idx);
+                break;
+              }
+              if (fij_org < 0 || 2 * fij_org + 1 >= X->NOrbitalP) {
+                info = ReportOrbitalIdx(defname, idx, fij_org, X->NOrbitalP / 2);
+                break;
+              }
               for (spn_i = 0; spn_i < 2; spn_i++) {
                 all_i = i + spn_i * X->Nsite; //fsz
                 all_j = j + spn_i * X->Nsite; //fsz
-                if (CheckPairSite(i, j, X->Nsite) != 0) {
-                  fprintf(stderr, "Error: Site index is incorrect. \n");
-                  info = 1;
-                  break;
-                }
                 idx++;
                 fij = X->NOrbitalAP + 2 * fij_org + spn_i;
                 X->OrbitalIdx[all_i][all_j] = fij;
@@ -696,10 +891,25 @@ int ReadDefFileIdxPara(
                    &j_spin,
                    &Orbitalidx,
                    &Orbitalsgn);
+            if (ndata < 5) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
             if (ndata == 5){ //sgn does not exist in input file
               Orbitalsgn = 1;
             }
-            //printf("Debug: %d %d %d %d %d %d %d\n", ndata, i, i_spin, j, j_spin, Orbitalidx, Orbitalsgn);
+            if (CheckPairSite(i, j, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            if (CheckSpin(i_spin) != 0 || CheckSpin(j_spin) != 0) {
+              info = ReportSpin(defname, idx);
+              break;
+            }
+            if (Orbitalidx < 0 || Orbitalidx >= X->NOrbitalIdx) {
+              info = ReportOrbitalIdx(defname, idx, Orbitalidx, X->NOrbitalIdx);
+              break;
+            }
             (X->OrbitalIdx[i + X->Nsite * i_spin][j + X->Nsite * j_spin]) = Orbitalidx;
             (X->OrbitalSgn[i + X->Nsite * i_spin][j + X->Nsite * j_spin]) = Orbitalsgn;
             idx++;
@@ -715,8 +925,23 @@ int ReadDefFileIdxPara(
         /*cisajs.def----------------------------------------*/
         if (X->NCisAjs > 0) {
           idx = 0;
-          while (fscanf(fp, "%d %d %d %d\n",
-                        &(x0), &(x1), &(x2), &(x3)) != EOF) {
+          while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            if (CheckRecordCount(idx, X->NCisAjs, defname) != 0) {
+              info = 1;
+              break;
+            }
+            if (sscanf(ctmp2, "%d %d %d %d\n", &(x0), &(x1), &(x2), &(x3)) != 4) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckPairSite(x0, x2, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            if (CheckSpin(x1) != 0 || CheckSpin(x3) != 0) {
+              info = ReportSpin(defname, idx);
+              break;
+            }
             X->CisAjs[idx][0] = x0;
             X->CisAjs[idx][1] = x1;
             X->CisAjs[idx][2] = x2;
@@ -739,15 +964,26 @@ int ReadDefFileIdxPara(
         if (X->NInitial > 0) {
           idx = 0;
           while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
+            /* As before, records beyond NInitial are ignored. */
             if (idx >= X->NInitial) break;
             dImValue = 0;
-            sscanf(ctmp2, "%d %d %d %d %lf %lf\n",
-                   &(X->Initial[idx][0]),
-                   &(X->Initial[idx][1]),
-                   &(X->Initial[idx][2]),
-                   &(X->Initial[idx][3]),
-                   &dReValue,
-                   &dImValue);
+            ndata = sscanf(ctmp2, "%d %d %d %d %lf %lf\n", &x0, &x1, &x2, &x3, &dReValue, &dImValue);
+            if (ndata < 5) {
+              info = ReportFormat(defname, idx);
+              break;
+            }
+            if (CheckPairSite(x0, x2, X->Nsite) != 0) {
+              info = ReportSite(defname, idx);
+              break;
+            }
+            if (CheckSpin(x1) != 0 || CheckSpin(x3) != 0) {
+              info = ReportSpin(defname, idx);
+              break;
+            }
+            X->Initial[idx][0] = x0;
+            X->Initial[idx][1] = x1;
+            X->Initial[idx][2] = x2;
+            X->Initial[idx][3] = x3;
             X->ParaInitial[idx] = dReValue + dImValue * I;
             idx++;
           }
@@ -997,7 +1233,13 @@ void SetInitialValue(struct DefineList *X){
   X->print=0;
   X->IterationMax=2000;
   X->eps_int_slater=6;
-  X->Ncond=0;
+  X->Ncond=-1;
+  X->Ne=-1;
+  X->Nsize=0;
+  X->NOrbitalAP=0;
+  X->NOrbitalP=0;
+  X->iFlgOrbitalGeneral=0;
+  X->OrbitalOutputMode=0;
   X->TwoSz=-1;
 }
 

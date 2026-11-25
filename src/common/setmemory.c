@@ -49,7 +49,7 @@ void free_i_1d_allocate(int *A){
 int **i_2d_allocate(int N, int M) {
     int **A;
     int int_i;
-    A = (int **) malloc((N) * sizeof(int *));
+    A = (int **) malloc((N > 0 ? N : 1) * sizeof(int *)); /* at least one row pointer so that A[0] is valid for N=0 */
     A[0] = (int *) malloc((M * N) * sizeof(int));
     for (int_i = 0; int_i < N; int_i++) {
         A[int_i] = A[0] + int_i * M;
@@ -94,7 +94,7 @@ void free_d_1d_allocate(double *A){
 double **d_2d_allocate(int N, int M){
     int int_i;
     double **A;
-    A     = (double**)malloc((N)*sizeof(double*));
+    A     = (double**)malloc((N > 0 ? N : 1)*sizeof(double*)); /* at least one row pointer so that A[0] is valid for N=0 */
     A[0]  = (double*)malloc((M*N)*sizeof(double));
     for(int_i=0;int_i<N;int_i++){
         A[int_i] = A[0] + int_i*M;
@@ -139,7 +139,7 @@ void free_cd_1d_allocate(double complex *A){
 complex double **cd_2d_allocate(int N, int M){
     int int_i;
     complex double **A;
-    A     = (complex double**)malloc((N)*sizeof(complex double));
+    A     = (complex double**)malloc((N > 0 ? N : 1)*sizeof(complex double*)); /* at least one row pointer so that A[0] is valid for N=0 */
     A[0]  = (complex double*)malloc((M*N)*sizeof(complex double));
     for(int_i=0;int_i<N;int_i++){
         A[int_i] = A[0]+int_i*M;
@@ -165,8 +165,8 @@ void free_cd_2d_allocate(double complex**A){
 double complex***cd_3d_allocate(int N, int M, int L){
     int int_i, int_j;
     double complex***A;
-    A     = (double complex***)malloc((N)*sizeof(double complex**));
-    A[0]  = (double complex**)malloc((M*N)*sizeof(double complex*));
+    A     = (double complex***)malloc((N > 0 ? N : 1)*sizeof(double complex**)); /* at least one pointer so that A[0] and A[0][0] are valid for N*M=0 */
+    A[0]  = (double complex**)malloc((M*N > 0 ? M*N : 1)*sizeof(double complex*));
     A[0][0] = (double complex*)malloc((L*M*N)*sizeof(double complex));
     for(int_i=0;int_i<N; int_i++) {
         A[int_i] = A[0] + int_i*M;

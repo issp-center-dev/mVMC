@@ -24,7 +24,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 #include "diag.h"
 //#include "mfmemory.c"
 
-void diag(struct BindStruct *X) {
+int diag(struct BindStruct *X) {
 
   int int_i, int_j, int_k, int_l;
   double *r;
@@ -53,7 +53,13 @@ void diag(struct BindStruct *X) {
     }
   }
 
-  ZHEEVall(2 * xMsize, tmp_mat, r, vec);
+  if (ZHEEVall(2 * xMsize, tmp_mat, r, vec) == 0) {
+    fprintf(stderr, "Error: diagonalization of the Hartree-Fock Hamiltonian failed at step %d.\n", X->Def.step);
+    free_cd_2d_allocate(tmp_mat);
+    free_cd_2d_allocate(vec);
+    free_d_1d_allocate(r);
+    return -1;
+  }
 //[e]check
   for (int_k = 0; int_k < 2 * xMsize; int_k++) {
     X->Large.EigenValues[int_k] = r[int_k];
@@ -75,4 +81,5 @@ void diag(struct BindStruct *X) {
   free_cd_2d_allocate(tmp_mat);
   free_cd_2d_allocate(vec);
   free_d_1d_allocate(r);
+  return 0;
 }
