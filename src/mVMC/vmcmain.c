@@ -901,6 +901,22 @@ static int RunPowerLanczosIndependent(
 }
 
 /*main program*/
+/* Leave from the command-line checks. Every rank parses the same argv, so
+   all ranks reach the same exit. A success (-h) finalizes and exits. An
+   error aborts the job instead of letting every rank exit(EXIT_FAILURE):
+   with Open MPI 5 (PRRTE 3.0.13) prterun occasionally never returns when
+   all ranks exit with a non-zero status at nearly the same time (two of the
+   ranks are left as unreaped zombies), which showed up as an intermittent
+   hang of the MultiDef option tests in CI. MPI_Abort is reaped reliably. */
+static void exitAfterOptionCheck(int status) {
+  if (status == EXIT_SUCCESS) {
+    MPI_Finalize();
+    exit(EXIT_SUCCESS);
+  }
+  MPI_Abort(MPI_COMM_WORLD, status);
+  exit(status); /* not reached */
+}
+
 int main(int argc, char* argv[])
 {
   /* input file name */
@@ -965,7 +981,7 @@ int main(int argc, char* argv[])
     case 'h': /* Print Help Message*/
       printUsageError();
       printOption();
-      exit(EXIT_SUCCESS);
+      exitAfterOptionCheck(EXIT_SUCCESS);
       break;
 
     case 'm': /* MultiDefMode */
@@ -974,18 +990,18 @@ int main(int argc, char* argv[])
       if((errno == ERANGE && (num == LONG_MIN || num == LONG_MAX)) ||
           (errno != 0 && num == 0)) {
         perror("error: -m: strtol()");
-        exit(EXIT_FAILURE);
+        exitAfterOptionCheck(EXIT_FAILURE);
       }
       if(endptr == optarg) {
         fprintf(stderr,"error: -m: No digits were found\n");
-        exit(EXIT_FAILURE);
+        exitAfterOptionCheck(EXIT_FAILURE);
       }
       if(*endptr != '\0') {
         fprintf(stderr,"warning: -m: Futher characters after number: %s\n",endptr);
       }
       if(num > INT_MAX || num < INT_MIN) {
         fprintf(stderr,"error: -m: Numerical result out of range\n");
-        exit(EXIT_FAILURE);
+        exitAfterOptionCheck(EXIT_FAILURE);
       }
       /* strtol() successfully parsed a number */
       flagMultiDef = 1;
@@ -1002,23 +1018,23 @@ int main(int argc, char* argv[])
       if((errno == ERANGE && (num == LONG_MIN || num == LONG_MAX)) ||
           (errno != 0 && num == 0)) {
         perror("error: -F: strtol()");
-        exit(EXIT_FAILURE);
+        exitAfterOptionCheck(EXIT_FAILURE);
       }
       if(endptr == optarg) {
         fprintf(stderr,"error: -F: No digits were found\n");
-        exit(EXIT_FAILURE);
+        exitAfterOptionCheck(EXIT_FAILURE);
       }
       if(*endptr != '\0') {
         fprintf(stderr,"warning: -F: Futher characters after number: %s\n",endptr);
       }
       if(num > INT_MAX || num < INT_MIN) {
         fprintf(stderr,"error: -F: Numerical result out of range\n");
-        exit(EXIT_FAILURE);
+        exitAfterOptionCheck(EXIT_FAILURE);
       }
       /* strtol() successfully parsed a number */
       if(num < 1) {
         fprintf(stderr,"error: -F: FileFlushInterval should be natural number.\n");
-        exit(EXIT_FAILURE);
+        exitAfterOptionCheck(EXIT_FAILURE);
       }
       NFileFlushInterval = (int)num;
       break;
@@ -1040,7 +1056,7 @@ int main(int argc, char* argv[])
 
     default: /* '?' */
       printUsageError();
-      exit(EXIT_FAILURE);
+      exitAfterOptionCheck(EXIT_FAILURE);
     }
   }
 
@@ -1048,7 +1064,7 @@ int main(int argc, char* argv[])
   if((flagMultiDef==0 && argc-optind<1) || (flagMultiDef==1 && argc-optind<2)) {
     fprintf(stderr,"error: Argument count mismatch\n");
     printUsageError();
-    exit(EXIT_FAILURE);
+    exitAfterOptionCheck(EXIT_FAILURE);
   }
 
   /* set input filename */
@@ -1782,8 +1798,8 @@ void initMultiDefMode(int nMultiDef, char *fileDirList, MPI_Comm comm_parent, MP
   /* Validate before division, communicator splitting, or allocation. */
   if(nMultiDef<=0 || size<nMultiDef) {
     if(rank==0) fprintf(stderr,"error: -m: N must be between 1 and MPI size (%d).\n",size);
-    MPI_Finalize();
-    exit(EXIT_FAILURE);
+    /* Abort rather than exit(EXIT_FAILURE) on every rank: see exitAfterOptionCheck. */
+    MPI_Abort(comm_parent, EXIT_FAILURE);
   } else if(size%nMultiDef!=0) {
     if(rank==0) fprintf(stderr,"warning: load imbalance. MPI_size=%d nMultiDef=%d\n",size,nMultiDef);
   }
