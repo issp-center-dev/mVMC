@@ -196,6 +196,7 @@ int ReadDefFileNInt(
 	char *xNameListFile, 
 	struct DefineList *X
 ) {
+  int ncondGiven = 0;
 	FILE *fp;
 	char defname[D_FileNameMaxReadDef];
 	char ctmp[D_CharTmpReadDef];
@@ -417,7 +418,8 @@ int ReadDefFileNInt(
   }
 
   //CalcNCond
-  if (X->Ncond == -1) {
+  ncondGiven = (X->Ncond != -1);
+  if (ncondGiven == 0) {
     /* Ne is the number of electrons per spin, as in mVMC. */
     if (X->Ne == -1) {
       fprintf(stderr, "Error: Ne or NCond must be given in modpara.def.\n");
@@ -437,7 +439,10 @@ int ReadDefFileNInt(
     return -1;
   }
   if (X->iFlgOrbital == 1) {
-    if (X->Ncond % 2 != 0) {
+    /* Same rule as mVMC: an explicit NCond must be even. A value derived
+       from Ne already gives an even 2*Ne = NLocalSpin + NCond, so it is
+       accepted even when NLocalSpin is odd. */
+    if (ncondGiven && X->Ncond % 2 != 0) {
       fprintf(stderr, "Error: NCond (in modpara.def) must be even number.\n");
       return -1;
     }
@@ -534,6 +539,7 @@ int ReadDefFileIdxPara(
     switch (iKWidx) {
       case KWLocSpin:
         /* Read locspn.def----------------------------------------*/
+        for (i = 0; i < X->Nsite; i++) X->LocSpn[i] = -1;
         while (fgets(ctmp2, sizeof(ctmp2) / sizeof(char), fp) != NULL) {
           if (CheckRecordCount(idx, X->Nsite, defname) != 0) {
             info = 1;
@@ -552,15 +558,27 @@ int ReadDefFileIdxPara(
             info = 1;
             break;
           }
+          if (X->LocSpn[x0] != -1) {
+            fprintf(stderr, "Error in %s: site %d appears more than once (record %d).\n", defname, x0, idx);
+            info = 1;
+            break;
+          }
           X->LocSpn[x0] = x1;
           idx++;
         }
-        if (X->Nsize < X->NLocSpn) {
-          fprintf(stderr, "Error: 2*Ne must be (2*Ne >= NLocalSpin).\n");
-          info = 1;
-        }
-        if (idx != X->Nsite) {
+        if (info == 0 && idx != X->Nsite) {
           info = ReadDefFileError(defname);
+        }
+        if (info == 0) {
+          /* Only the header NlocalSpin enters Ne and Nsize, so it must agree
+             with the flags, as GetLocSpinInfo of mVMC requires. */
+          int nLocSpnBody = 0;
+          for (i = 0; i < X->Nsite; i++) nLocSpnBody += X->LocSpn[i];
+          if (nLocSpnBody != X->NLocSpn) {
+            fprintf(stderr, "Error in %s: NlocalSpin (%d) does not match the number of localized spins (%d).\n",
+                    defname, X->NLocSpn, nLocSpnBody);
+            info = 1;
+          }
         }
         break;//locspn
 

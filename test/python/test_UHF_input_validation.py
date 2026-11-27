@@ -155,6 +155,31 @@ class TestUHFInputValidation(unittest.TestCase):
         set_record(d, "coulombintra.def", 0, "    a   4.000000000000000")
         self.assertRejected(run(d))
 
+    def test_odd_local_spin_count_with_ne_is_accepted(self):
+        # Site 0 is a localized spin (NlocalSpin = 1) and modpara gives Ne, not
+        # Ncond. 2*Ne = NlocalSpin + Ncond is even, so the derived odd Ncond is
+        # accepted even though an orbital file is present (review R-1).
+        d = prepare("odd_locspn_ne")
+        set_record(d, "locspn.def", 0, "    0      1")
+        edit(d, "locspn.def",
+             lambda t: re.sub(r"^NlocalSpin\s+0", "NlocalSpin     1", t, flags=re.M))
+        edit(d, "modpara.def",
+             lambda t: re.sub(r"^Ncond\s+8.*$", "Ne             4", t, flags=re.M))
+        self.assertAccepted(run(d))
+
+    def test_local_spin_header_mismatch_is_rejected(self):
+        # Only the header NlocalSpin enters the electron count, so it must
+        # agree with the flags in the body (review R-2).
+        d = prepare("locspn_header")
+        edit(d, "locspn.def",
+             lambda t: re.sub(r"^NlocalSpin\s+0", "NlocalSpin     2", t, flags=re.M))
+        self.assertRejected(run(d))
+
+    def test_duplicate_local_spin_site_is_rejected(self):
+        d = prepare("locspn_duplicate")
+        set_record(d, "locspn.def", 1, "    0      0")
+        self.assertRejected(run(d))
+
     def test_negative_record_count_is_rejected(self):
         d = prepare("negative_count")
         edit(d, "trans.def", lambda t: re.sub(r"^NTransfer\s+48", "NTransfer      -1", t, flags=re.M))
