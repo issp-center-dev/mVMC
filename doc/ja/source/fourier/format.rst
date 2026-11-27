@@ -128,7 +128,7 @@ mVMC/:math:`{\mathcal H}\Phi` によって計算され,
 
 Fourier変換された相関関数(波数表示)が入っている.
 ユーティリイティ ``greenr2k`` によって生成される.
-:ref:`tutorial` でのファイル名は ``output/zvo_corr_eigen0.dat`` である.
+:ref:`tutorial` でのファイル名は ``output/zvo_corr.dat`` である.
 
 ::
    
@@ -165,4 +165,4 @@ gnuplotでこれを読み込むことでグラフ中に *k* 点のラベルを�
 -------------------------------------------------------------
 
 ``greenr2k`` にて作成される.
-ファイル名は ``output/zvo_corr_eigen0.dat.frmsf``
+ファイル名は ``output/zvo_corr_001.dat.frmsf``

@@ -112,7 +112,7 @@ by using gnuplot.
 .. code-block:: gnuplot
 
    load "kpath.gp"
-   plot "output/zvo_corr_eigen0.dat" u 1:12 w l
+   plot "output/zvo_corr.dat" u 1:12 w l
 
 .. _corplotpng:
 

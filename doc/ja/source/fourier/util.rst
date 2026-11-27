@@ -68,10 +68,10 @@ mVMC
 .. math::
    
    \begin{align}
-   \delta A = \frac{1}{N_{\rm Try} - 1}
-   \sqrt{\frac{1}{N_{\rm Try}} \sum_{i=1}^{N_{\rm Try}} (A_i - \langle A \rangle)^2}
+   \delta A = \sqrt{\frac{1}{N_{\rm Try} (N_{\rm Try} - 1)}
+   \sum_{i=1}^{N_{\rm Try}} (A_i - \langle A \rangle)^2}
    \end{align}
 
 を計算し, 平均値と誤差を含んだ単一のファイル
-``zvo_corr_eigen*.dat`` を ``output/`` ディレクトリに出力する.
+``zvo_corr.dat`` を ``output/`` ディレクトリに出力する.
 

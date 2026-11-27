@@ -101,7 +101,7 @@ HPhi/vmc.out の実行
 - output/zvo_cisajscktalt_001.dat (:ref:`zvocisajs`)
 - output/zvo_cisajscktalt.dat (:ref:`zvocisajs`)
 - geometry.dat (:ref:`geometry`)
-- output/zvo_corr*.dat (:ref:`zvocorr`)
+- output/zvo_corr.dat (:ref:`zvocorr`)
 
 相関関数のプロット
 ------------------
@@ -112,7 +112,7 @@ gnuplotを使って,
 .. code-block:: gnuplot
 
    load "kpath.gp"
-   plot "output/zvo_corr_eigen0.dat" u 1:12 w l
+   plot "output/zvo_corr.dat" u 1:12 w l
 
 .. _corplotpng:
      
@@ -124,4 +124,4 @@ gnuplotを使って,
 関連するファイル
 
 - kpath.gp (:ref:`gnuplot`)
-- output/zvo_corr*.dat (:ref:`zvocorr`)
+- output/zvo_corr.dat (:ref:`zvocorr`)
