@@ -110,7 +110,7 @@ The parameters needed in the program of UHF are as follows:
 
 -  ``Nsite``
 
--  ``Ne``
+-  ``Ne`` or ``Ncond``
 
 -  ``Mix``
 
@@ -118,8 +118,11 @@ The parameters needed in the program of UHF are as follows:
 
 -  ``IterationMax``
 
-The parameters, ``Nsite`` and ``Ne``, are common as mVMC. The other
-three parameters are specific to UHF:
+The parameters ``Nsite``, ``Ne`` and ``Ncond`` are common with mVMC.
+The number of electrons is ``NLocalSpin + Ncond`` when ``Ncond`` is given,
+and ``2*Ne`` when only ``Ne`` is given; it must satisfy
+``0 < number of electrons < 2*Nsite``, otherwise the program stops with an error.
+The other three parameters are specific to UHF:
 
 -  ``Mix``
    

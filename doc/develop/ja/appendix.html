@@ -114,13 +114,16 @@ n_ {i}n_{j} &amp;=
 <p>UHFで指定するパラメータは以下のパラメータです。</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Nsite</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Ne</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ne</span></code> または <code class="docutils literal notranslate"><span class="pre">Ncond</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Mix</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">EPS</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">IterationMax</span></code></p></li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">Nsite</span></code>,
-<code class="docutils literal notranslate"><span class="pre">Ne</span></code> はmVMCと共通のパラメータで、以下の三つがUHF独特のパラメータです。</p>
+<p><code class="docutils literal notranslate"><span class="pre">Nsite</span></code>, <code class="docutils literal notranslate"><span class="pre">Ne</span></code>, <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> はmVMCと共通のパラメータです。
+電子数は <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> が指定されていれば <code class="docutils literal notranslate"><span class="pre">NLocalSpin</span> <span class="pre">+</span> <span class="pre">Ncond</span></code> 、
+<code class="docutils literal notranslate"><span class="pre">Ncond</span></code> がなく <code class="docutils literal notranslate"><span class="pre">Ne</span></code> だけが指定されていれば <code class="docutils literal notranslate"><span class="pre">2*Ne</span></code> となり、
+<code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;</span> <span class="pre">電子数</span> <span class="pre">&lt;</span> <span class="pre">2*Nsite</span></code> を満たさない場合はエラー終了します。
+以下の三つがUHF独特のパラメータです。</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">Mix</span></code></p>
 <p>linear
