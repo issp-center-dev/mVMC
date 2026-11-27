@@ -1116,6 +1116,9 @@ ModParaファイル (modpara.def)
    **形式 :** int型 (1以上、必須)
 
    **説明 :** 電子のペア数(電子数は2 ``Nelectron`` で与えられる)。
+   カノニカル計算 (``NGrandCanonical=0``) では ``Nelectron``
+   (または ``Ncond`` から求めた値) は1以上である必要があり、
+   ``Nelectron <= 0`` は入力エラーとして拒否されます。
 
 -  ``NCond``
 
@@ -1123,7 +1126,8 @@ ModParaファイル (modpara.def)
 
    **説明 :** 伝導電子の数。局在スピンの電子は数えないため、
    純粋なスピン系では0を指定します。2 (``Nsite`` - ``NlocalSpin``)
-   を超える値は指定できません。
+   を超える値は指定できません。また ``NGrandCanonical=0`` では
+   ``NlocalSpin`` + ``Ncond`` が2以上(電子ペアが1つ以上)である必要があります。
 
 -  ``2Sz``
 
@@ -1312,12 +1316,14 @@ ModParaファイル (modpara.def)
 
 -  ``NSRCG``
 
-   **形式 :** int型 (0もしくは1、デフォルト値=0)
+   **形式 :** int型 (0、1もしくは2、デフォルト値=0)
 
    **説明 :** SR法で連立一次方程式 :math:`Sx=g`
    を解くときに、 :math:`S`
    を陽に構築せずに解くことでメモリを削減する [4]_ オプション[NeuscammanUmrigarChan_ ](1で機能On,
-   ``NStore`` は1に固定されます)。 ``NSRCG`` は ``NSplitSize > 1`` と併用できません。
+   2は ``useDiagScale`` の対角スケーリング付きで機能On,
+   ``NStore`` は1に固定されます)。これ以外の値は入力エラーとして拒否されます。
+   ``NSRCG`` は ``NSplitSize > 1`` と併用できません。
    この制限は内部MPI分割に固有のものです。 ``NSplitSize=1`` の場合、SR-CG は従来通り
    stored :math:`O` 経路を内部で使用します。
 

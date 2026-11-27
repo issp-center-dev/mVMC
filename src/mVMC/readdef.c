@@ -1493,6 +1493,18 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
         }
         info = 1;
       }
+      /* A canonical calculation needs at least one electron pair: Ne=0 gives
+       * Nsize=0 (SKTRF is called with LDA=0) and gen_rand32()%Ne divides by
+       * zero in the hopping update.  Grand-canonical runs (NGrandCanonical=1)
+       * do not use Ne/Ncond to fix the particle number and are not checked. */
+      if (bufInt[IdxNe] <= 0) {
+        fprintf(stderr,
+                "Error: Ne (= %d) must be positive when NGrandCanonical=0. "
+                "Set Nelectron (= Ne) >= 1 in modpara.def, or Ncond so that "
+                "(NlocalSpin + Ncond)/2 >= 1.\n",
+                bufInt[IdxNe]);
+        info = 1;
+      }
     }
 
     //Check LocSpn
@@ -1898,6 +1910,20 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
   } //else {
   //  useDiagScale = 0;
   //}
+  /* Only 0 (direct SR), 1 (SR-CG) and 2 (SR-CG with diagonal scaling,
+   * normalized to 1 above) are defined.  Any other value used to select the
+   * SR-CG solver while the stored-O buffer was allocated only for NSRCG==1,
+   * so NSRCG=3 or NSRCG=-1 with NStore=0 wrote through an unallocated
+   * pointer.  NSRCG was broadcast above, so every rank takes this branch. */
+  if (NSRCG != 0 && NSRCG != 1) {
+    if (rank == 0) {
+      fprintf(stderr,
+              "Error: NSRCG (= %d) must be 0 (direct SR), 1 (SR-CG), or 2 "
+              "(SR-CG with diagonal scaling).\n",
+              NSRCG);
+    }
+    MPI_Abort(comm, EXIT_FAILURE);
+  }
   NSRCGFallback = (NSRCGFallback != 0);
   NSRCGAbortOnFail = (NSRCGAbortOnFail != 0);
 
