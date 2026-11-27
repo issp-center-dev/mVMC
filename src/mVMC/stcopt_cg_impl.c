@@ -201,10 +201,11 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   if (nSmat == 0) {
     /* Every parameter is fixed by OptFlag or removed by the diagonal cut, so
      * there is no linear system to solve.  Running CG with max_iter=0 would
-     * report a spurious "did not converge" failure, and r[0] below would be
-     * read one past the end of VecCG.  nSmat is identical on every rank
-     * (OptFlag, DSROptRedCut and the reduced SROptOO are shared), so all
-     * ranks skip the collective solver together. */
+     * report a spurious "did not converge" failure, NSRCG=2 would call DGEMV
+     * with lda=0, and the SRinfo row would print r[0], which is then just
+     * the first word of the workspace (in bounds but meaningless).  nSmat is
+     * identical on every rank (OptFlag, DSROptRedCut and the reduced SROptOO
+     * are shared), so all ranks skip the collective solver together. */
     if (rank == 0 && !no_active_printed) {
       fprintf(stderr,
               "warning: SR-CG has no active variational parameter "

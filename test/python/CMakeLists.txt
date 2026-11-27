@@ -2749,7 +2749,8 @@ set_tests_properties(GC_Ncond_Zero_Accepted_mpi PROPERTIES
     LABELS requires_mpi)
 
 # #95 comment: SR-CG with nSmat==0 (every parameter fixed by OptFlag, or removed
-# by the diagonal cut) ran CG with max_iter=0 and read r[0] past VecCG.
+# by the diagonal cut) ran CG with max_iter=0, aborted with a misleading
+# "did not converge" message, and printed a meaningless r[0] in SRinfo.
 function(add_srcg_no_active_test test_name mode)
     add_test(NAME ${test_name}
              COMMAND ${PYTHON_EXECUTABLE} runtest_srcg_no_active.py ${mode})
