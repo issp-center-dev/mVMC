@@ -1778,6 +1778,11 @@ def run_lanczos_invalid_case(rootdir, case_name, mpi_procs=None):
             "requires input SPGaussLeg <= 1",
             None,
         ),
+        "FSZ_Lanczos_InvalidSPGaussLeg_mpi": (
+            {"NLanczosMode": "1", "NVMCCalMode": "1", "NSPGaussLeg": "8"},
+            "requires input SPGaussLeg <= 1",
+            None,
+        ),
         "FSZ_Lanczos_InvalidPairHop": (
             {"NLanczosMode": "1", "NVMCCalMode": "1"},
             "currently supports only diagonal and Transfer Hamiltonian terms",
