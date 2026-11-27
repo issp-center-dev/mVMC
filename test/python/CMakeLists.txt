@@ -74,6 +74,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATI
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nstore_nsplit.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_qp_split.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_expert_phys.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -2691,6 +2692,25 @@ set_tests_properties(NSplitSize_NStore_fsz_Compare_mpi PROPERTIES ENVIRONMENT "P
 # These tests launch MPI through the REF/SPLIT variables, not MVMC_MPI_PROCS.
 set_tests_properties(NSplitSize_NStore_Compare_mpi NSplitSize_NStore_fsz_Compare_mpi
     PROPERTIES LABELS requires_mpi)
+if(MPI_FOUND)
+    foreach(qp_mode real complex)
+        foreach(qp_spin fixed fsz)
+            set(qp_split_args)
+            if(qp_mode STREQUAL "complex")
+                list(APPEND qp_split_args --complex)
+            endif()
+            if(qp_spin STREQUAL "fsz")
+                list(APPEND qp_split_args --fsz)
+            endif()
+            add_test(NAME QPSplit_${qp_mode}_${qp_spin}_mpi
+                COMMAND ${PYTHON_EXECUTABLE} runtest_qp_split.py ${qp_split_args}
+                    --mpiexec ${MPIEXEC_EXECUTABLE} --np-flag=${MPIEXEC_NUMPROC_FLAG})
+            set_tests_properties(QPSplit_${qp_mode}_${qp_spin}_mpi PROPERTIES
+                LABELS requires_mpi PROCESSORS 4 TIMEOUT 300
+                ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1;BLIS_NUM_THREADS=1;VECLIB_MAXIMUM_THREADS=1")
+        endforeach()
+    endforeach()
+endif()
 add_test(NAME NSplitSize_SRCG_Invalid
          COMMAND ${PYTHON_EXECUTABLE} runtest_invalid_expert.py HubbardChain_SpinJastrow
                  "NSplitSize > 1 cannot be combined" NSplitSize=2 NStore=0 NSRCG=1)

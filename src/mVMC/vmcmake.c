@@ -83,9 +83,10 @@ void VMCMakeSample(MPI_Comm comm) {
   }
 
 #ifdef _pf_block_update
-  // TODO: Compute from qpStart to qpEnd to support loop splitting.
-  void *pfOrbital[NQPFull];
-  void *pfUpdator[NQPFull];
+  /* PfM and InvM use local QP indices; SlaterElm uses global indices. */
+  const int qpNum = qpEnd - qpStart;
+  void *pfOrbital[qpNum > 0 ? qpNum : 1];
+  void *pfUpdator[qpNum > 0 ? qpNum : 1];
   // Read block size from input.
   const char *optBlockSize = getenv("VMC_BLOCK_UPDATE_SIZE");
   if (optBlockSize)
@@ -101,13 +102,13 @@ void VMCMakeSample(MPI_Comm comm) {
   for (mi=0; mi<Ne;  mi++) EleSpn[mi] = 0;
   for (mi=Ne;mi<Ne*2;mi++) EleSpn[mi] = 1;
   // Initialize.
-  updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
-                       SlaterElm, Nsite2*Nsite2,
+  updated_tdi_v_init_z(qpNum, Nsite, Nsite2, Nsize,
+                       SlaterElm + (size_t)qpStart*Nsite2*Nsite2, Nsite2*Nsite2,
                        InvM, Nsize*Nsize,
                        TmpEleIdx, EleSpn,
                        NBlockUpdateSize,
                        pfUpdator, pfOrbital);
-  updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+  updated_tdi_v_get_pfa_z(qpNum, PfM, pfUpdator);
 #else  
   CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
 #endif
@@ -120,14 +121,14 @@ void VMCMakeSample(MPI_Comm comm) {
                       qpStart,qpEnd,comm);
 #ifdef _pf_block_update
     // Clear and reinitialize.
-    updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
-    updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
-                         SlaterElm, Nsite2*Nsite2,
+    updated_tdi_v_free_z(qpNum, pfUpdator, pfOrbital);
+    updated_tdi_v_init_z(qpNum, Nsite, Nsite2, Nsize,
+                         SlaterElm + (size_t)qpStart*Nsite2*Nsite2, Nsite2*Nsite2,
                          InvM, Nsize*Nsize,
                          TmpEleIdx, EleSpn,
                          NBlockUpdateSize,
                          pfUpdator, pfOrbital);
-    updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+    updated_tdi_v_get_pfa_z(qpNum, PfM, pfUpdator);
 #else
     CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
 #endif
@@ -182,8 +183,8 @@ void VMCMakeSample(MPI_Comm comm) {
 
         StartTimer(61);
 #ifdef _pf_block_update
-        updated_tdi_v_push_z(NQPFull, rj+s*Nsite, mi+s*Ne, 1, pfUpdator);
-        updated_tdi_v_get_pfa_z(NQPFull, pfMNew, pfUpdator);
+        updated_tdi_v_push_z(qpNum, rj+s*Nsite, mi+s*Ne, 1, pfUpdator);
+        updated_tdi_v_get_pfa_z(qpNum, pfMNew, pfUpdator);
 #else
         //CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
         CalculateNewPfM2(mi,s,pfMNew,TmpEleIdx,qpStart,qpEnd);
@@ -209,7 +210,7 @@ void VMCMakeSample(MPI_Comm comm) {
           StartTimer(63);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
-          updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+          updated_tdi_v_get_pfa_z(qpNum, PfM, pfUpdator);
 #else
           // UpdateMAll will change SlaterElm, InvM (including PfM)
           UpdateMAll(mi,s,TmpEleIdx,qpStart,qpEnd);
@@ -225,7 +226,7 @@ void VMCMakeSample(MPI_Comm comm) {
           Counter[1]++;
         } else { /* reject */
 #ifdef _pf_block_update
-          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_z(qpNum, 0, pfUpdator);
 #endif
           revertEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
         }
@@ -265,11 +266,11 @@ void VMCMakeSample(MPI_Comm comm) {
         StartTimer(66);
 
 #ifdef _pf_block_update
-        updated_tdi_v_push_pair_z(NQPFull,
+        updated_tdi_v_push_pair_z(qpNum,
                                   rj+s*Nsite, mi+s*Ne,
                                   ri+t*Nsite, mj+t*Ne,
                                   1, pfUpdator);
-        updated_tdi_v_get_pfa_z(NQPFull, pfMNew, pfUpdator);
+        updated_tdi_v_get_pfa_z(qpNum, pfMNew, pfUpdator);
 #else
         CalculateNewPfMTwo2_fcmp(mi, s, mj, t, pfMNew, TmpEleIdx, qpStart, qpEnd);
 #endif
@@ -293,7 +294,7 @@ void VMCMakeSample(MPI_Comm comm) {
           StartTimer(68);
 #ifdef _pf_block_update
           // Inv already updated. Only need to get PfM again.
-          updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+          updated_tdi_v_get_pfa_z(qpNum, PfM, pfUpdator);
 #else
           UpdateMAllTwo_fcmp(mi, s, mj, t, ri, rj, TmpEleIdx,qpStart,qpEnd);
 #endif
@@ -308,8 +309,8 @@ void VMCMakeSample(MPI_Comm comm) {
           Counter[3]++;
         } else { /* reject */
 #ifdef _pf_block_update
-          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
-          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_z(qpNum, 0, pfUpdator);
+          updated_tdi_v_pop_z(qpNum, 0, pfUpdator);
 #endif
           revertEleConfig(mj,rj,ri,t,TmpEleIdx,TmpEleCfg,TmpEleNum);
           revertEleConfig(mi,ri,rj,s,TmpEleIdx,TmpEleCfg,TmpEleNum);
@@ -342,11 +343,11 @@ void VMCMakeSample(MPI_Comm comm) {
         StartTimer(66);
 
 #ifdef _pf_block_update
-        updated_tdi_v_push_pair_z(NQPFull,
+        updated_tdi_v_push_pair_z(qpNum,
                                   rj+0*Nsite, mi+0*Ne,
                                   rj+1*Nsite, mj+1*Ne,
                                   1, pfUpdator);
-        updated_tdi_v_get_pfa_z(NQPFull, pfMNew, pfUpdator);
+        updated_tdi_v_get_pfa_z(qpNum, pfMNew, pfUpdator);
 #else
         CalculateNewPfMTwo2_fcmp(mi, 0, mj, 1, pfMNew, TmpEleIdx, qpStart, qpEnd);
 #endif
@@ -366,7 +367,7 @@ void VMCMakeSample(MPI_Comm comm) {
         if(w > genrand_real2()) { /* accept */
           StartTimer(68);
 #ifdef _pf_block_update
-          updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+          updated_tdi_v_get_pfa_z(qpNum, PfM, pfUpdator);
 #else
           UpdateMAllTwo_fcmp(mi, 0, mj, 1, ri, ri, TmpEleIdx, qpStart, qpEnd);
 #endif
@@ -379,8 +380,8 @@ void VMCMakeSample(MPI_Comm comm) {
           Counter[3]++;
         } else { /* reject */
 #ifdef _pf_block_update
-          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
-          updated_tdi_v_pop_z(NQPFull, 0, pfUpdator);
+          updated_tdi_v_pop_z(qpNum, 0, pfUpdator);
+          updated_tdi_v_pop_z(qpNum, 0, pfUpdator);
 #endif
           revertEleConfig(mj, ri, rj, 1, TmpEleIdx, TmpEleCfg, TmpEleNum);
           revertEleConfig(mi, ri, rj, 0, TmpEleIdx, TmpEleCfg, TmpEleNum);
@@ -393,14 +394,14 @@ void VMCMakeSample(MPI_Comm comm) {
         StartTimer(34);
 #ifdef _pf_block_update
         // Clear and reinitialize.
-        updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
-        updated_tdi_v_init_z(NQPFull, Nsite, Nsite2, Nsize,
-                             SlaterElm, Nsite2*Nsite2,
+        updated_tdi_v_free_z(qpNum, pfUpdator, pfOrbital);
+        updated_tdi_v_init_z(qpNum, Nsite, Nsite2, Nsize,
+                             SlaterElm + (size_t)qpStart*Nsite2*Nsite2, Nsite2*Nsite2,
                              InvM, Nsize*Nsize,
                              TmpEleIdx, EleSpn,
                              NBlockUpdateSize,
                              pfUpdator, pfOrbital);
-        updated_tdi_v_get_pfa_z(NQPFull, PfM, pfUpdator);
+        updated_tdi_v_get_pfa_z(qpNum, PfM, pfUpdator);
 #else
         CalculateMAll_fcmp(TmpEleIdx,qpStart,qpEnd);
 #endif
@@ -432,7 +433,7 @@ void VMCMakeSample(MPI_Comm comm) {
 
 #ifdef _pf_block_update
   // Free-up updator space.
-  updated_tdi_v_free_z(NQPFull, pfUpdator, pfOrbital);
+  updated_tdi_v_free_z(qpNum, pfUpdator, pfOrbital);
 #endif
 
   return;
