@@ -3,6 +3,10 @@
 #include <complex.h>
 #include <stdio.h>
 
+int CalculateEne(double H1, double H2_1, double H2_2, double H3, double H4,
+                 size_t sampleCount, double *alpha_p, double *ene_p,
+                 double *ene_vp, double *alpha_m, double *ene_m, double *ene_vm);
+
 int PhysCalLanczos_real(
  double *_QQQQ_real,
  double *_QCisAjsQ_real,
@@ -18,6 +22,7 @@ int PhysCalLanczos_real(
  const int _nCisAjsCktAltDC,
  int **_CisAjsCktAltDC,
  const int _NLanczosmode,
+ size_t sampleCount,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
@@ -42,6 +47,7 @@ int PhysCalLanczos_fcmp(
  const int _nCisAjsCktAltDC,
  int **_CisAjsCktAltDC,
  const int _NLanczosmode,
+ size_t sampleCount,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,

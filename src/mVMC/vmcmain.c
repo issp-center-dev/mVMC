@@ -41,7 +41,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
 int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2);
-void outputData();
+static void outputData(size_t lanczosSampleCount);
 void printUsageError();
 void printOption();
 void printVersionRank0();
@@ -1365,7 +1365,7 @@ int VMCParaOpt(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
     StopTimer(21);
     StartTimer(22);
     /* output zvo_out and zvo_var */
-    if(rank==0) outputData();
+    if(rank==0) outputData(0);
     StopTimer(22);
 
 #ifdef _DEBUG_DUMP_SROPTO_STORE
@@ -1578,13 +1578,13 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 
     WeightAverageWE(comm_parent);
     if(FlagLanczosGuide) WeightAverageNearZeroGuide(comm_parent);
-    WeightAverageGreenFunc(comm_parent);
+    const size_t lanczosSampleCount = WeightAverageGreenFunc(comm_parent);
     ReduceCounter(comm_child2);
 
     StopTimer(21);
     StartTimer(22);
     /* output zvo_out and green functions */
-    if(rank==0) outputData();
+    if(rank==0) outputData(lanczosSampleCount);
     CloseFilePhysCal(rank);
 
     StopTimer(22);
@@ -1598,7 +1598,7 @@ int VMCPhysCal(MPI_Comm comm_parent, MPI_Comm comm_child1, MPI_Comm comm_child2)
 }
 
 
-void outputData() {
+static void outputData(size_t lanczosSampleCount) {
   int i, k, offset;
   int lanczosStatus;
 
@@ -1716,16 +1716,18 @@ void outputData() {
         lanczosStatus = PhysCalLanczos_real(
           QQQQ_real, QCisAjsQ_real, QCisAjsCktAltQ_real, QCisAjsCktAltQDC_real,
           NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx,
-          NLanczosMode, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
+          NLanczosMode, lanczosSampleCount, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
           FileLSCisAjs, FileLSCisAjsCktAlt, FileLSCisAjsCktAltDC);
       }else { //complex
         lanczosStatus = PhysCalLanczos_fcmp(
           QQQQ, QCisAjsQ, QCisAjsCktAltQ, QCisAjsCktAltQDC,
           NLSHam, Nsite, NCisAjs, NCisAjs, iOneBodyGIdx, CisAjsIdx, NCisAjsCktAlt, NCisAjsCktAltDC, CisAjsCktAltDCIdx,
-          NLanczosMode, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
+          NLanczosMode, lanczosSampleCount, FileLS, FileLSQQQQ, FileLSQCisAjsQ, FileLSQCisAjsCktAltQ,
           FileLSCisAjs, FileLSCisAjsCktAlt, FileLSCisAjsCktAltDC);
       }
       if (lanczosStatus != 0) {
+        /* Preserve the ordinary measurements already written for this bin. */
+        fflush(NULL);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
       }
       } else {

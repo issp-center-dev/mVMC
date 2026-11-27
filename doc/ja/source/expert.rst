@@ -3538,7 +3538,7 @@ RBM因子
 
 -  本機能はベータ版のため、使用には十分注意してください。また、正式リリースした際に、ファイル形式や実装が変更される可能性があります。
 
--  ``ComplexType=0`` と ``ComplexType=1`` の両方を指定できます。RBM層を含む有効な変分パラメータ定義がすべて ``ComplexType=0`` の場合、mVMCは実数VMC経路を使用します。いずれか1つでも ``ComplexType=1`` の定義があれば複素数経路を使用します。実数RBMは ``Orbital`` （``OrbitalGeneral`` / FSZは不可）、``NExUpdatePath=0`` または ``1``、``NLanczosMode=0`` の組合せに対応します。BackFlowおよびPower Lanczosとの併用には対応していません。同じ経路選択と制約がChargeRBMおよびSpinRBMの各層定義にも適用されます。
+-  ``ComplexType=0`` と ``ComplexType=1`` の両方を指定できます。RBM層を含む有効な変分パラメータ定義がすべて ``ComplexType=0`` の場合、mVMCは実数VMC経路を使用します。いずれか1つでも ``ComplexType=1`` の定義があれば複素数経路を使用します。実数RBMは ``Orbital`` （``OrbitalGeneral`` / FSZは不可）、``NExUpdatePath=0`` または ``1``、``NLanczosMode=0`` の組合せに対応します。BackFlowおよびPower Lanczosとの併用には対応していません。同じ経路選択と制約がChargeRBMおよびSpinRBMの各層定義にも適用されます。FSZのサンプリング・測定ではRBM因子が未実装のため、FSZとRBMを併用する入力は実数・複素数ともにエラーになります。
 
 -  行数固定で読み込みを行う為、ヘッダの省略はできません。
 

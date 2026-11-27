@@ -1,12 +1,8 @@
 #include "physcal_lanczos.h"
+#include <float.h>
 #include "math.h"
 #include "stdlib.h"
 
-int CalculateEne(
-    double H1, double H2_1, double H2_2, double H3, double H4,
-    double *alpha_p, double *ene_p, double *ene_vp,
-    double *alpha_m, double *ene_m, double *ene_vm
-);
 int CalculateEneByAlpha(double H1, double H2_1, double H2_2,
             double H3, double H4, double alpha,
             double *ene, double*ene_V);
@@ -40,6 +36,7 @@ int PhysCalLanczos_real
  const int _nCisAjsCktAltDC,
  int **_CisAjsCktAltDC,
  const int _NLanczosmode,
+ size_t sampleCount,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
@@ -62,10 +59,10 @@ int PhysCalLanczos_real
   LS_CisAjsCktAltDC_real = (double*)malloc(sizeof(double)*_nCisAjsCktAltDC);
 
   if (CalculateEne(_QQQQ_real[2], _QQQQ_real[3], _QQQQ_real[10],
-                   _QQQQ_real[11], _QQQQ_real[15], &alpha_p, &ene_p,
+                   _QQQQ_real[11], _QQQQ_real[15], sampleCount, &alpha_p, &ene_p,
                    &ene_vp, &alpha_m, &ene_m, &ene_vm) != 0) {
     fprintf(stderr,
-            "Error: Lanczos method is failed due to illegal value of alpha.\n");
+            "Error: singular or non-finite first-step Lanczos solution.\n");
     free(LS_CisAjs_real);
     free(LS_CisAjsCktAlt_real);
     free(LS_CisAjsCktAltDC_real);
@@ -169,6 +166,7 @@ int PhysCalLanczos_fcmp(
  const int _nCisAjsCktAltDC,
  int **_CisAjsCktAltDC,
  const int _NLanczosmode,
+ size_t sampleCount,
  FILE *_FileLS,
  FILE *_FileLSQQQQ,
  FILE *_FileLSQCisAjsQ,
@@ -193,9 +191,9 @@ int PhysCalLanczos_fcmp(
   /* zvo_ls.dat */
   if (CalculateEne(creal(_QQQQ[2]), creal(_QQQQ[3]),
                    creal(_QQQQ[10]), creal(_QQQQ[11]),
-                   creal(_QQQQ[15]), &alpha_p, &ene_p, &ene_vp, &alpha_m,
+                   creal(_QQQQ[15]), sampleCount, &alpha_p, &ene_p, &ene_vp, &alpha_m,
                    &ene_m, &ene_vm) != 0) {
-    fprintf(stderr,"Error: Lanczos method is failed due to illegal value of alpha.\n");
+    fprintf(stderr,"Error: singular or non-finite first-step Lanczos solution.\n");
     free(LS_CisAjs);
     free(LS_CisAjsCktAlt);
     free(LS_CisAjsCktAltDC);
@@ -278,15 +276,24 @@ int PhysCalLanczos_fcmp(
 }
 
 int CalculateEne(double H1, double H2_1, double H2_2, double H3, double H4,
-         double *alpha_p, double *ene_p, double *ene_vp,
-         double *alpha_m, double *ene_m, double *ene_vm
-){
+                 size_t sampleCount, double *alpha_p, double *ene_p,
+                 double *ene_vp, double *alpha_m, double *ene_m, double *ene_vm) {
   double tmp_AA, tmp_BB, tmp_CC, tmp_xp, tmp_xm;
-  //determine alpha
+  /* det S for (psi, H psi) is the sampled local-energy variance.
+     Summation error in each moment grows with the number of samples.
+     Use the valid rows from all chains in this bin, including split chains. */
+  const double relativeTolerance = fmax(64.0, 4.0 * (double)sampleCount) * DBL_EPSILON;
+  const double h1Squared = H1 * H1;
+  if (!isfinite(H1) || !isfinite(H2_1) || !isfinite(H2_2) ||
+      !isfinite(H3) || !isfinite(H4) ||
+      H2_1 - h1Squared <= relativeTolerance * fmax(H2_1, h1Squared)) {
+    return -1;
+  }
+
   tmp_AA  = H2_1*(H2_1+H2_2)-2*H1*H3;
   tmp_BB  = -H1*H2_1+H3;
   tmp_CC  = H2_1*pow(H2_1+H2_2,2)-pow(H1,2)*H2_1*(H2_1+2.0*H2_2)+4*pow(H1, 3)*H3-2.0*H1*(2*H2_1+H2_2)*H3+H3*H3;
-  if(tmp_CC < 0){
+  if (!isfinite(tmp_AA) || tmp_AA == 0.0 || !isfinite(tmp_CC) || tmp_CC < 0.0) {
     return -1;
   }
   tmp_xp  = (tmp_BB+sqrt(tmp_CC))/tmp_AA;
@@ -295,14 +302,16 @@ int CalculateEne(double H1, double H2_1, double H2_2, double H3, double H4,
   *alpha_m = tmp_xm ;
 
   //calculate energy
-  if(!CalculateEneByAlpha(H1, H2_1, H2_2, H3, H4, *alpha_p, ene_p, ene_vp)==0){
+  if (CalculateEneByAlpha(H1, H2_1, H2_2, H3, H4, *alpha_p, ene_p, ene_vp) != 0) {
     return -1;
   }
-  if(!CalculateEneByAlpha(H1, H2_1, H2_2, H3, H4, *alpha_m, ene_m, ene_vm)==0){
+  if (CalculateEneByAlpha(H1, H2_1, H2_2, H3, H4, *alpha_m, ene_m, ene_vm) != 0) {
     return -1;
   }
 
-  return 0;
+  /* Only the lower-energy candidate is written. Its relative variance
+     must also be defined when the other candidate has zero energy. */
+  return isfinite(*ene_p > *ene_m ? *ene_vm : *ene_vp) ? 0 : -1;
 }
 
 int CalculateEneByAlpha(
@@ -314,9 +323,12 @@ int CalculateEneByAlpha(
   tmp_ene        = H1+alpha*(H2_1+H2_2)+alpha*alpha*H3;
   dnorm        = 1.0+2*alpha*H1+alpha*alpha*H2_1;
   tmp_ene_V        = H2_1+2*alpha*H3+alpha*alpha*H4;
-  if(fabs(dnorm/H1) < pow(10.0, -12)) return -1;
-  *ene_V        =  ((tmp_ene_V/dnorm)-pow((tmp_ene/dnorm), 2))/pow((tmp_ene/dnorm),2);
-  *ene    = tmp_ene/dnorm;
+  if (!isfinite(alpha) || !isfinite(dnorm) || dnorm <= 0.0 ||
+      dnorm < 1e-12 * fabs(H1)) return -1;
+  *ene = tmp_ene / dnorm;
+  if (!isfinite(*ene)) return -1;
+  const double e2 = (*ene) * (*ene);
+  *ene_V = e2 > 0.0 && isfinite(e2) ? (tmp_ene_V / dnorm - e2) / e2 : NAN;
   return 0;
 }
 

@@ -514,7 +514,7 @@ def run_negative(rootdir, case):
         workdir = make_case(
             rootdir, "negative_fsz", base="HubbardChain_fsz_SpinJastrow"
         )
-        expected = "real-valued RBM does not support orbital-general (FSZ) mode"
+        expected = "RBM does not support orbital-general (FSZ) mode"
     else:
         workdir = make_case(rootdir, "negative_" + case)
         expected = {

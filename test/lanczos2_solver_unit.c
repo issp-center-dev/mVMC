@@ -7,10 +7,6 @@
 #include "physcal_lanczos.h"
 #include "physcal_lanczos2.h"
 
-int CalculateEne(double H1, double H2_1, double H2_2, double H3, double H4,
-                 double *alpha_p, double *ene_p, double *ene_vp,
-                 double *alpha_m, double *ene_m, double *ene_vm);
-
 static int failures = 0;
 
 #define CHECK(condition, ...)                                                   \
@@ -373,7 +369,7 @@ static void TestLegacyDimensionTwoReduction(void) {
   moment[10] = 2.2;              /* QQQQ[15]: H4 */
 
   legacyStatus =
-      CalculateEne(0.2, 1.3, 0.9, -0.4, 2.2, &alphaPlus, &energyPlus,
+      CalculateEne(0.2, 1.3, 0.9, -0.4, 2.2, 128, &alphaPlus, &energyPlus,
                    &variancePlus, &alphaMinus, &energyMinus, &varianceMinus);
   CHECK(legacyStatus == 0, "legacy CalculateEne status=%d", legacyStatus);
   if (energyPlus <= energyMinus) {
@@ -414,20 +410,55 @@ static void TestLegacyNegativeDiscriminantFails(void) {
   realMoment[3] = -1.0;
   complexMoment[3] = -1.0;
 
-  status = CalculateEne(0.0, -1.0, 0.0, 0.0, 0.0, &alphaPlus,
+  status = CalculateEne(0.0, -1.0, 0.0, 0.0, 0.0, 128, &alphaPlus,
                         &energyPlus, &variancePlus, &alphaMinus,
                         &energyMinus, &varianceMinus);
   CHECK(status != 0, "negative discriminant CalculateEne status=%d", status);
 
   status = PhysCalLanczos_real(
-      realMoment, NULL, NULL, NULL, 2, 0, 0, 0, NULL, NULL, 0, 0, NULL, 1,
+      realMoment, NULL, NULL, NULL, 2, 0, 0, 0, NULL, NULL, 0, 0, NULL, 1, 128,
       NULL, NULL, NULL, NULL, NULL, NULL, NULL);
   CHECK(status != 0, "negative discriminant real path status=%d", status);
 
   status = PhysCalLanczos_fcmp(
-      complexMoment, NULL, NULL, NULL, 2, 0, 0, 0, NULL, NULL, 0, 0, NULL, 1,
+      complexMoment, NULL, NULL, NULL, 2, 0, 0, 0, NULL, NULL, 0, 0, NULL, 1, 128,
       NULL, NULL, NULL, NULL, NULL, NULL, NULL);
   CHECK(status != 0, "negative discriminant complex path status=%d", status);
+}
+
+static void TestLegacyOverlapRank(void) {
+  double ap, ep, vp, am, em, vm;
+  /* Roundoff in <|E_loc|^2> can put the sampled overlap determinant
+     on either side of zero. M02 and M11 are sampled independently. */
+  const double h1 = -2.802775632001865;
+  const double h2 = h1 * h1;
+  for (int sign = -1; sign <= 1; sign += 2) {
+    const double h2Sample = nextafter(h2, sign > 0 ? INFINITY : -INFINITY);
+    CHECK(CalculateEne(h1, h2Sample, 7.855551255954654,
+                       -22.01734763613131, 61.70968553493064, 128,
+                       &ap, &ep, &vp, &am, &em, &vm) != 0,
+          "accepted a numerically rank-one overlap (sign=%d)", sign);
+  }
+
+  /* Eigenvalues -1 and 2 with weights 2/3 and 1/3 give <H> = 0
+     and a full-rank overlap. The lower-energy branch is regular. */
+  int status = CalculateEne(0.0, 2.0, 2.0, 2.0, 6.0, 128,
+                            &ap, &ep, &vp, &am, &em, &vm);
+  CHECK(status == 0 && NearlyEqual(fmin(ep, em), -1.0, 1e-14),
+        "failed full-rank zero-mean fixture (status=%d)", status);
+
+  /* Eigenvalues 1 and 2^20 with weight 2^-71 on the upper state.
+     The moments rounded to binary64 give det S = 2^-31. */
+  const double m2 = 1.0 + 0x1p-31;
+  const double m3 = 1.0 + 0x1p-11;
+  const double m4 = 513.0;
+  status = CalculateEne(1.0, m2, m2, m3, m4, 10000,
+                        &ap, &ep, &vp, &am, &em, &vm);
+  CHECK(status == 0 && NearlyEqual(fmin(ep, em), 1.0, 1e-12),
+        "rejected a resolved positive variance (status=%d)", status);
+  CHECK(CalculateEne(1.0, m2, m2, m3, m4, 1000000,
+                     &ap, &ep, &vp, &am, &em, &vm) != 0,
+        "accepted a variance within the sample-dependent tolerance");
 }
 
 static void TestMomentAccumulation(void) {
@@ -742,6 +773,7 @@ int main(void) {
   TestNonfiniteAndInvalidInputs();
   TestLegacyDimensionTwoReduction();
   TestLegacyNegativeDiscriminantFails();
+  TestLegacyOverlapRank();
   TestMomentAccumulation();
   TestPowerLanczosSupportDiagnostic();
   TestOutputLayout();
