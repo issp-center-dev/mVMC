@@ -96,23 +96,26 @@ written to a file in ``output/``.
 
 Related files
 
-- output/zvo_cisajs_001.dat (:ref:`zvocisajs`)
-- output/zvo_cisajs.dat (:ref:`zvocisajs`)
-- output/zvo_cisajscktalt_001.dat (:ref:`zvocisajs`)
-- output/zvo_cisajscktalt.dat (:ref:`zvocisajs`)
+- ``output/zvo_cisajs_001.dat``, ``output/zvo_cisajscktalt_001.dat`` (:ref:`zvocisajs`) (mVMC)
+- ``output/zvo_cisajs_eigen0.dat``, ``output/zvo_cisajscktalt_eigen0.dat`` (:ref:`zvocisajs`) (HPhi CG)
 - geometry.dat (:ref:`geometry`)
-- output/zvo_corr.dat (:ref:`zvocorr`)
 
 Display correlation functions
 -----------------------------
 
-Plot the correlation function in the *k* space
-by using gnuplot.
+Use the following gnuplot commands for the mVMC result.
 
 .. code-block:: gnuplot
 
    load "kpath.gp"
    plot "output/zvo_corr.dat" u 1:12 w l
+
+For the HPhi CG ground state, use the eigenstate 0 file.
+
+.. code-block:: gnuplot
+
+   load "kpath.gp"
+   plot "output/zvo_corr_eigen0.dat" u 1:12 w l
 
 .. _corplotpng:
 
@@ -124,4 +127,5 @@ by using gnuplot.
 Related files
 
 - kpath.gp (:ref:`gnuplot`)
-- output/zvo_corr.dat (:ref:`zvocorr`)
+- ``output/zvo_corr.dat`` (:ref:`zvocorr`), ``output/zvo_corr_001.dat.frmsf`` (:ref:`correlation`) (mVMC)
+- ``output/zvo_corr_eigen0.dat`` (:ref:`zvocorr`), ``output/zvo_corr_eigen0.dat.frmsf`` (:ref:`correlation`) (HPhi CG)

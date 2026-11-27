@@ -74,6 +74,7 @@ END MODULE fourier_val
 MODULE fourier_routine
   !
   IMPLICIT NONE
+  CHARACTER(*), PARAMETER :: whitespace = " " // ACHAR(9)
   !
 CONTAINS
 !
@@ -113,28 +114,97 @@ SUBROUTINE open_input(fi, filename, description)
   !
 END SUBROUTINE open_input
 !
-! Read the value of a "keyword value" record as a character string.
-! List-directed input stops at '/', so split the record by hand.
-! Tabs are treated as blanks.
-!
-SUBROUTINE read_string_value(fi, value)
-  INTEGER,INTENT(IN) :: fi
-  CHARACTER(*),INTENT(OUT) :: value
+! Read one complete record, including any text beyond the first chunk.
+FUNCTION read_record(fi) RESULT(line)
+  USE ISO_FORTRAN_ENV, ONLY: iostat_end, iostat_eor
+  INTEGER, INTENT(IN) :: fi
+  CHARACTER(:), ALLOCATABLE :: line
+  CHARACTER(512) :: chunk
+  INTEGER :: ios, n
   !
-  INTEGER :: ii
-  CHARACTER(256) :: line
-  !
-  READ(fi,'(a)') line
-  DO ii = 1, LEN(line)
-     IF(line(ii:ii) == CHAR(9)) line(ii:ii) = " "
+  line = ""
+  DO
+     READ(fi, '(a)', ADVANCE='NO', SIZE=n, IOSTAT=ios) chunk
+     IF(ios /= 0 .AND. ios /= iostat_end .AND. ios /= iostat_eor) ERROR STOP "Cannot read input record."
+     line = line // chunk(:n)
+     IF(ios /= 0) EXIT
   END DO
-  line = ADJUSTL(line)
-  line = ADJUSTL(line(INDEX(line, " "):))
-  ii = INDEX(line, " ")
-  IF(ii == 0) ii = LEN(line) + 1
-  value = line(1:ii-1)
+END FUNCTION read_record
+!
+! Extract a whitespace-delimited word and leave pos at the following separator.
+FUNCTION next_word(line, pos) RESULT(word)
+  CHARACTER(*), INTENT(IN) :: line
+  INTEGER, INTENT(INOUT) :: pos
+  CHARACTER(:), ALLOCATABLE :: word
+  INTEGER :: first
   !
+  DO WHILE(pos <= LEN(line))
+     IF(INDEX(whitespace, line(pos:pos)) == 0) EXIT
+     pos = pos + 1
+  END DO
+  first = pos
+  DO WHILE(pos <= LEN(line))
+     IF(INDEX(whitespace, line(pos:pos)) /= 0) EXIT
+     pos = pos + 1
+  END DO
+  word = line(first:pos-1)
+END FUNCTION next_word
+!
+! Unquoted paths can contain '/'. For quoted paths use Fortran's rules for
+! spaces and doubled quotation marks, then check the decoded length.
+SUBROUTINE read_string_value(fi, value)
+  INTEGER, INTENT(IN) :: fi
+  CHARACTER(*), INTENT(OUT) :: value
+  CHARACTER(:), ALLOCATABLE :: line, key, name
+  INTEGER :: pos, first, ios
+  !
+  line = read_record(fi)
+  pos = 1
+  key = next_word(line, pos)
+  first = VERIFY(line(pos:), whitespace)
+  IF(first == 0) ERROR STOP "Missing value for file name."
+  pos = pos + first - 1
+  IF(line(pos:pos) == '"' .OR. line(pos:pos) == "'") THEN
+     ALLOCATE(CHARACTER(LEN=LEN(line)-pos+1) :: name)
+     READ(line(pos:), *, IOSTAT=ios) name
+     IF(ios /= 0) ERROR STOP "Invalid quoted file name."
+  ELSE
+     name = next_word(line, pos)
+  END IF
+  IF(LEN_TRIM(name) > LEN(value)) THEN
+     WRITE(*,*) "ERROR! File name for ", key, " exceeds ", LEN(value), " characters."
+     ERROR STOP "File name too long."
+  END IF
+  value = name
 END SUBROUTINE read_string_value
+!
+! HPhi writes "MAX DIMENSION idim_max=<positive integer>" on the first line.
+! Validate the entire value before the integer conversion: list-directed READ
+! also accepts '/' and null fields without assigning an integer.
+INTEGER FUNCTION fulldiag_dimension(line) RESULT(n)
+  CHARACTER(*), INTENT(IN) :: line
+  CHARACTER(:), ALLOCATABLE :: label, number
+  INTEGER :: equal, pos, ios
+  !
+  n = 0
+  equal = INDEX(line, "=")
+  IF(equal == 0) RETURN
+  label = line(:equal-1)
+  pos = 1
+  IF(next_word(label, pos) /= "MAX") RETURN
+  IF(next_word(label, pos) /= "DIMENSION") RETURN
+  IF(next_word(label, pos) /= "idim_max") RETURN
+  IF(next_word(label, pos) /= "") RETURN
+  pos = equal + 1
+  number = next_word(line, pos)
+  IF(next_word(line, pos) /= "") RETURN
+  IF(LEN(number) > 0) THEN
+     IF(number(1:1) == "+") number = number(2:)
+  END IF
+  IF(LEN(number) == 0 .OR. VERIFY(number, "0123456789") /= 0) RETURN
+  READ(number, *, IOSTAT=ios) n
+  IF(ios /= 0) n = 0
+END FUNCTION fulldiag_dimension
 !
 ! Read from HPhi/mVMC input files
 !
@@ -144,8 +214,8 @@ SUBROUTINE read_filename()
   &                       filetail, calctype, numave, interval
   IMPLICIT NONE
   !
-  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start, ii, ios
-  CHARACTER(256) :: modpara, calcmod, keyname, namelist, outputdir, line
+  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start
+  CHARACTER(256) :: modpara, calcmod, keyname, namelist, outputdir
   !
   WRITE(*,*) 
   WRITE(*,*) "#####  Read HPhi/mVMC Input Files  #####" 
@@ -303,23 +373,13 @@ SUBROUTINE read_filename()
      !
      ! FullDiag
      !
-     ! HPhi writes "  MAX DIMENSION idim_max=<N> " as the first line.
-     ! A character constant is not allowed in an input format,
-     ! so read the line as a string and parse the number after '='.
-     !
      CALL open_input(fi, TRIM(outputdir) // "/CHECK_Memory.dat", "CHECK_Memory.dat file")
-     READ(fi, '(a)', IOSTAT = ios) line
-     ii = INDEX(line, "=")
-     IF(ios == 0 .AND. ii > 0) THEN
-        READ(line(ii+1:), *, IOSTAT = ios) nwfc
-     ELSE
-        ios = -1
-     END IF
-     IF(ios /= 0) THEN
-        WRITE(*,*) "ERROR! Cannot read idim_max from ", TRIM(outputdir) // "/CHECK_Memory.dat"
-        ERROR STOP "Cannot read the dimension of the Hilbert space."
-     END IF
+     nwfc = fulldiag_dimension(read_record(fi))
      CLOSE(fi)
+     IF(nwfc <= 0) THEN
+        WRITE(*,*) "ERROR! Cannot read idim_max from ", TRIM(outputdir) // "/CHECK_Memory.dat"
+        ERROR STOP "Expected a positive Hilbert space dimension."
+     END IF
      ALLOCATE(filetail(nwfc))
      !
      DO iwfc = 1, nwfc

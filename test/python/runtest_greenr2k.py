@@ -11,13 +11,16 @@ cases:
   slash_paths    the namelist names files with '/' ("sub/greenone.def",
                  "./modpara.def", one separated by a tab); the result is
                  byte for byte the same as "normal"
+  quoted_long_paths  quoted paths, embedded spaces and quotes, long records
+  path_too_long  reject a name exceeding the tool's 256-character field
+  invalid_dimension  reject invalid FullDiag headers before writing output
   missing_index  greentwo.def lacks required entries -> nonzero exit
                  status and the message "Missing indices ..."
   missing_file   the namelist names a file that does not exist -> nonzero
                  exit status, an error message, and no file is created
   fulldiag       an HPhi FullDiag layout (CalcMod with CalcType 2,
-                 output/CHECK_Memory.dat, *_eigen0.dat) -> greenr2k exits 0
-                 and writes output/zvo_corr_eigen0.dat
+                 output/CHECK_Memory.dat, *_eigen*.dat) -> greenr2k exits 0
+                 and writes correlations for two eigenstates
 """
 
 from __future__ import print_function
@@ -29,7 +32,8 @@ import sys
 
 TIMEOUT = 300
 HEAD = "zvo"
-CASES = ["normal", "slash_paths", "missing_index", "missing_file", "fulldiag"]
+CASES = ["normal", "slash_paths", "quoted_long_paths", "path_too_long",
+         "missing_index", "missing_file", "fulldiag", "invalid_dimension"]
 
 STDFACE = """\
 L = 4
@@ -45,7 +49,7 @@ NVMCSample = 10
 """
 KPATH = "2 4\nG 0 0 0\nX 0.5 0 0\n4 1 1\n"
 # The first line is what HPhi writes to output/CHECK_Memory.dat.
-CHECK_MEMORY = ("  MAX DIMENSION idim_max=1 \n"
+CHECK_MEMORY = ("  MAX DIMENSION idim_max=2 \n"
                 "  APPROXIMATE REQUIRED MEMORY  max_mem=0.000001 GB \n")
 
 
@@ -112,7 +116,7 @@ def read_bytes(path):
         return stream.read()
 
 
-def rewrite_namelist(casedir, replace, separator="  "):
+def rewrite_namelist(casedir, replace, separator="  ", indent=""):
     """Replace the file names of the given keywords in namelist.def."""
     path = os.path.join(casedir, "namelist.def")
     with open(path) as stream:
@@ -121,7 +125,7 @@ def rewrite_namelist(casedir, replace, separator="  "):
     for line in lines:
         words = line.split()
         if len(words) == 2 and words[0] in replace:
-            line = "{}{}{}\n".format(words[0], separator, replace[words[0]])
+            line = "{}{}{}{}\n".format(indent, words[0], separator, replace[words[0]])
         result.append(line)
     with open(path, "w") as stream:
         stream.writelines(result)
@@ -210,6 +214,38 @@ def case_slash_paths(build, basedir, casedir, refdir):
     return 0
 
 
+def case_quoted_long_paths(build, basedir, casedir, refdir):
+    prepare_case(basedir, casedir)
+    # A 256-character relative path split over two filesystem components.
+    os.mkdir(os.path.join(casedir, "subdir"))
+    long_name = "subdir/" + "f" * 245 + ".def"
+    shutil.move(os.path.join(casedir, "greenone.def"), os.path.join(casedir, long_name))
+    shutil.move(os.path.join(casedir, "greentwo.def"), os.path.join(casedir, "two's body.def"))
+    rewrite_namelist(casedir, {"OneBodyG": long_name})
+    rewrite_namelist(casedir, {"ModPara": '"./modpara.def"', "TwoBodyG": "'two''s body.def'"},
+                     separator="\t", indent=" " * 600)
+    code, _ = run_greenr2k(build, casedir)
+    if code != 0:
+        return 1
+    for name in [HEAD + "_corr.dat", HEAD + "_corr_001.dat.frmsf"]:
+        if read_bytes(os.path.join(casedir, "output", name)) != read_bytes(os.path.join(refdir, "output", name)):
+            print("FAIL: {} differs for quoted or long paths".format(name))
+            return 1
+    return 0
+
+
+def case_path_too_long(build, basedir, casedir):
+    prepare_case(basedir, casedir)
+    name = "subdir/" + "x" * 250
+    for value in [name, '"' + name + '"']:
+        rewrite_namelist(casedir, {"OneBodyG": value})
+        code, out = run_greenr2k(build, casedir)
+        if code in (None, 0) or "File name too long." not in out:
+            print("FAIL: expected a length error for a 257-character file name")
+            return 1
+    return 0
+
+
 def case_missing_index(build, basedir, casedir):
     prepare_case(basedir, casedir)
     path = os.path.join(casedir, "greentwo.def")
@@ -274,6 +310,9 @@ def case_fulldiag(build, basedir, casedir):
               "a") as stream:
         for row in extra:
             stream.write(" ".join(str(i) for i in row) + "  0.0  0.0\n")
+    for prefix in [HEAD + "_cisajs", HEAD + "_cisajscktalt"]:
+        shutil.copyfile(os.path.join(output, prefix + "_eigen0.dat"),
+                        os.path.join(output, prefix + "_eigen1.dat"))
     code, out = run_greenr2k(build, casedir)
     if code != 0:
         print("FAIL: greenr2k exited with {}".format(code))
@@ -282,9 +321,35 @@ def case_fulldiag(build, basedir, casedir):
         if text not in out:
             print("FAIL: '{}' was not printed".format(text))
             return 1
-    for name in [HEAD + "_corr_eigen0.dat", HEAD + "_corr_eigen0.dat.frmsf"]:
-        if not os.path.isfile(os.path.join(output, name)):
-            print("FAIL: greenr2k did not write {}".format(name))
+    for state in (0, 1):
+        for suffix in (".dat", ".dat.frmsf"):
+            name = HEAD + "_corr_eigen" + str(state) + suffix
+            if not os.path.isfile(os.path.join(output, name)):
+                print("FAIL: greenr2k did not write {}".format(name))
+                return 1
+    return 0
+
+
+def case_invalid_dimension(build, basedir, casedir):
+    prepare_case(basedir, casedir)
+    with open(os.path.join(casedir, "namelist.def"), "a") as stream:
+        stream.write("CalcMod calcmod.def\n")
+    with open(os.path.join(casedir, "calcmod.def"), "w") as stream:
+        stream.write("CalcType 2\n")
+    output = os.path.join(casedir, "output")
+    records = ["", "other=1", "MAX DIMENSION idim_max"] + [
+        "MAX DIMENSION idim_max=" + value
+        for value in ("", "0", "-1", "/", ",", "+", "abc", "1.5", "1 2",
+                      "9" * 40, "1" + " " * 512 + "junk")]
+    for record in records:
+        with open(os.path.join(output, "CHECK_Memory.dat"), "w") as stream:
+            stream.write(record + "\n" if record else "")
+        code, out = run_greenr2k(build, casedir)
+        if code in (None, 0) or "Cannot read idim_max" not in out:
+            print("FAIL: expected a dimension error for {!r}".format(record))
+            return 1
+        if any(name.startswith(HEAD + "_corr") for name in os.listdir(output)):
+            print("FAIL: greenr2k wrote correlation output for an invalid dimension")
             return 1
     return 0
 
@@ -313,6 +378,12 @@ def main():
             code = case_normal(build, basedir, casedir)
         elif case == "slash_paths":
             code = case_slash_paths(build, basedir, casedir, refdir)
+        elif case == "quoted_long_paths":
+            code = case_quoted_long_paths(build, basedir, casedir, refdir)
+        elif case == "path_too_long":
+            code = case_path_too_long(build, basedir, casedir)
+        elif case == "invalid_dimension":
+            code = case_invalid_dimension(build, basedir, casedir)
         elif case == "missing_index":
             code = case_missing_index(build, basedir, casedir)
         elif case == "missing_file":
