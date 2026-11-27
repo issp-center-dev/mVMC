@@ -115,6 +115,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   const char *alt_solver_name;
   const char *failure_reason;
   static int fallback_info_printed = 0;
+  static int no_active_printed = 0;
 
 
   int rank,size;
@@ -197,7 +198,23 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   abort();
 #endif
 
-  if (useDiagScale){
+  if (nSmat == 0) {
+    /* Every parameter is fixed by OptFlag or removed by the diagonal cut, so
+     * there is no linear system to solve.  Running CG with max_iter=0 would
+     * report a spurious "did not converge" failure, and r[0] below would be
+     * read one past the end of VecCG.  nSmat is identical on every rank
+     * (OptFlag, DSROptRedCut and the reduced SROptOO are shared), so all
+     * ranks skip the collective solver together. */
+    if (rank == 0 && !no_active_printed) {
+      fprintf(stderr,
+              "warning: SR-CG has no active variational parameter "
+              "(%d of %d parameter slots fixed by OptFlag, %d removed by "
+              "DSROptRedCut); the parameter update is skipped.\n",
+              optNum, nPara, cutNum);
+      no_active_printed = 1;
+    }
+    info = 0;
+  } else if (useDiagScale){
     info = fn_StochasticOptPreconCG_DiagScale_Main(nSmat, VecCG, comm);
   }else{
     info = fn_StochasticOptCG_Main(nSmat, VecCG, comm);
@@ -275,7 +292,8 @@ int fn_StochasticOptCG(MPI_Comm comm) {
   /*** print zqp_SRinfo.dat ***/
   if(rank==0) {
     //if(info!=0) fprintf(stderr, "StcOpt: DPOSV info=%d\n",info);
-    rmax = r[0]; simax=0;;
+    /* r has nSmat entries; with nSmat==0 report rmax=0 and index -1. */
+    rmax = (nSmat > 0) ? r[0] : 0.0; simax=0;
     for(si=0;si<nSmat;si++) {
       if(fabs(rmax) < fabs(r[si])) {
         rmax = r[si]; simax=si;
@@ -283,7 +301,7 @@ int fn_StochasticOptCG(MPI_Comm comm) {
     }
 
     fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e % .5e % .5e %5d %d\n",NPara,nSmat,optNum,cutNum,
-            sDiagMax,sDiagMin,rmax,smatToParaIdx[simax], info);
+            sDiagMax,sDiagMin,rmax,(nSmat > 0) ? smatToParaIdx[simax] : -1, info);
     //fprintf(FileSRinfo, "%5d %5d %5d %5d % .5e %5d %d\n",NPara,nSmat,optNum,cutNum,
     //        rmax,smatToParaIdx[simax], info);
   }
