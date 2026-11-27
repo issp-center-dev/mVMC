@@ -21,4 +21,4 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 */
 #pragma once
 #include "Def.h"
-void diag(struct BindStruct *X);
+int diag(struct BindStruct *X);

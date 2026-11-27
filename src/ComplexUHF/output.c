@@ -51,7 +51,7 @@ void Child_OutputOptData(char* cFileName, char* cNKWidx, double complex *Para, i
   fclose(fp_out);
 }
 
-void output(struct BindStruct *X) {
+int output(struct BindStruct *X) {
 
   FILE *fp;
   char sdt[256];
@@ -85,8 +85,9 @@ void output(struct BindStruct *X) {
   cal_cisajs(X);
 
   if (X->Def.iFlgOrbital == 1) {
-    MakeOrbitalFile(X);
+    return MakeOrbitalFile(X);
   }
+  return 0;
 }
 
 void cal_cisajs(struct BindStruct *X){
@@ -156,7 +157,16 @@ int MakeOrbitalFile(struct BindStruct *X){
           tmp_mat[int_i][int_j] = X->Large.Ham[int_i][int_j];
         }
       }
-      ZHEEVall(xMsize,tmp_mat,r,vec);
+      if (ZHEEVall(xMsize,tmp_mat,r,vec) == 0) {
+        fprintf(stderr, "Error: diagonalization for the anti-parallel orbital output failed.\n");
+        free_cd_2d_allocate(tmp_mat);
+        free_cd_2d_allocate(vec);
+        free_cd_2d_allocate(tmp_SLT_D);
+        free_cd_2d_allocate(tmp_SLT_U);
+        free_cd_2d_allocate(AP_UHF_fij);
+        free_d_1d_allocate(r);
+        return -1;
+      }
       for(int_k = 0; int_k < xMsize; int_k++){ // int_k = n
         for(int_l = 0; int_l < xMsize; int_l++){
           tmp_SLT_U[int_l][int_k] = vec[int_k][int_l];
@@ -168,7 +178,16 @@ int MakeOrbitalFile(struct BindStruct *X){
           tmp_mat[int_i][int_j] = X->Large.Ham[int_i+xMsize][int_j+xMsize];
         }
       }
-      ZHEEVall(xMsize,tmp_mat,r,vec);
+      if (ZHEEVall(xMsize,tmp_mat,r,vec) == 0) {
+        fprintf(stderr, "Error: diagonalization for the anti-parallel orbital output failed.\n");
+        free_cd_2d_allocate(tmp_mat);
+        free_cd_2d_allocate(vec);
+        free_cd_2d_allocate(tmp_SLT_D);
+        free_cd_2d_allocate(tmp_SLT_U);
+        free_cd_2d_allocate(AP_UHF_fij);
+        free_d_1d_allocate(r);
+        return -1;
+      }
       for(int_k = 0; int_k < xMsize; int_k++){ // int_k: Ne
         for(int_l = 0; int_l < xMsize; int_l++){
           tmp_SLT_D[int_l][int_k] = (vec[int_k][int_l]);

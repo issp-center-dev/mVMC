@@ -30,6 +30,7 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 
 /*=================================================================================================*/
 #include "matrixlapack.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 int dgetrf_(int *m, int *n, double *a, int *lda, int *ipiv, int *info);
@@ -263,6 +264,7 @@ int ZHEEVall(int xNsize, double complex **A, double *r,double complex **vec){
 	zheev_(&jobz, &uplo, &n, a, &lda, w, work, &lwork, rwork, &info);
 
 	if(info != 0){
+		fprintf(stderr, "Error: zheev failed (INFO=%d).\n", info);
 		free(a);
 		free(w);
 		free(work);
