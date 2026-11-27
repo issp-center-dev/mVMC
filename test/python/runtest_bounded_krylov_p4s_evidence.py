@@ -28,9 +28,17 @@ def git_head(repository):
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         universal_newlines=True, check=False,
     )
-    if process.returncode != 0:
-        raise AssertionError("cannot resolve test repository HEAD")
-    return process.stdout.strip()
+    if process.returncode == 0:
+        return process.stdout.strip()
+    # Outside a git repository (a release tarball), cmake/git_archive.txt holds
+    # the commit the archive was made from (filled in by git archive and dist.sh).
+    archive = os.path.join(repository, "cmake", "git_archive.txt")
+    if os.path.exists(archive):
+        with open(archive) as handle:
+            text = handle.read().strip()
+        if re.match(r"^[0-9a-f]{40}$", text):
+            return text
+    raise AssertionError("cannot resolve test repository HEAD")
 
 
 def write_synthetic_markov_log(path, decision="GO", sample_count=512,

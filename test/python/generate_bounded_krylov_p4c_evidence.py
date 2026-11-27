@@ -1017,8 +1017,18 @@ def validate_commit_object(repository, commit):
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         universal_newlines=True, check=False,
     )
-    if process.returncode != 0 or process.stdout.strip() != commit:
-        raise AssertionError("commit provenance is not a repository commit")
+    if process.returncode == 0 and process.stdout.strip() == commit:
+        return
+    # Outside a git repository (a release tarball) the commit cannot be
+    # verified as an object. Accept it when it is the archived commit that
+    # cmake/git_archive.txt records (filled in by git archive and dist.sh).
+    archive = os.path.join(repository, "cmake", "git_archive.txt")
+    if (not os.path.exists(os.path.join(repository, ".git"))
+            and os.path.exists(archive)):
+        with open(archive) as handle:
+            if handle.read().strip() == commit:
+                return
+    raise AssertionError("commit provenance is not a repository commit")
 
 
 def analyze_command(args):
