@@ -90,6 +90,52 @@ SUBROUTINE key2lower(key)
   END DO
 END SUBROUTINE key2lower
 !
+! Open an existing input file for reading.
+! Without STATUS='OLD' a missing file is silently created and read as empty,
+! so abort with a message and a nonzero exit status instead.
+!
+SUBROUTINE open_input(fi, filename, description)
+  INTEGER,INTENT(IN) :: fi
+  CHARACTER(*),INTENT(IN) :: filename, description
+  !
+  INTEGER :: ios
+  !
+  IF(LEN_TRIM(filename) == 0) THEN
+     WRITE(*,*) "ERROR! The name of the ", description, " is empty."
+     ERROR STOP "Input file is not specified."
+  END IF
+  !
+  OPEN(fi, file = TRIM(filename), STATUS = 'OLD', ACTION = 'READ', IOSTAT = ios)
+  IF(ios /= 0) THEN
+     WRITE(*,*) "ERROR! Cannot open the ", description, " : ", TRIM(filename)
+     ERROR STOP "Cannot open the input file."
+  END IF
+  !
+END SUBROUTINE open_input
+!
+! Read the value of a "keyword value" record as a character string.
+! List-directed input stops at '/', so split the record by hand.
+! Tabs are treated as blanks.
+!
+SUBROUTINE read_string_value(fi, value)
+  INTEGER,INTENT(IN) :: fi
+  CHARACTER(*),INTENT(OUT) :: value
+  !
+  INTEGER :: ii
+  CHARACTER(256) :: line
+  !
+  READ(fi,'(a)') line
+  DO ii = 1, LEN(line)
+     IF(line(ii:ii) == CHAR(9)) line(ii:ii) = " "
+  END DO
+  line = ADJUSTL(line)
+  line = ADJUSTL(line(INDEX(line, " "):))
+  ii = INDEX(line, " ")
+  IF(ii == 0) ii = LEN(line) + 1
+  value = line(1:ii-1)
+  !
+END SUBROUTINE read_string_value
+!
 ! Read from HPhi/mVMC input files
 !
 SUBROUTINE read_filename()
@@ -98,7 +144,7 @@ SUBROUTINE read_filename()
   &                       filetail, calctype, numave, interval
   IMPLICIT NONE
   !
-  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start, ii
+  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start, ii, ios
   CHARACTER(256) :: modpara, calcmod, keyname, namelist, outputdir, line
   !
   WRITE(*,*) 
@@ -110,22 +156,27 @@ SUBROUTINE read_filename()
   !
   ! Read from NameList file
   !
-  OPEN(fi,file = TRIM(namelist))
+  CALL open_input(fi, namelist, "NameList file")
   !
+  file_one = ""
+  file_two = ""
+  modpara = ""
   calcmod = ""
   DO
      READ(fi,*,END=10) keyname
      BACKSPACE(fi)
      CALL key2lower(keyname)
      !
+     ! File names may contain '/', which stops list-directed input.
+     !
      IF(TRIM(ADJUSTL(keyname)) == "onebodyg") THEN
-        READ(fi,*) keyname, file_one
+        CALL read_string_value(fi, file_one)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "twobodyg") THEN
-        READ(fi,*) keyname, file_two
+        CALL read_string_value(fi, file_two)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "modpara") THEN
-        READ(fi,*) keyname, modpara
+        CALL read_string_value(fi, modpara)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "calcmod") THEN
-        READ(fi,*) keyname, calcmod
+        CALL read_string_value(fi, calcmod)
      ELSE
         READ(fi,*) keyname
      END IF
@@ -142,7 +193,7 @@ SUBROUTINE read_filename()
   !
   ! Read from Modpara file
   !
-  OPEN(fi,file = TRIM(modpara))
+  CALL open_input(fi, modpara, "ModPara file")
   !
   outputdir = "output"
   DO
@@ -153,18 +204,9 @@ SUBROUTINE read_filename()
      IF(TRIM(ADJUSTL(keyname)) == "nsite") THEN
         READ(fi,*) keyname, nsite
      ELSE IF(TRIM(ADJUSTL(keyname)) == "cdatafilehead") THEN
-        READ(fi,*) keyname, filehead
+        CALL read_string_value(fi, filehead)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "outputdir") THEN
-        !
-        ! List-directed input stops at '/', so split the line by hand.
-        !
-        READ(fi,'(a)') line
-        DO ii = 1, LEN(line)
-           IF(line(ii:ii) == CHAR(9)) line(ii:ii) = " "
-        END DO
-        line = ADJUSTL(line)
-        line = ADJUSTL(line(INDEX(line, " "):))
-        outputdir = line(1:INDEX(line, " ") - 1)
+        CALL read_string_value(fi, outputdir)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "numave") THEN
         READ(fi,*) keyname, numave
      ELSE IF(TRIM(ADJUSTL(keyname)) == "lanczos_max") THEN
@@ -201,7 +243,7 @@ SUBROUTINE read_filename()
      !
   ELSE
      !
-     OPEN(fi,file = TRIM(calcmod))
+     CALL open_input(fi, calcmod, "CalcMod file")
      !
      DO
         READ(fi,*,END=30) keyname
@@ -261,8 +303,22 @@ SUBROUTINE read_filename()
      !
      ! FullDiag
      !
-     OPEN(fi, file = "output/CHECK_Memory.dat")
-     READ(fi, '("  MAX DIMENSION idim_max=1", i16)') nwfc
+     ! HPhi writes "  MAX DIMENSION idim_max=<N> " as the first line.
+     ! A character constant is not allowed in an input format,
+     ! so read the line as a string and parse the number after '='.
+     !
+     CALL open_input(fi, TRIM(outputdir) // "/CHECK_Memory.dat", "CHECK_Memory.dat file")
+     READ(fi, '(a)', IOSTAT = ios) line
+     ii = INDEX(line, "=")
+     IF(ios == 0 .AND. ii > 0) THEN
+        READ(line(ii+1:), *, IOSTAT = ios) nwfc
+     ELSE
+        ios = -1
+     END IF
+     IF(ios /= 0) THEN
+        WRITE(*,*) "ERROR! Cannot read idim_max from ", TRIM(outputdir) // "/CHECK_Memory.dat"
+        ERROR STOP "Cannot read the dimension of the Hilbert space."
+     END IF
      CLOSE(fi)
      ALLOCATE(filetail(nwfc))
      !
@@ -324,7 +380,7 @@ SUBROUTINE read_geometry()
   CALL GETARG(2, filename)
   !
   WRITE(*,*) "  Read from ", TRIM(filename)
-  OPEN(fi, file = TRIM(filename))
+  CALL open_input(fi, filename, "Geometry file")
   !
   ! Direct lattice vector in arbitraly unit
   !
@@ -495,7 +551,7 @@ SUBROUTINE read_corrindx()
   !
   ! Read index for the One-Body Correlation
   !
-  OPEN(fi, file = TRIM(file_one))
+  CALL open_input(fi, file_one, "OneBodyG file")
   WRITE(*,*) "  Read from ", TRIM(file_one)
   READ(fi,*) ctmp
   READ(fi,*) ctmp, ncor1
@@ -536,7 +592,7 @@ SUBROUTINE read_corrindx()
   !
   ! Read index for the Two-Body Correlation
   !
-  OPEN(fi, file = TRIM(file_two))
+  CALL open_input(fi, file_two, "TwoBodyG file")
   WRITE(*,*) "  Read from ", TRIM(file_two)
   READ(fi,*) ctmp
   READ(fi,*) ctmp, ncor2
@@ -658,7 +714,7 @@ SUBROUTINE read_corrindx()
            END DO
         END DO
      END DO
-     STOP "Missing indices for the Green function."
+     ERROR STOP "Missing indices for the Green function."
   END IF
   !
   WRITE(*,*) "    Number of UpUpUpUp         Index : ", COUNT(indx(1:nr, 3, 1:norb, 1:norb) /= 0)
@@ -702,7 +758,7 @@ SUBROUTINE read_corrfile()
      ! One Body Correlation Function
      !
      filename = TRIM(filehead) // "_cisajs" // TRIM(filetail(iwfc))
-     OPEN(fi, file = TRIM(filename))
+     CALL open_input(fi, filename, "one-body correlation file")
      !
      DO icor = 1, ncor1
         READ(fi,*) itmp(1:4), cor0_r(1:2)
@@ -724,7 +780,7 @@ SUBROUTINE read_corrfile()
      ! Two Body Correlation function
      !
      filename = TRIM(filehead) // "_cisajscktalt" // TRIM(filetail(iwfc))
-     OPEN(fi, file = TRIM(filename))
+     CALL open_input(fi, filename, "two-body correlation file")
      !
      DO icor = 1, ncor2
         READ(fi,*) itmp(1:8), cor0_r(1:2)
