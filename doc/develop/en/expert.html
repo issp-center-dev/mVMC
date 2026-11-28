@@ -1149,14 +1149,18 @@ the number from <code class="docutils literal notranslate"><span class="pre">NDa
 <li><p><code class="docutils literal notranslate"><span class="pre">Nelectron</span></code></p>
 <p><strong>Type :</strong> int-type (Positive integer)</p>
 <p><strong>Description :</strong> The number of electron pairs (the electron number
-is given by 2 <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>).</p>
+is given by 2 <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code>). For canonical calculations
+(<code class="docutils literal notranslate"><span class="pre">NGrandCanonical=0</span></code>) <code class="docutils literal notranslate"><span class="pre">Nelectron</span></code> (or the value derived from
+<code class="docutils literal notranslate"><span class="pre">Ncond</span></code>) must be at least 1; <code class="docutils literal notranslate"><span class="pre">Nelectron</span> <span class="pre">&lt;=</span> <span class="pre">0</span></code> is rejected as an
+input error.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Ncond</span></code></p>
 <p><strong>Type :</strong> int-type (greater than or equal to 0)</p>
 <p><strong>Description :</strong> The number of conduction electrons. Electrons of
 localized spins are not counted, so that <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> is 0 for a pure
 spin system. <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> must not exceed
-2 (<code class="docutils literal notranslate"><span class="pre">Nsite</span></code> - <code class="docutils literal notranslate"><span class="pre">NlocalSpin</span></code>).</p>
+2 (<code class="docutils literal notranslate"><span class="pre">Nsite</span></code> - <code class="docutils literal notranslate"><span class="pre">NlocalSpin</span></code>), and <code class="docutils literal notranslate"><span class="pre">NlocalSpin</span></code> + <code class="docutils literal notranslate"><span class="pre">Ncond</span></code> must be
+at least 2 (at least one electron pair) when <code class="docutils literal notranslate"><span class="pre">NGrandCanonical=0</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">2Sz</span></code></p>
 <p><strong>Type :</strong> int-type</p>
@@ -1321,10 +1325,12 @@ usage from <span class="math notranslate nohighlight">\(O(N_\text{p}^2)\)</span>
 SR (<code class="docutils literal notranslate"><span class="pre">NSRCG=0</span></code>), this option can be used with <code class="docutils literal notranslate"><span class="pre">NSplitSize</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">NSRCG</span></code></p>
-<p><strong>Type :</strong> int-type (0 or 1, default value: 0)</p>
+<p><strong>Type :</strong> int-type (0, 1 or 2, default value: 0)</p>
 <p><strong>Description :</strong> The option of solving <span class="math notranslate nohighlight">\(Sx=g\)</span> in the SR method
 without constructing <span class="math notranslate nohighlight">\(S\)</span>
-matrix [<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ]. (0: off, 1: on).
+matrix [<a class="reference external" href="https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.045103">NeuscammanUmrigarChan</a> ]. (0: off, 1: on, 2: on with the
+diagonal scaling of <code class="docutils literal notranslate"><span class="pre">useDiagScale</span></code>). Any other value is rejected
+as an input error.
 This reduces the amount of memory usage from
 <span class="math notranslate nohighlight">\(O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})\)</span> to
 <span class="math notranslate nohighlight">\(O(N_\text{p}) + O(N_\text{p}N_\text{MCS})\)</span> when

@@ -1211,7 +1211,10 @@ Keywords and parameters
    **Type :** int-type (Positive integer)
 
    **Description :** The number of electron pairs (the electron number
-   is given by 2 ``Nelectron``).
+   is given by 2 ``Nelectron``). For canonical calculations
+   (``NGrandCanonical=0``) ``Nelectron`` (or the value derived from
+   ``Ncond``) must be at least 1; ``Nelectron <= 0`` is rejected as an
+   input error.
 
 -  ``Ncond``
 
@@ -1220,7 +1223,8 @@ Keywords and parameters
    **Description :** The number of conduction electrons. Electrons of
    localized spins are not counted, so that ``Ncond`` is 0 for a pure
    spin system. ``Ncond`` must not exceed
-   2 (``Nsite`` - ``NlocalSpin``).
+   2 (``Nsite`` - ``NlocalSpin``), and ``NlocalSpin`` + ``Ncond`` must be
+   at least 2 (at least one electron pair) when ``NGrandCanonical=0``.
 
 -  ``2Sz``
 
@@ -1428,11 +1432,13 @@ Keywords and parameters
 
 -  ``NSRCG``
 
-   **Type :** int-type (0 or 1, default value: 0)
+   **Type :** int-type (0, 1 or 2, default value: 0)
 
    **Description :** The option of solving :math:`Sx=g` in the SR method
    without constructing :math:`S`
-   matrix [NeuscammanUmrigarChan_ ]. (0: off, 1: on).
+   matrix [NeuscammanUmrigarChan_ ]. (0: off, 1: on, 2: on with the
+   diagonal scaling of ``useDiagScale``). Any other value is rejected
+   as an input error.
    This reduces the amount of memory usage from
    :math:`O(N_\text{p}^2) + O(N_\text{p}N_\text{MCS})` to
    :math:`O(N_\text{p}) + O(N_\text{p}N_\text{MCS})` when
