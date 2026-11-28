@@ -566,6 +566,15 @@ file and ``NLanczosStep`` = 1. Here, xxx is the header indicated by ``CDataFileH
 where both ``NDataIdxStart`` and ``NDataQtySmp`` are defined in
 ``ModPara`` file.
 
+For the classic first-step estimator, mVMC checks whether the sampled
+basis is numerically singular, as can occur on an eigenstate. The relative
+tolerance for the overlap determinant is :math:`\max(64,4N)\epsilon`,
+where :math:`N` is the bin's valid sample count across all chains and
+:math:`\epsilon` is double-precision machine epsilon. If the check fails,
+mVMC exits with an error. Ordinary measurements and the support diagnostic
+are saved for that bin. Its Lanczos energy, moments, and corrected Green
+functions are omitted, and later bins are not computed.
+
 xxx\_nzguide\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 

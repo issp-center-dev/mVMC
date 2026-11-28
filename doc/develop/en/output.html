@@ -574,6 +574,14 @@ file and <code class="docutils literal notranslate"><span class="pre">NLanczosSt
 <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code>,
 where both <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> and <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> are defined in
 <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> file.</p>
+<p>For the classic first-step estimator, mVMC checks whether the sampled
+basis is numerically singular, as can occur on an eigenstate. The relative
+tolerance for the overlap determinant is <span class="math notranslate nohighlight">\(\max(64,4N)\epsilon\)</span>,
+where <span class="math notranslate nohighlight">\(N\)</span> is the bin’s valid sample count across all chains and
+<span class="math notranslate nohighlight">\(\epsilon\)</span> is double-precision machine epsilon. If the check fails,
+mVMC exits with an error. Ordinary measurements and the support diagnostic
+are saved for that bin. Its Lanczos energy, moments, and corrected Green
+functions are omitted, and later bins are not computed.</p>
 </section>
 <section id="xxx-nzguide-yyy-dat">
 <h2>xxx_nzguide_yyy.dat<a class="headerlink" href="#xxx-nzguide-yyy-dat" title="Link to this heading">¶</a></h2>

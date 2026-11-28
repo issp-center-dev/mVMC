@@ -541,6 +541,11 @@ MPI reduction後の実部・虚部です。<code class="docutils literal notrans
 2、<code class="docutils literal notranslate"><span class="pre">NLanczosStep</span></code> = 1に設定することで計算されます。
 xxxには <code class="docutils literal notranslate"><span class="pre">CDataFileHead</span></code> で指定されるヘッダが、yyyには <code class="docutils literal notranslate"><span class="pre">ModPara</span></code> ファイルの <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> に従い <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> <span class="math notranslate nohighlight">\(\cdots\)</span> <code class="docutils literal notranslate"><span class="pre">NDataIdxStart</span></code> + <code class="docutils literal notranslate"><span class="pre">NDataQtySmp</span></code> の順に記載されます。</p>
+<p>通常の第1ステップ推定では、固有状態などで標本から得た基底が数値的に一次従属になるかを調べます。
+重なり行列式の相対許容値は <span class="math notranslate nohighlight">\(\max(64,4N)\epsilon\)</span> です。
+<span class="math notranslate nohighlight">\(N\)</span> はその測定区間の全チェーンで集計した有効な標本の個数、<span class="math notranslate nohighlight">\(\epsilon\)</span> は倍精度の機械イプシロンです。
+特異と判定した場合、mVMC はその区間の通常の測定結果とサポート診断を保存してエラー終了します。
+その区間の Lanczos エネルギー・モーメント・補正後の Green 関数は出力せず、後続の区間も計算しません。</p>
 </section>
 <section id="xxx-nzguide-yyy-dat">
 <h2>xxx_nzguide_yyy.dat<a class="headerlink" href="#xxx-nzguide-yyy-dat" title="Link to this heading">¶</a></h2>

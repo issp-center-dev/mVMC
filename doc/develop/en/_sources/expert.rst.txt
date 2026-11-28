@@ -3796,7 +3796,9 @@ User rules
    calculations support ``Orbital`` (not ``OrbitalGeneral``/FSZ),
    ``NExUpdatePath=0`` or ``1``, and ``NLanczosMode=0``.  They do not support
    BackFlow or Power Lanczos.  The same dispatch and restrictions apply to
-   the ChargeRBM and SpinRBM layer definitions.
+   the ChargeRBM and SpinRBM layer definitions. Orbital-general (FSZ)
+   sampling and measurement do not implement the RBM factor, so mVMC rejects
+   FSZ with any RBM definition for both real and complex parameters.
 
 -  Headers cannot be omitted.
 

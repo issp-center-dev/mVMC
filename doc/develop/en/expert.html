@@ -3303,7 +3303,9 @@ has <code class="docutils literal notranslate"><span class="pre">ComplexType=1</
 calculations support <code class="docutils literal notranslate"><span class="pre">Orbital</span></code> (not <code class="docutils literal notranslate"><span class="pre">OrbitalGeneral</span></code>/FSZ),
 <code class="docutils literal notranslate"><span class="pre">NExUpdatePath=0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>, and <code class="docutils literal notranslate"><span class="pre">NLanczosMode=0</span></code>.  They do not support
 BackFlow or Power Lanczos.  The same dispatch and restrictions apply to
-the ChargeRBM and SpinRBM layer definitions.</p></li>
+the ChargeRBM and SpinRBM layer definitions. Orbital-general (FSZ)
+sampling and measurement do not implement the RBM factor, so mVMC rejects
+FSZ with any RBM definition for both real and complex parameters.</p></li>
 <li><p>Headers cannot be omitted.</p></li>
 <li><p>A program is terminated, when [ int01 ] is
 different from the total number of variational parameters defined in
