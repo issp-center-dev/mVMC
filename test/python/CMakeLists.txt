@@ -74,6 +74,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/compare_gc_canonical_baseline.py DESTINATI
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_projection_parser.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_sr.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nstore_nsplit.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_nsrcg_nstore.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_srcg_no_active.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_qp_split.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_UHF.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test_UHF_InterAll.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
@@ -2113,6 +2115,7 @@ add_python_vmc_test_bf_fsz(FSZ_Lanczos_InvalidMode2)
 add_python_vmc_test_bf_fsz_mpi(FSZ_Lanczos_InvalidMode2_mpi)
 add_python_vmc_test_bf_fsz(FSZ_Lanczos_InvalidOptimization)
 add_python_vmc_test_bf_fsz(FSZ_Lanczos_InvalidSPGaussLeg)
+add_python_vmc_test_bf_fsz_mpi(FSZ_Lanczos_InvalidSPGaussLeg_mpi)
 add_python_vmc_test_bf_fsz(FSZ_Lanczos_InvalidPairHop)
 add_python_vmc_test_bf_fsz(FSZ_Lanczos_InvalidReweight)
 add_python_vmc_test_bf_fsz(BackFlow_FSZ_Lanczos_Identity_Complex)
@@ -2692,6 +2695,76 @@ set_tests_properties(NSplitSize_NStore_fsz_Compare_mpi PROPERTIES ENVIRONMENT "P
 # These tests launch MPI through the REF/SPLIT variables, not MVMC_MPI_PROCS.
 set_tests_properties(NSplitSize_NStore_Compare_mpi NSplitSize_NStore_fsz_Compare_mpi
     PROPERTIES LABELS requires_mpi)
+
+# Input acceptance conditions (Julia-mVMC #56 / #57 / #95 comment).
+# Serial and 2-rank variants of each rejection: the checks read broadcast
+# scalars or run inside the rank-0 block, so every rank must terminate.
+function(add_input_acceptance_invalid test_name model expected_error)
+    add_python_vmc_test_invalid_expert_with_updates(
+        ${test_name} ${model} "${expected_error}" ${ARGN})
+    add_python_vmc_test_invalid_expert_with_updates(
+        ${test_name}_mpi ${model} "${expected_error}" ${ARGN})
+    set_tests_properties(${test_name}_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+        LABELS requires_mpi)
+endfunction(add_input_acceptance_invalid)
+
+# #56: only NSRCG=0/1/2 are defined; other values selected SR-CG without the
+# stored-O buffer (NStore=0) and wrote through a null pointer.
+add_input_acceptance_invalid(NSRCG_Invalid_Three HubbardChain_SpinJastrow
+    "NSRCG (= 3) must be 0 (direct SR), 1 (SR-CG), or 2" NSRCG=3 NStore=0)
+add_input_acceptance_invalid(NSRCG_Invalid_Negative HubbardChain_SpinJastrow
+    "NSRCG (= -1) must be 0 (direct SR), 1 (SR-CG), or 2" NSRCG=-1 NStore=0)
+# Accepted neighbours: NStore=0/1 give identical SR-CG results for NSRCG=1 and 2.
+add_test(NAME NSRCG_NStore_Compare
+         COMMAND ${PYTHON_EXECUTABLE} runtest_nsrcg_nstore.py HubbardChain_SpinJastrow)
+set_tests_properties(NSRCG_NStore_Compare PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+add_test(NAME NSRCG_NStore_Compare_mpi
+         COMMAND ${PYTHON_EXECUTABLE} runtest_nsrcg_nstore.py HubbardChain_SpinJastrow)
+set_tests_properties(NSRCG_NStore_Compare_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+    LABELS requires_mpi)
+
+# #57: canonical Ne<=0 reached SKTRF with LDA=0 and gen_rand32()%Ne.
+add_input_acceptance_invalid(Ne_Zero_Ncond_Invalid HubbardChain_SpinJastrow
+    "Ne (= 0) must be positive when NGrandCanonical=0" Ncond=0)
+add_input_acceptance_invalid(Ne_Zero_Nelectron_Invalid HubbardChain_SpinJastrow
+    "Ne (= 0) must be positive when NGrandCanonical=0" Ncond=-1 Ne=0)
+add_input_acceptance_invalid(Ne_Negative_Nelectron_Invalid HubbardChain_SpinJastrow
+    "Ne (= -1) must be positive when NGrandCanonical=0" Ncond=-1 Ne=-1)
+add_input_acceptance_invalid(Ne_Negative_Ncond_Invalid HubbardChain_SpinJastrow
+    "Ne (= -1) must be positive when NGrandCanonical=0" Ncond=-2)
+# Accepted neighbours: the smallest canonical filling, and the grand-canonical
+# sector where Ncond does not fix the particle number.
+add_python_vmc_test_invalid_expert_with_updates(Ne_Positive_Ncond2_Valid
+    HubbardChain_SpinJastrow "Finish calculation." allow_success
+    Ncond=2 NSROptItrStep=2 NSROptItrSmp=1 NVMCWarmUp=1 NVMCSample=10 NSPGaussLeg=1)
+add_python_vmc_test_invalid_expert_with_updates(GC_Ncond_Zero_Accepted
+    gc_invalid/base "NCond is ignored when NGrandCanonical=1" allow_success Ncond=0)
+add_python_vmc_test_invalid_expert_with_updates(GC_Ncond_Zero_Accepted_mpi
+    gc_invalid/base "NCond is ignored when NGrandCanonical=1" allow_success Ncond=0)
+set_tests_properties(GC_Ncond_Zero_Accepted_mpi PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+    LABELS requires_mpi)
+
+# #95 comment: SR-CG with nSmat==0 (every parameter fixed by OptFlag, or removed
+# by the diagonal cut) ran CG with max_iter=0, aborted with a misleading
+# "did not converge" message, and printed a meaningless r[0] in SRinfo.
+function(add_srcg_no_active_test test_name mode)
+    add_test(NAME ${test_name}
+             COMMAND ${PYTHON_EXECUTABLE} runtest_srcg_no_active.py ${mode})
+    set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1")
+    add_test(NAME ${test_name}_mpi
+             COMMAND ${PYTHON_EXECUTABLE} runtest_srcg_no_active.py ${mode})
+    set_tests_properties(${test_name}_mpi PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/test/python;OMP_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+        LABELS requires_mpi)
+endfunction(add_srcg_no_active_test)
+add_srcg_no_active_test(SRCG_NoActiveParameter_OptFlag optflag)
+add_srcg_no_active_test(SRCG_NoActiveParameter_OptFlag_DiagScale optflag_diagscale)
+add_srcg_no_active_test(SRCG_NoActiveParameter_DiagCut diagcut)
 if(MPI_FOUND)
     foreach(qp_mode real complex)
         foreach(qp_spin fixed fsz)

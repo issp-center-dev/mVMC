@@ -604,7 +604,9 @@ void SetMemory() {
       }
     }
 
-    if(NSRCG==1 || NStoreO!=0){
+    /* The stored-O path is taken whenever NSRCG!=0 or NStoreO!=0
+     * (vmccal.c / vmccal_fsz.c), so allocate under the same condition. */
+    if(NSRCG!=0 || NStoreO!=0){
       //if(AllComplexFlag==0 && iFlgOrbitalGeneral==0){ //real & sz=0
       if(AllComplexFlag==0){ //real & sz=0
         SROptO_Store_real = (double *)malloc(sizeof(double)*(SROptSize*NVMCSample) );
@@ -757,7 +759,7 @@ void FreeMemory() {
     if (AllComplexFlag == 0){
         free(SROptOO_real);
     }
-    if(NSRCG==1 || NStoreO!=0){
+    if(NSRCG!=0 || NStoreO!=0){
       if(AllComplexFlag==0){ //real & sz=0
         free(SROptO_Store_real);
       }else{
