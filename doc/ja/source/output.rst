@@ -515,6 +515,12 @@ Power Lanczos法により求めた :math:`\langle H \rangle`,
 xxxには ``CDataFileHead`` で指定されるヘッダが、yyyには ``ModPara`` ファイルの ``NDataIdxStart``,
 ``NDataQtySmp`` に従い ``NDataIdxStart`` :math:`\cdots` ``NDataIdxStart`` + ``NDataQtySmp`` の順に記載されます。
 
+通常の第1ステップ推定では、固有状態などで標本から得た基底が数値的に一次従属になるかを調べます。
+重なり行列式の相対許容値は :math:`\max(64,4N)\epsilon` です。
+:math:`N` はその測定区間の全チェーンで集計した有効な標本の個数、:math:`\epsilon` は倍精度の機械イプシロンです。
+特異と判定した場合、mVMC はその区間の通常の測定結果とサポート診断を保存してエラー終了します。
+その区間の Lanczos エネルギー・モーメント・補正後の Green 関数は出力せず、後続の区間も計算しません。
+
 xxx\_nzguide\_yyy.dat
 ~~~~~~~~~~~~~~~~~~~~~~
 

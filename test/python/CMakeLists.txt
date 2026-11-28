@@ -2064,6 +2064,22 @@ foreach(gc_fault rebuild_nonfinite zero_ip)
     endforeach()
 endforeach()
 
+foreach(lanczos_rbm_case singular weights fsz)
+  add_test(NAME LanczosRBM_${lanczos_rbm_case}
+      COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_rbm.py ${lanczos_rbm_case})
+  set_tests_properties(LanczosRBM_${lanczos_rbm_case} PROPERTIES
+      ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1" TIMEOUT 120)
+endforeach()
+if(MPI_FOUND)
+  foreach(lanczos_rbm_case singular fsz)
+    add_test(NAME LanczosRBM_${lanczos_rbm_case}_mpi
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/runtest_lanczos_rbm.py ${lanczos_rbm_case})
+    set_tests_properties(LanczosRBM_${lanczos_rbm_case}_mpi PROPERTIES
+        ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MVMC_MPI_PROCS=2"
+        PROCESSORS 2 TIMEOUT 120)
+  endforeach()
+endif()
+
 foreach(real_rbm_case
     family-charge
     family-spin

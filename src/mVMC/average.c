@@ -38,7 +38,7 @@ void weightAverageReduce(int n, double *vec, MPI_Comm comm);
 void weightAverageReduce_fcmp(int n, double complex *vec, MPI_Comm comm);
 void weightAverageReduce_real(int n, double *vec, MPI_Comm comm);
 
-static void CheckPowerLanczosSupport(MPI_Comm comm) {
+static size_t CheckPowerLanczosSupport(MPI_Comm comm) {
   PowerLanczosSupportDiagnostic diagnostic;
   PowerLanczosSupportStatus supportStatus = POWER_LANCZOS_SUPPORT_INVALID;
   Lanczos2SolveStatus outputStatus = LANCZOS2_SOLVE_OK;
@@ -126,6 +126,7 @@ static void CheckPowerLanczosSupport(MPI_Comm comm) {
      statusCode != POWER_LANCZOS_SUPPORT_PASS) {
     MPI_Abort(comm,EXIT_FAILURE);
   }
+  return rank == 0 ? diagnostic.sampleCount : 0;
 }
 
 
@@ -334,7 +335,7 @@ void WeightAverageSROpt_real(MPI_Comm comm) {
 
 /* calculate average of Green functions */
 /* Only rank=0 process will have the result */
-void WeightAverageGreenFunc(MPI_Comm comm) {
+size_t WeightAverageGreenFunc(MPI_Comm comm) {
   int n;
   double complex *vec;
   double *vec_real;
@@ -417,9 +418,9 @@ void WeightAverageGreenFunc(MPI_Comm comm) {
     }
   }
   if(NLanczosMode>0){
-    CheckPowerLanczosSupport(comm);
+    return CheckPowerLanczosSupport(comm);
   }
-  return;
+  return 0;
 }
 
 void weightAverageReduce(int n, double *vec, MPI_Comm comm) {

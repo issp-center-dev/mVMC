@@ -1585,12 +1585,11 @@ int ReadDefFileNInt(char *xNameListFile, MPI_Comm comm) {
               "parameters.\n");
       info = 1;
     }
+    if (FlagRBM != 0 && iFlgOrbitalGeneral != 0) {
+      fprintf(stderr, "Error: RBM does not support orbital-general (FSZ) mode.\n");
+      info = 1;
+    }
     if(FlagRBM != 0 && AllComplexFlag == 0){
-      if (iFlgOrbitalGeneral != 0) {
-        fprintf(stderr,
-                "Error: real-valued RBM does not support orbital-general (FSZ) mode.\n");
-        info = 1;
-      }
       if (bufInt[IdxLanczosMode] > 0) {
         fprintf(stderr,
                 "Error: real-valued RBM does not support Lanczos mode.\n");
