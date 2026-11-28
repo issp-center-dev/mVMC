@@ -1031,7 +1031,9 @@ void calculateOptTransDiff(double complex *srOptO, const double complex ipAll) {
     for(j=0;j<NQPFix;++j) {
       ip += QPFixWeight[j] * pfM[j];
     }
-    srOptO[i] = ip/ipAll;
+    /* SROptO holds (O, i O) per parameter, as in SlaterElmDiff_fcmp. */
+    srOptO[2*i]   = ip/ipAll;
+    srOptO[2*i+1] = I*ip/ipAll;
   }
 
   return;
