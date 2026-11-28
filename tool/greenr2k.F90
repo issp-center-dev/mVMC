@@ -74,6 +74,7 @@ END MODULE fourier_val
 MODULE fourier_routine
   !
   IMPLICIT NONE
+  CHARACTER(*), PARAMETER :: whitespace = " " // ACHAR(9)
   !
 CONTAINS
 !
@@ -90,6 +91,121 @@ SUBROUTINE key2lower(key)
   END DO
 END SUBROUTINE key2lower
 !
+! Open an existing input file for reading.
+! Without STATUS='OLD' a missing file is silently created and read as empty,
+! so abort with a message and a nonzero exit status instead.
+!
+SUBROUTINE open_input(fi, filename, description)
+  INTEGER,INTENT(IN) :: fi
+  CHARACTER(*),INTENT(IN) :: filename, description
+  !
+  INTEGER :: ios
+  !
+  IF(LEN_TRIM(filename) == 0) THEN
+     WRITE(*,*) "ERROR! The name of the ", description, " is empty."
+     ERROR STOP "Input file is not specified."
+  END IF
+  !
+  OPEN(fi, file = TRIM(filename), STATUS = 'OLD', ACTION = 'READ', IOSTAT = ios)
+  IF(ios /= 0) THEN
+     WRITE(*,*) "ERROR! Cannot open the ", description, " : ", TRIM(filename)
+     ERROR STOP "Cannot open the input file."
+  END IF
+  !
+END SUBROUTINE open_input
+!
+! Read one complete record, including any text beyond the first chunk.
+FUNCTION read_record(fi) RESULT(line)
+  USE ISO_FORTRAN_ENV, ONLY: iostat_end, iostat_eor
+  INTEGER, INTENT(IN) :: fi
+  CHARACTER(:), ALLOCATABLE :: line
+  CHARACTER(512) :: chunk
+  INTEGER :: ios, n
+  !
+  line = ""
+  DO
+     READ(fi, '(a)', ADVANCE='NO', SIZE=n, IOSTAT=ios) chunk
+     IF(ios /= 0 .AND. ios /= iostat_end .AND. ios /= iostat_eor) ERROR STOP "Cannot read input record."
+     line = line // chunk(:n)
+     IF(ios /= 0) EXIT
+  END DO
+END FUNCTION read_record
+!
+! Extract a whitespace-delimited word and leave pos at the following separator.
+FUNCTION next_word(line, pos) RESULT(word)
+  CHARACTER(*), INTENT(IN) :: line
+  INTEGER, INTENT(INOUT) :: pos
+  CHARACTER(:), ALLOCATABLE :: word
+  INTEGER :: first
+  !
+  DO WHILE(pos <= LEN(line))
+     IF(INDEX(whitespace, line(pos:pos)) == 0) EXIT
+     pos = pos + 1
+  END DO
+  first = pos
+  DO WHILE(pos <= LEN(line))
+     IF(INDEX(whitespace, line(pos:pos)) /= 0) EXIT
+     pos = pos + 1
+  END DO
+  word = line(first:pos-1)
+END FUNCTION next_word
+!
+! Unquoted paths can contain '/'. For quoted paths use Fortran's rules for
+! spaces and doubled quotation marks, then check the decoded length.
+SUBROUTINE read_string_value(fi, value)
+  INTEGER, INTENT(IN) :: fi
+  CHARACTER(*), INTENT(OUT) :: value
+  CHARACTER(:), ALLOCATABLE :: line, key, name
+  INTEGER :: pos, first, ios
+  !
+  line = read_record(fi)
+  pos = 1
+  key = next_word(line, pos)
+  first = VERIFY(line(pos:), whitespace)
+  IF(first == 0) ERROR STOP "Missing value for file name."
+  pos = pos + first - 1
+  IF(line(pos:pos) == '"' .OR. line(pos:pos) == "'") THEN
+     ALLOCATE(CHARACTER(LEN=LEN(line)-pos+1) :: name)
+     READ(line(pos:), *, IOSTAT=ios) name
+     IF(ios /= 0) ERROR STOP "Invalid quoted file name."
+  ELSE
+     name = next_word(line, pos)
+  END IF
+  IF(LEN_TRIM(name) > LEN(value)) THEN
+     WRITE(*,*) "ERROR! File name for ", key, " exceeds ", LEN(value), " characters."
+     ERROR STOP "File name too long."
+  END IF
+  value = name
+END SUBROUTINE read_string_value
+!
+! HPhi writes "MAX DIMENSION idim_max=<positive integer>" on the first line.
+! Validate the entire value before the integer conversion: list-directed READ
+! also accepts '/' and null fields without assigning an integer.
+INTEGER FUNCTION fulldiag_dimension(line) RESULT(n)
+  CHARACTER(*), INTENT(IN) :: line
+  CHARACTER(:), ALLOCATABLE :: label, number
+  INTEGER :: equal, pos, ios
+  !
+  n = 0
+  equal = INDEX(line, "=")
+  IF(equal == 0) RETURN
+  label = line(:equal-1)
+  pos = 1
+  IF(next_word(label, pos) /= "MAX") RETURN
+  IF(next_word(label, pos) /= "DIMENSION") RETURN
+  IF(next_word(label, pos) /= "idim_max") RETURN
+  IF(next_word(label, pos) /= "") RETURN
+  pos = equal + 1
+  number = next_word(line, pos)
+  IF(next_word(line, pos) /= "") RETURN
+  IF(LEN(number) > 0) THEN
+     IF(number(1:1) == "+") number = number(2:)
+  END IF
+  IF(LEN(number) == 0 .OR. VERIFY(number, "0123456789") /= 0) RETURN
+  READ(number, *, IOSTAT=ios) n
+  IF(ios /= 0) n = 0
+END FUNCTION fulldiag_dimension
+!
 ! Read from HPhi/mVMC input files
 !
 SUBROUTINE read_filename()
@@ -98,8 +214,8 @@ SUBROUTINE read_filename()
   &                       filetail, calctype, numave, interval
   IMPLICIT NONE
   !
-  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start, ii
-  CHARACTER(256) :: modpara, calcmod, keyname, namelist, outputdir, line
+  INTEGER :: fi = 10, lanczos_max, irun, istep, iwfc, idx_start
+  CHARACTER(256) :: modpara, calcmod, keyname, namelist, outputdir
   !
   WRITE(*,*) 
   WRITE(*,*) "#####  Read HPhi/mVMC Input Files  #####" 
@@ -110,22 +226,27 @@ SUBROUTINE read_filename()
   !
   ! Read from NameList file
   !
-  OPEN(fi,file = TRIM(namelist))
+  CALL open_input(fi, namelist, "NameList file")
   !
+  file_one = ""
+  file_two = ""
+  modpara = ""
   calcmod = ""
   DO
      READ(fi,*,END=10) keyname
      BACKSPACE(fi)
      CALL key2lower(keyname)
      !
+     ! File names may contain '/', which stops list-directed input.
+     !
      IF(TRIM(ADJUSTL(keyname)) == "onebodyg") THEN
-        READ(fi,*) keyname, file_one
+        CALL read_string_value(fi, file_one)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "twobodyg") THEN
-        READ(fi,*) keyname, file_two
+        CALL read_string_value(fi, file_two)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "modpara") THEN
-        READ(fi,*) keyname, modpara
+        CALL read_string_value(fi, modpara)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "calcmod") THEN
-        READ(fi,*) keyname, calcmod
+        CALL read_string_value(fi, calcmod)
      ELSE
         READ(fi,*) keyname
      END IF
@@ -142,7 +263,7 @@ SUBROUTINE read_filename()
   !
   ! Read from Modpara file
   !
-  OPEN(fi,file = TRIM(modpara))
+  CALL open_input(fi, modpara, "ModPara file")
   !
   outputdir = "output"
   DO
@@ -153,18 +274,9 @@ SUBROUTINE read_filename()
      IF(TRIM(ADJUSTL(keyname)) == "nsite") THEN
         READ(fi,*) keyname, nsite
      ELSE IF(TRIM(ADJUSTL(keyname)) == "cdatafilehead") THEN
-        READ(fi,*) keyname, filehead
+        CALL read_string_value(fi, filehead)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "outputdir") THEN
-        !
-        ! List-directed input stops at '/', so split the line by hand.
-        !
-        READ(fi,'(a)') line
-        DO ii = 1, LEN(line)
-           IF(line(ii:ii) == CHAR(9)) line(ii:ii) = " "
-        END DO
-        line = ADJUSTL(line)
-        line = ADJUSTL(line(INDEX(line, " "):))
-        outputdir = line(1:INDEX(line, " ") - 1)
+        CALL read_string_value(fi, outputdir)
      ELSE IF(TRIM(ADJUSTL(keyname)) == "numave") THEN
         READ(fi,*) keyname, numave
      ELSE IF(TRIM(ADJUSTL(keyname)) == "lanczos_max") THEN
@@ -201,7 +313,7 @@ SUBROUTINE read_filename()
      !
   ELSE
      !
-     OPEN(fi,file = TRIM(calcmod))
+     CALL open_input(fi, calcmod, "CalcMod file")
      !
      DO
         READ(fi,*,END=30) keyname
@@ -261,9 +373,13 @@ SUBROUTINE read_filename()
      !
      ! FullDiag
      !
-     OPEN(fi, file = "output/CHECK_Memory.dat")
-     READ(fi, '("  MAX DIMENSION idim_max=1", i16)') nwfc
+     CALL open_input(fi, TRIM(outputdir) // "/CHECK_Memory.dat", "CHECK_Memory.dat file")
+     nwfc = fulldiag_dimension(read_record(fi))
      CLOSE(fi)
+     IF(nwfc <= 0) THEN
+        WRITE(*,*) "ERROR! Cannot read idim_max from ", TRIM(outputdir) // "/CHECK_Memory.dat"
+        ERROR STOP "Expected a positive Hilbert space dimension."
+     END IF
      ALLOCATE(filetail(nwfc))
      !
      DO iwfc = 1, nwfc
@@ -324,7 +440,7 @@ SUBROUTINE read_geometry()
   CALL GETARG(2, filename)
   !
   WRITE(*,*) "  Read from ", TRIM(filename)
-  OPEN(fi, file = TRIM(filename))
+  CALL open_input(fi, filename, "Geometry file")
   !
   ! Direct lattice vector in arbitraly unit
   !
@@ -495,7 +611,7 @@ SUBROUTINE read_corrindx()
   !
   ! Read index for the One-Body Correlation
   !
-  OPEN(fi, file = TRIM(file_one))
+  CALL open_input(fi, file_one, "OneBodyG file")
   WRITE(*,*) "  Read from ", TRIM(file_one)
   READ(fi,*) ctmp
   READ(fi,*) ctmp, ncor1
@@ -536,7 +652,7 @@ SUBROUTINE read_corrindx()
   !
   ! Read index for the Two-Body Correlation
   !
-  OPEN(fi, file = TRIM(file_two))
+  CALL open_input(fi, file_two, "TwoBodyG file")
   WRITE(*,*) "  Read from ", TRIM(file_two)
   READ(fi,*) ctmp
   READ(fi,*) ctmp, ncor2
@@ -658,7 +774,7 @@ SUBROUTINE read_corrindx()
            END DO
         END DO
      END DO
-     STOP "Missing indices for the Green function."
+     ERROR STOP "Missing indices for the Green function."
   END IF
   !
   WRITE(*,*) "    Number of UpUpUpUp         Index : ", COUNT(indx(1:nr, 3, 1:norb, 1:norb) /= 0)
@@ -702,7 +818,7 @@ SUBROUTINE read_corrfile()
      ! One Body Correlation Function
      !
      filename = TRIM(filehead) // "_cisajs" // TRIM(filetail(iwfc))
-     OPEN(fi, file = TRIM(filename))
+     CALL open_input(fi, filename, "one-body correlation file")
      !
      DO icor = 1, ncor1
         READ(fi,*) itmp(1:4), cor0_r(1:2)
@@ -724,7 +840,7 @@ SUBROUTINE read_corrfile()
      ! Two Body Correlation function
      !
      filename = TRIM(filehead) // "_cisajscktalt" // TRIM(filetail(iwfc))
-     OPEN(fi, file = TRIM(filename))
+     CALL open_input(fi, filename, "two-body correlation file")
      !
      DO icor = 1, ncor2
         READ(fi,*) itmp(1:8), cor0_r(1:2)

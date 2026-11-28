@@ -204,6 +204,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_multidef.py DESTINATION ${CMAKE_BI
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_git_hash.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_real_rbm.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_output_dir.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/runtest_greenr2k.py DESTINATION ${CMAKE_BINARY_DIR}/test/python)
 
 function(add_python_vmc_test model)
     add_test(NAME ${model} COMMAND ${PYTHON_EXECUTABLE} runtest.py ${model})
@@ -1024,6 +1025,10 @@ if(MPI_FOUND)
             PROCESSORS 2)
     endforeach()
 endif()
+
+# The post-processing tool greenr2k (exit status, file names with '/',
+# the HPhi FullDiag layout); no MPI variant is needed.
+add_test(NAME Greenr2k_Tool COMMAND ${PYTHON_EXECUTABLE} runtest_greenr2k.py)
 
 add_python_vmc_test_doublon_only(DoublonOnly_GreenFunc2)
 add_test(NAME DoublonOnly_GreenFunc2_Complex

@@ -68,9 +68,9 @@ and the standard error
 .. math::
    
    \begin{align}
-   \delta A = \frac{1}{N_{\rm Try} - 1}
-   \sqrt{\frac{1}{N_{\rm Try}} \sum_{i=1}^{N_{\rm Try}} (A_i - \langle A \rangle)^2}
+   \delta A = \sqrt{\frac{1}{N_{\rm Try} (N_{\rm Try} - 1)}
+   \sum_{i=1}^{N_{\rm Try}} (A_i - \langle A \rangle)^2}
    \end{align}
 
 of the real- and imaginary-part of each correlation function, and
-writes them to a file ``zvo_corr_eigen*.dat`` in ``output/`` directory.
+writes them to a single file ``zvo_corr.dat`` in ``output/`` directory.
