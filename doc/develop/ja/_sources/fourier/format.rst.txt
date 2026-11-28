@@ -114,7 +114,7 @@ mVMC/:math:`{\mathcal H}\Phi` によって計算され,
 総合的な説明はmVMC/:math:`{\mathcal H}\Phi` のマニュアルを参照.
 :ref:`tutorial` でのファイル名は
 ``output/zvo_cisajs_001.dat`` および ``output/zvo_cisajscktalt_001.dat`` (mVMC), 
-``output/zvo_cisajs.dat`` および ``output/zvo_cisajscktalt.dat`` (:math:`{\mathcal H}\Phi`).
+``output/zvo_cisajs_eigen0.dat`` および ``output/zvo_cisajscktalt_eigen0.dat`` (HPhi CG).
 
 ``greenr2k`` ユーティリティはこのファイルを読み込んで計算を行う.
 この時, (スタンダードモードを使わず自分でインデックスを指定するなどにより)
@@ -128,7 +128,8 @@ mVMC/:math:`{\mathcal H}\Phi` によって計算され,
 
 Fourier変換された相関関数(波数表示)が入っている.
 ユーティリイティ ``greenr2k`` によって生成される.
-:ref:`tutorial` でのファイル名は ``output/zvo_corr_eigen0.dat`` である.
+:ref:`tutorial` では mVMC 用に ``output/zvo_corr.dat``、HPhi CG 用に
+``output/zvo_corr_eigen0.dat`` を出力する。以下は HPhi CG の出力例である。
 
 ::
    
@@ -165,4 +166,5 @@ gnuplotでこれを読み込むことでグラフ中に *k* 点のラベルを�
 -------------------------------------------------------------
 
 ``greenr2k`` にて作成される.
-ファイル名は ``output/zvo_corr_eigen0.dat.frmsf``
+:ref:`tutorial` でのファイル名は、mVMC では ``output/zvo_corr_001.dat.frmsf``、
+HPhi CG では ``output/zvo_corr_eigen0.dat.frmsf`` である。

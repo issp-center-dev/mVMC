@@ -142,7 +142,7 @@ mVMC/<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> に�
 総合的な説明はmVMC/<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> のマニュアルを参照.
 <a class="reference internal" href="tutorial.html#tutorial"><span class="std std-ref">チュートリアル</span></a> でのファイル名は
 <code class="docutils literal notranslate"><span class="pre">output/zvo_cisajs_001.dat</span></code> および <code class="docutils literal notranslate"><span class="pre">output/zvo_cisajscktalt_001.dat</span></code> (mVMC),
-<code class="docutils literal notranslate"><span class="pre">output/zvo_cisajs.dat</span></code> および <code class="docutils literal notranslate"><span class="pre">output/zvo_cisajscktalt.dat</span></code> (<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span>).</p>
+<code class="docutils literal notranslate"><span class="pre">output/zvo_cisajs_eigen0.dat</span></code> および <code class="docutils literal notranslate"><span class="pre">output/zvo_cisajscktalt_eigen0.dat</span></code> (HPhi CG).</p>
 <p><code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> ユーティリティはこのファイルを読み込んで計算を行う.
 この時, (スタンダードモードを使わず自分でインデックスを指定するなどにより)
 <a class="reference internal" href="#greenindex"><span class="std std-ref">計算する相関関数のインデックスの指定</span></a> で挙げたインデックスの相関関数のなかで欠けているものがある場合,
@@ -153,7 +153,8 @@ mVMC/<span class="math notranslate nohighlight">\({\mathcal H}\Phi\)</span> に�
 <span id="id5"></span><h2><em>k</em> パス上での相関関数<a class="headerlink" href="#zvocorr" title="Link to this heading">¶</a></h2>
 <p>Fourier変換された相関関数(波数表示)が入っている.
 ユーティリイティ <code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> によって生成される.
-<a class="reference internal" href="tutorial.html#tutorial"><span class="std std-ref">チュートリアル</span></a> でのファイル名は <code class="docutils literal notranslate"><span class="pre">output/zvo_corr_eigen0.dat</span></code> である.</p>
+<a class="reference internal" href="tutorial.html#tutorial"><span class="std std-ref">チュートリアル</span></a> では mVMC 用に <code class="docutils literal notranslate"><span class="pre">output/zvo_corr.dat</span></code>、HPhi CG 用に
+<code class="docutils literal notranslate"><span class="pre">output/zvo_corr_eigen0.dat</span></code> を出力する。以下は HPhi CG の出力例である。</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># k-length[1]</span>
 <span class="c1"># Orbital  1 to Orbital  1</span>
 <span class="c1">#  UpUp[   2,   3] (Re. Im.) DownDown[   4,   5]</span>
@@ -181,7 +182,8 @@ gnuplotでこれを読み込むことでグラフ中に <em>k</em> 点のラベ�
 <section id="fermisurfer">
 <span id="correlation"></span><h2>運動量分布関数の等値面をプロットするためのFermiSurferファイル<a class="headerlink" href="#fermisurfer" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">greenr2k</span></code> にて作成される.
-ファイル名は <code class="docutils literal notranslate"><span class="pre">output/zvo_corr_eigen0.dat.frmsf</span></code></p>
+<a class="reference internal" href="tutorial.html#tutorial"><span class="std std-ref">チュートリアル</span></a> でのファイル名は、mVMC では <code class="docutils literal notranslate"><span class="pre">output/zvo_corr_001.dat.frmsf</span></code>、
+HPhi CG では <code class="docutils literal notranslate"><span class="pre">output/zvo_corr_eigen0.dat.frmsf</span></code> である。</p>
 </section>
 </section>
 

@@ -96,18 +96,21 @@ HPhi/vmc.out の実行
 
 関連するファイル
 
-- output/zvo_cisajs_001.dat (:ref:`zvocisajs`)
-- output/zvo_cisajs.dat (:ref:`zvocisajs`)
-- output/zvo_cisajscktalt_001.dat (:ref:`zvocisajs`)
-- output/zvo_cisajscktalt.dat (:ref:`zvocisajs`)
+- ``output/zvo_cisajs_001.dat``, ``output/zvo_cisajscktalt_001.dat`` (:ref:`zvocisajs`) (mVMC)
+- ``output/zvo_cisajs_eigen0.dat``, ``output/zvo_cisajscktalt_eigen0.dat`` (:ref:`zvocisajs`) (HPhi CG)
 - geometry.dat (:ref:`geometry`)
-- output/zvo_corr*.dat (:ref:`zvocorr`)
 
 相関関数のプロット
 ------------------
 
-gnuplotを使って,
-相関関数を :math:`k` 空間でプロットする.
+mVMC の結果は次の gnuplot コマンドで描画する。
+
+.. code-block:: gnuplot
+
+   load "kpath.gp"
+   plot "output/zvo_corr.dat" u 1:12 w l
+
+HPhi CG の基底状態を描画する場合は、固有状態 0 のファイルを指定する。
 
 .. code-block:: gnuplot
 
@@ -124,4 +127,5 @@ gnuplotを使って,
 関連するファイル
 
 - kpath.gp (:ref:`gnuplot`)
-- output/zvo_corr*.dat (:ref:`zvocorr`)
+- ``output/zvo_corr.dat`` (:ref:`zvocorr`), ``output/zvo_corr_001.dat.frmsf`` (:ref:`correlation`) (mVMC)
+- ``output/zvo_corr_eigen0.dat`` (:ref:`zvocorr`), ``output/zvo_corr_eigen0.dat.frmsf`` (:ref:`correlation`) (HPhi CG)

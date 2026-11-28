@@ -98,11 +98,11 @@ computes the average</p>
 <p>and the standard error</p>
 <div class="math notranslate nohighlight">
 \[\begin{align}
-\delta A = \frac{1}{N_{\rm Try} - 1}
-\sqrt{\frac{1}{N_{\rm Try}} \sum_{i=1}^{N_{\rm Try}} (A_i - \langle A \rangle)^2}
+\delta A = \sqrt{\frac{1}{N_{\rm Try} (N_{\rm Try} - 1)}
+\sum_{i=1}^{N_{\rm Try}} (A_i - \langle A \rangle)^2}
 \end{align}\]</div>
 <p>of the real- and imaginary-part of each correlation function, and
-writes them to a file <code class="docutils literal notranslate"><span class="pre">zvo_corr_eigen*.dat</span></code> in <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.</p>
+writes them to a single file <code class="docutils literal notranslate"><span class="pre">zvo_corr.dat</span></code> in <code class="docutils literal notranslate"><span class="pre">output/</span></code> directory.</p>
 </section>
 </section>
 
